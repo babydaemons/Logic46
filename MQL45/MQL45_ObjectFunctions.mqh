@@ -237,6 +237,30 @@ bool MQL45::ObjectSet(string object_name, int index, double value)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
+bool MQL45::ObjectSet(string object_name, ENUM_OBJECT_PROPERTY_INTEGER object_property, long value)
+{
+    return ObjectSetInteger(0, object_name, object_property, value);
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool MQL45::ObjectSet(string object_name, ENUM_OBJECT_PROPERTY_DOUBLE object_property, double value)
+{
+    return ObjectSetDouble(0, object_name, object_property, value);
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool MQL45::ObjectSet(string object_name, ENUM_OBJECT_PROPERTY_STRING object_property, string value)
+{
+    return ObjectSetString(0, object_name, object_property, value);
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 bool MQL45::ObjectSetFiboDescription(string object_name, int index, string text)
 {
     return(ObjectSetString(0, object_name, OBJPROP_LEVELTEXT, index, text));
