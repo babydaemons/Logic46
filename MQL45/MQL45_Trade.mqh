@@ -1054,7 +1054,7 @@ string CTrade::FormatRequest(string &str,const MqlTradeRequest &request) const
    str="";
 //--- set up
    string symbol_name=(request.symbol==NULL) ? _Symbol : request.symbol;
-   int    digits=_Digits;
+   int    digits=(int)SymbolInfoInteger(symbol_name, SYMBOL_DIGITS);
    ENUM_SYMBOL_TRADE_EXECUTION trade_execution=0;
    if(SymbolInfoInteger(symbol_name,SYMBOL_DIGITS,tmp_long))
       digits=(int)tmp_long;
@@ -1246,7 +1246,7 @@ string CTrade::FormatRequestResult(string &str,const MqlTradeRequest &request,co
   {
 //--- set up
    string symbol_name=(request.symbol==NULL) ? _Symbol : request.symbol;
-   int    digits=_Digits;
+   int    digits=(int)SymbolInfoInteger(symbol_name, SYMBOL_DIGITS);
    long   tmp_long;
    ENUM_SYMBOL_TRADE_EXECUTION trade_execution=0;
    if(SymbolInfoInteger(symbol_name,SYMBOL_DIGITS,tmp_long))
@@ -1304,7 +1304,7 @@ string CTrade::FormatRequestResult(string &str,const MqlTradeRequest &request,co
          str="invalid request";
          break;
       case TRADE_RETCODE_INVALID_VOLUME:
-         str="invalid volume";
+         str=StringFormat("invalid volume(%f)", request.volume);
          break;
       case TRADE_RETCODE_INVALID_PRICE:
          str="invalid price";
