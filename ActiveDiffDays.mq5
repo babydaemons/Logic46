@@ -43,7 +43,7 @@ input string            SYMBOLS = "USDJPY;EURUSD";
 input E_TIMEFRAMES      TF = TIMEFRAME_H04;
 input double            INIT_MARGIN = 100000;
 input double            MIN_MARGIN_LEVEL = 1500.0;
-input double            PYLAMIDDING_POWER = 0.6;
+input double            PYLAMIDDING_POWER = 2.0;
 input bool              NANPIN_ENABLED = false;
 
 input int               BAR_SCAN_BARS = 6;
@@ -54,8 +54,8 @@ input int               EMA_MULTI3 = 3;
 input int               EMA_SCAN_BARS = 6;
 input int               TOTAL_SCAN_BARS = 3;
 
-input int               BB_DAYS1 = 10.0;
-input int               BB_MULTI = 30;
+input int               BB_DAYS1 = 20.0;
+input int               BB_MULTI = 12;
 input double            BB_ENTRY = 0.175;
 
 input int               RSI_BARS = 48;
@@ -479,15 +479,17 @@ protected:
             return NONE;
         }
 
-/*
         if (BB1[0] < BB1[1]) {
             _is_trend = false;
         }
-
-        if (BB1[0] / BB2[0] < BB_ENTRY) {
+        else if (BB1[0] / BB2[0] < BB_ENTRY) {
             _is_trend = false;
         }
+        else {
+            _is_trend = true;
+        }
 
+/*
         if (!_is_trend) {
             TRADE_TYPE type0 = DoTrade0(comment);
             if (type0 != NONE) {
@@ -502,10 +504,12 @@ protected:
         }
 */
 
-        TRADE_TYPE type2 = DoTrade2(comment);
-        if (type2 != NONE) {
-            _is_trend = true;
-            return type2;
+        if (_is_trend) {
+            TRADE_TYPE type2 = DoTrade2(comment);
+            if (type2 != NONE) {
+                _is_trend = true;
+                return type2;
+            }
         }
 
 /*
