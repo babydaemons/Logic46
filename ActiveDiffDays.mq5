@@ -568,22 +568,18 @@ protected:
     TRADE_TYPE DoTrade2(string& comment)
     {
         if (IsEntryEnabled(BUY) && O[0] > O[1] && B[0] > 0) {
-            if (EMA1[0] > EMA1[1] && EMA2[0] > EMA2[1]) {
-                if (IsBuyStart(TOTAL_BAND1, TOTAL_SCAN_BARS / 2, true) && IsBuyStart(TOTAL_BAND2, TOTAL_SCAN_BARS, true)) {
-                    CloseAll(SELL, "BuyTotal(BuyStart)");
-                    comment = "BuyTotal(BuyStart)";
-                    return BUY;
-                }
+            if (IsBuyStart(TOTAL_BAND1, TOTAL_SCAN_BARS / 2, false) && IsBuyStart(TOTAL_BAND2, TOTAL_SCAN_BARS, false)) {
+                CloseAll(SELL, "BuyTotal(BuyStart)");
+                comment = "BuyTotal(BuyStart)";
+                return BUY;
             }
         }
 
         if (IsEntryEnabled(SELL) && O[0] < O[1] && B[0] < 0) {
-            if (EMA1[0] < EMA1[1] && EMA2[0] < EMA2[1]) {
-                if (IsSellStart(TOTAL_BAND1, TOTAL_SCAN_BARS / 2, true) && IsSellStart(TOTAL_BAND2, TOTAL_SCAN_BARS, true)) {
-                    CloseAll(BUY, "SellTotal(SellSttart)");
-                    comment = "SellTotal(SellSttart)";
-                    return SELL;
-                }
+            if (IsSellStart(TOTAL_BAND1, TOTAL_SCAN_BARS / 2, false) && IsSellStart(TOTAL_BAND2, TOTAL_SCAN_BARS, false)) {
+                CloseAll(BUY, "SellTotal(SellSttart)");
+                comment = "SellTotal(SellSttart)";
+                return SELL;
             }
         }
 
