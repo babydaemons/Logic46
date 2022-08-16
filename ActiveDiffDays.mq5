@@ -39,7 +39,7 @@ enum E_TIMEFRAMES {
 //--- input parameters
 //input string            SYMBOLS = "USDJPY;EURUSD;GBPUSD;USDCHF;AUDUSD;EURJPY;GBPJPY;CHFJPY;AUDJPY";
 //input string            SYMBOLS = "USDJPY;EURUSD;GBPUSD;USDCHF;AUDUSD";
-input string            SYMBOLS = "USDJPY";
+input string            SYMBOLS = "USDJPY;EURUSD";
 input E_TIMEFRAMES      TF = TIMEFRAME_H04;
 input double            INIT_MARGIN = 100000;
 input double            MIN_MARGIN_LEVEL = 1500.0;
