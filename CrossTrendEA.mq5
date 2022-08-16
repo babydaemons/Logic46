@@ -9,8 +9,8 @@
 
 #define MQL45_BARS 2
 #include "MQL45/MQL45.mqh"
-
 #include "ActiveLabel.mqh"
+#include "TrueTrend.mqh"
 
 enum ENUM_TF {
     TF_M01 = PERIOD_M1,
@@ -24,19 +24,28 @@ enum ENUM_TF {
     TF_MN1 = PERIOD_MN1,
 };
 
-input ENUM_TF TF = TF_M05;
-input double START_DAYS = 0.125;
-input double SORT_RATIO = 16;
-input double SCAN_RATIO = 2.5;
+input ENUM_TF TF = TF_H01;
+input bool ENABLE_USD = true;
+input bool ENABLE_EUR = true;
+input bool ENABLE_JPY = true;
+input bool ENABLE_GBP = true;
+input bool ENABLE_CHF = true;
+input bool ENABLE_CAD = true;
+input bool ENABLE_AUD = true;
+input bool ENABLE_NZD = true;
+input double START_DAYS = 0.25;
+input double SORT_RATIO = 4.0;
+input double SCAN_RATIO = 5.0;
+input double POWER_ENTRY = 1.0;
 input double BB_DAYS = 5;
 input double BB_STOPLOSS_RATIO = 1.0;
 input double BB_TRAILING_START_RATIO = 0.3;
 input double BB_TRAILING_STEP_RATIO = 0.5;
-input double LOTS = 0.01;
 input double ACCOUNT_TRAILING_RATIO = 0.05;
-input double ACCOUNT_TAKEPROFIT_RATIO = 0.80;
+input double ACCOUNT_TAKEPROFIT_RATIO = 0.50;
 input double ACCOUNT_STOPLOSS_RATIO = 0.05;
 
+sinput double LOTS = 0.01;
 sinput double TRADE_STOP_PERCENTAGE = 10.0;
 
 sinput int MAGIC = 20220813;
@@ -49,17 +58,24 @@ sinput int SLIPPAGE = 10;
 #define BB_BARS (int)(24 * 3600 * BB_DAYS / PeriodSeconds(PERIOD))
 #define TREND_BARS (int)(24 * 3600 * TREND_DAYS / PeriodSeconds(PERIOD))
 
-enum SYMBOL_INDEX { EUR, USD, JPY, CHF, GBP, AUD, CAD, NZD, MAX_SYMBOLS };
-const string SYMBOL_NAMES[] = { "EUR", "USD", "JPY", "CHF", "GBP", "AUD", "CAD", "NZD" };
+string SYMBOL_NAMES[];
+#define MAX_SYMBOLS ArraySize(SYMBOL_NAMES)
+void ADD_SYMBOL_NAMES(bool enabled, string name)
+{
+    if (!enabled) { return; }
+    ArrayResize(SYMBOL_NAMES, MAX_SYMBOLS + 1, MAX_SYMBOLS);
+    SYMBOL_NAMES[MAX_SYMBOLS - 1] = name;
+}
 
-struct SYMBOL_INFO {
+class SYMBOL_INFO MQL45_DERIVERED {
+public:
     string Name;
     double Powers[];
     double Power;
     double FirstPower;
     double P;
-    double R;
-    double S;
+    double R[3];
+    double S[3];
     int Sign;
 
     static void Sort(SYMBOL_INFO& array[]) {
@@ -79,43 +95,65 @@ struct SYMBOL_INFO {
         if (MathAbs(Value1.Power) != MathAbs(Value2.Power)) {
             return MathAbs(Value1.Power) > MathAbs(Value2.Power) ? +1 : -1;
         }
-        if (MathAbs(Value1.R) != MathAbs(Value2.R)) {
-            return MathAbs(Value1.R) > MathAbs(Value2.R) ? +1 : -1;
+        if (MathAbs(Value1.R[0]) != MathAbs(Value2.R[0])) {
+            return MathAbs(Value1.R[0]) > MathAbs(Value2.R[0]) ? +1 : -1;
         }
-        if (MathAbs(Value1.S) != MathAbs(Value2.S)) {
-            return MathAbs(Value1.S) > MathAbs(Value2.S) ? +1 : -1;
+        if (MathAbs(Value1.R[1]) != MathAbs(Value2.R[1])) {
+            return MathAbs(Value1.R[1]) > MathAbs(Value2.R[1]) ? +1 : -1;
         }
-        if (MathAbs(Value1.P) != MathAbs(Value2.P)) {
-            return MathAbs(Value1.P) > MathAbs(Value2.P) ? +1 : -1;
+        if (MathAbs(Value1.S[0]) != MathAbs(Value2.S[0])) {
+            return MathAbs(Value1.S[0]) > MathAbs(Value2.S[0]) ? +1 : -1;
+        }
+        if (MathAbs(Value1.S[1]) != MathAbs(Value2.S[1])) {
+            return MathAbs(Value1.S[1]) > MathAbs(Value2.S[1]) ? +1 : -1;
         }
         return 0;
     }
 
     void Caliculate() {
-        P = iTrueTrend(Name, PERIOD, START_BARS, 0);
-        R = iCorrelation(Name, PERIOD, SCAN_BARS, 0);
-        S = iTrend(Name, PERIOD, SCAN_BARS, 0);
+        R[0] = iCorrelation(Name, PERIOD, START_BARS);
+        if (R[0] == 0.0) { return; }
+        S[0] = iTrend(Name, PERIOD, START_BARS);
+        if (S[0] == 0.0) { return; }
+        R[1] = iCorrelation(Name, PERIOD, SORT_BARS);
+        if (R[1] == 0.0) { return; }
+        S[1] = iTrend(Name, PERIOD, SORT_BARS);
+        if (S[1] == 0.0) { return; }
+        R[2] = iCorrelation(Name, PERIOD, SCAN_BARS);
+        if (R[2] == 0.0) { return; }
+        S[2] = iTrend(Name, PERIOD, SCAN_BARS);
+        if (S[2] == 0.0) { return; }
 
         int n = ArraySize(Powers);
-        int N = SORT_BARS;
+        int N = SCAN_BARS;
         if (n < N) {
             ArrayResize(Powers, n + 1, n);
             ++n;
         }
         ArrayCopy(Powers, Powers, 1, 0, n - 1);
-        Powers[0] = P * MathAbs(::Sign(P) == ::Sign(R) ? R : 0) * MathAbs(::Sign(P) == ::Sign(S) ? S : 0);
+        if (Sgn(R[0]) == Sgn(R[1]) && Sgn(R[0]) == Sgn(R[2]) && Sgn(R[0]) == Sgn(S[0]) && Sgn(R[0]) == Sgn(S[1]) && Sgn(R[0]) == Sgn(S[2])) {
+            //P = R[0] * MathAbs(R[1]) * MathAbs(R[2]) * MathPow(MathAbs(S[0] * S[1] * S[2]), 1.0 / 3.0);
+            P = R[2] * MathPow(MathAbs(S[0] * S[1] * S[2]), 1.0 / 3.0);
+        }
+        else {
+            P = 0;
+        }
+        Powers[0] = P;
         if (n < N) {
             Power = 0;
             Sign = 0;
             return;
         }
         
-        double powers[];
-        ArrayResize(powers, N);
-        ArrayCopy(powers, Powers);
-        ArraySort(powers);
-        Power = powers[N / 2];
-        if (MathAbs(Power) > 25) {
+        Power = iSMA(Powers, N);
+        if (Sgn(Power) == Sgn(P)) {
+            Power *= MathAbs(R[0]);
+        }
+        else {
+            Power = 0;
+        }
+
+        if (MathAbs(Power) > POWER_ENTRY) {
             Sign = Power > 0 ? +1 : -1;
         }
         else {
@@ -124,7 +162,7 @@ struct SYMBOL_INFO {
     }
 
     string ToString(int i) {
-        return StringFormat("(%02d) %s %+08.3f  %+07.3f  %+05.3f  %+07.3f \n", i + 1, Name, Power, P, R, S);
+        return StringFormat("(%02d) %s %+06.1f %+04.2f %+04.2f %+04.2f %+06.1f %+06.1f %+06.1f \n", i + 1, Name, Power, R[0], R[1], R[2], S[0], S[1], S[2]);
     }
 };
 
@@ -152,6 +190,15 @@ int OnInit()
 {
     InitMargin = RemainingMargin();
 
+    ADD_SYMBOL_NAMES(ENABLE_USD, "USD");
+    ADD_SYMBOL_NAMES(ENABLE_EUR, "EUR");
+    ADD_SYMBOL_NAMES(ENABLE_JPY, "JPY");
+    ADD_SYMBOL_NAMES(ENABLE_GBP, "GBP");
+    ADD_SYMBOL_NAMES(ENABLE_CHF, "CHF");
+    ADD_SYMBOL_NAMES(ENABLE_CAD, "CAD");
+    ADD_SYMBOL_NAMES(ENABLE_AUD, "AUD");
+    ADD_SYMBOL_NAMES(ENABLE_NZD, "NZD");
+
     SYMBOLS = 0;
     for (int i = 0; i < MAX_SYMBOLS; ++i) {
         for (int j = i + 1; j < MAX_SYMBOLS; ++j) {
@@ -166,10 +213,11 @@ int OnInit()
             }
             ArrayResize(Symbols, SYMBOLS + 1, SYMBOLS);
             Symbols[SYMBOLS].Name = symbol;
-            //ArrayResize(Symbols[N].Trend, START_BARS);
             ++SYMBOLS;
         }
     }
+
+    ActiveLabel::POSITION_X = 550;
 
     return INIT_SUCCEEDED;
 }
@@ -198,12 +246,8 @@ void OnTick()
         prev_trailing_bar = current_trailing_bar;
 
         if (PositionLots != 0) {
-            //int sign = PositionLots > 0 ? +1 : -1;
-            //double trend0 = sign * iTrend(CurrentSymbol, PERIOD, TREND_BARS * 1, 0);
-            //double trend1 = sign * iTrend(CurrentSymbol, PERIOD, TREND_BARS * 5, 0);
-        
             double TrailingStartProfit = RemainingMargin() * ACCOUNT_TRAILING_RATIO;
-            if (/*trend0 < 0 &&*/ TrailingStartProfit < ExpertAdviserProfit && ExpertAdviserProfit < ACCOUNT_TAKEPROFIT_RATIO * MaxExpertAdviserProfit) {
+            if (TrailingStartProfit < ExpertAdviserProfit && ExpertAdviserProfit < ACCOUNT_TAKEPROFIT_RATIO * MaxExpertAdviserProfit) {
                 ClosePositionAll(LastEntrySymbol, "takeprofit");
             }
             if (ExpertAdviserProfit < -ACCOUNT_STOPLOSS_RATIO * RemainingMargin()) {
@@ -248,7 +292,11 @@ void OnTick()
     }
     ActiveLabel::Comment(comment);
 
-    if (Sign(Symbols[0].FirstPower) != Sign(Symbols[0].Power)) {
+    if (symbol != CurrentSymbol) {
+        ClosePositionAll(symbol, "symbol");
+    }
+
+    if (Sgn(Symbols[0].FirstPower) != Sgn(Symbols[0].Power)) {
         ClosePositionAll(symbol, StringFormat("[%+.3f/%+.3f]", Symbols[0].FirstPower, Symbols[0].Power));
     }
 
@@ -259,9 +307,6 @@ void OnTick()
             return;
         }
 
-        if (symbol != CurrentSymbol && ExpertAdviserProfit < 0) {
-            ClosePositionAll(symbol, "symbol");
-        }
         if (sign == 0) {
             return;
         }
@@ -448,150 +493,7 @@ void GetPositionLots()
 
 MQL45_APPLICATION_END()
 
-//+------------------------------------------------------------------+
-//| 傾きの算出                                                       |
-//+------------------------------------------------------------------+
-/*
-double iTrend(const double& value[], int N = 0)
-{
-    double sum_xy = 0;
-    double sum_xx = 0;
-    double sum_x = 0;
-    double sum_y = 0;
-    if (N < 1) { N = ArraySize(value); }
-    for (int i = 0; i < N; ++i) {
-        double x = -i;
-        double y = value[i];
-        sum_xx += x * x;
-        sum_xy += x * y;
-        sum_x += x;
-        sum_y += y;
-    }
-    double diff_xy = N * sum_xy - sum_x * sum_y;
-    double diff_xx = N * sum_xx - sum_x * sum_x;
-    if (diff_xx == 0.0) { return 0.0; }
-    double trend = diff_xy / diff_xx;
-    return trend;
-}
-*/
-
-//+------------------------------------------------------------------+
-//| 傾きの算出                                                       |
-//+------------------------------------------------------------------+
-double iTrend(string symbol, ENUM_TIMEFRAMES tf, int N, int shift)
-{
-    double sum_xy = 0;
-    double sum_xx = 0;
-    double sum_x = 0;
-    double sum_y = 0;
-    double y1 = 0;
-    int minutes = PeriodSeconds(tf) / 60;
-    for (int i = 0; i < N; ++i) {
-        double x = -i * minutes;
-        double y = ::iOpen(symbol, tf, i + shift);
-        if (y == 0.0) { return 0.0; }
-        if (i == N - 1) { y1 = y; }
-        sum_xx += x * x;
-        sum_xy += x * y;
-        sum_x += x;
-        sum_y += y;
-    }
-    double diff_xy = N * sum_xy - sum_x * sum_y;
-    double diff_xx = N * sum_xx - sum_x * sum_x;
-    if (diff_xx == 0.0) { return 0.0; }
-    double trend = diff_xy / diff_xx;
-    double spread = SymbolInfoDouble(symbol, SYMBOL_ASK) - SymbolInfoDouble(symbol, SYMBOL_BID);
-    return trend / spread * N;
-}
-
-//+------------------------------------------------------------------+
-//| 相関係数の算出                                                   |
-//+------------------------------------------------------------------+
-/*
-double iCorrelation(const double& value[], int N = 0)
-{
-    if (N < 1) { N = ArraySize(value); }
-    double sum_y = 0;
-    double sum_x = 0;
-    for (int i = 0; i < N; ++i) {
-        double x = -i;
-        double y = value[i];
-        sum_y += y;
-        sum_x += x;
-    }
-    double avr_y = sum_y / N;
-    double avr_x = sum_x / N;
-
-    double sum_xy = 0;
-    double sum_xx = 0;
-    double sum_yy = 0;
-    for (int i = 0; i < N; ++i) {
-        double x = (-i) - avr_x;
-        double y = value[i] - avr_y;
-        sum_xy += x * y;
-        sum_xx += x * x;
-        sum_yy += y * y;
-    }
-
-    double r = (sum_xx * sum_yy == 0) ? 0 : sum_xy / MathSqrt(sum_xx * sum_yy);
-    return r;
-}
-*/
-
-//+------------------------------------------------------------------+
-//| 相関係数の算出                                                   |
-//+------------------------------------------------------------------+
-double iCorrelation(string symbol, ENUM_TIMEFRAMES tf, int N, int shift)
-{
-    double sum_y = 0;
-    double sum_x = 0;
-    for (int i = 0; i < N; ++i) {
-        double x = -i;
-        double y = ::iOpen(symbol, tf, i + shift);
-        sum_y += y;
-        sum_x += x;
-    }
-    double avr_y = sum_y / N;
-    double avr_x = sum_x / N;
-
-    double sum_xy = 0;
-    double sum_xx = 0;
-    double sum_yy = 0;
-    for (int i = 0; i < N; ++i) {
-        double x = (-i) - avr_x;
-        double y = ::iOpen(symbol, tf, i + shift) - avr_y;
-        sum_xy += x * y;
-        sum_xx += x * x;
-        sum_yy += y * y;
-    }
-
-    double r = (sum_xx * sum_yy == 0) ? 0 : sum_xy / MathSqrt(sum_xx * sum_yy);
-    return r;
-}
-
-//+------------------------------------------------------------------+
-//| 傾きの算出                                                       |
-//+------------------------------------------------------------------+
-/*
-double iTrueTrend(const double& value[], int N = 0)
-{
-    double trend = iTrend(value, N);
-    double R = 1;//iCorrelation(value, N);
-    return MathAbs(R) * trend;
-}
-*/
-
-//+------------------------------------------------------------------+
-//| 傾きの算出                                                       |
-//+------------------------------------------------------------------+
-double iTrueTrend(string symbol, ENUM_TIMEFRAMES tf, int N, int shift)
-{
-    double trend = iTrend(symbol, tf, N, shift);
-    double R = iCorrelation(symbol, tf, N, shift);
-    return MathAbs(R) * trend;
-}
-
-int Sign(double value)
+int Sgn(double value)
 {
     if (value > 0) { return +1; }
     if (value < 0) { return -1; }
