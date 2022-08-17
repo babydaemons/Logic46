@@ -43,7 +43,7 @@ input string            SYMBOLS = "USDJPY;EURUSD";
 input E_TIMEFRAMES      TF = TIMEFRAME_H04;
 input double            INIT_MARGIN = 100000;
 input double            MIN_MARGIN_LEVEL = 1500.0;
-input double            PYLAMIDDING_POWER = 2.0;
+input double            PYLAMIDDING_POWER = 2.8;
 input bool              NANPIN_ENABLED = false;
 
 input int               BAR_SCAN_BARS = 6;
@@ -56,7 +56,7 @@ input int               TOTAL_SCAN_BARS = 3;
 
 input int               BB_DAYS1 = 20.0;
 input int               BB_MULTI = 12;
-input double            BB_ENTRY = 0.175;
+input double            BB_ENTRY = 0.3;
 
 input int               RSI_BARS = 48;
 input int               RSI_SCAN_BARS = 3;
@@ -64,8 +64,8 @@ input double            RSI_ENTRY = 25.0;
 
 input int               BB_SCAN_BARS = 2;
 input double            BB_TRAILING_RATIO = 0.5;
-input double            BB_STOPLOSS_RATIO = 8.0;
-input double            BB_RISKREWARD_RATIO = 0.5;
+input double            BB_STOPLOSS_RATIO = 1.0;
+input double            BB_RISKREWARD_RATIO = 3.5;
 
 input double            ACCOUNT_TRAILING_RATIO = 0.25;
 input double            ACCOUNT_TAKEPROFIT_RATIO = 0.70;
@@ -469,7 +469,12 @@ protected:
             lots = LOT;
             lots *= MathMax(MathFloor(position_count * compound_interest), 1.0);
         }
-        ActiveLabel::Comment(StringFormat("ProfitMargin: %.0f\nMarginLevel: %.2f\n%%", RemainingMargin() - _init_margin, AccountInfoDouble(ACCOUNT_MARGIN_LEVEL)));
+
+        string msg = TimeToString(TimeCurrent()) + " \n";
+        msg += StringFormat("ProfitMargin: %.0f \n", RemainingMargin() - _init_margin);
+        msg += StringFormat("MarginLevel: %.2f%% \n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
+        ActiveLabel::Comment(msg);
+
         return type;
     }
 
