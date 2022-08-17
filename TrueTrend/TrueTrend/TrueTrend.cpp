@@ -1,17 +1,17 @@
 #include <math.h>
 
 extern "C" {
-    __declspec(dllexport) double _stdcall ArrayTrueTrend(const double value[], int periodseconds, double spread, int N);
+    __declspec(dllexport) double _stdcall ArrayTrueTrend(const double value[], int periodseconds, double power, double spread, int N);
     __declspec(dllexport) double _stdcall ArrayTrend(const double value[], int periodseconds, double spread, int N);
     __declspec(dllexport) double _stdcall ArrayCorrelation(const double value[], int periodseconds, double spread, int N);
     __declspec(dllexport) double _stdcall iSMA(const double value[], int N);
 }
 
-__declspec(dllexport) double _stdcall ArrayTrueTrend(const double value[], int periodseconds, double spread, int N)
+__declspec(dllexport) double _stdcall ArrayTrueTrend(const double value[], int periodseconds, double power, double spread, int N)
 {
     double trend = ArrayTrend(value, periodseconds, spread, N);
     double r = ArrayCorrelation(value, periodseconds, spread, N);
-    return fabs(r) * trend;
+    return fabs(pow(r, power)) * trend;
 }
 
 __declspec(dllexport) double _stdcall ArrayTrend(const double value[], int periodseconds, double spread, int N)

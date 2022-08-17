@@ -8,7 +8,7 @@
 #property version   "1.00"
 
 #import "TrueTrend.dll"
-    double ArrayTrueTrend(const double& value[], int periodseconds, double spread, int N);
+    double ArrayTrueTrend(const double& value[], int periodseconds, double power, double spread, int N);
     double ArrayTrend(const double& value[], int periodseconds, double spread, int N);
     double ArrayCorrelation(const double& value[], int periodseconds, double spread, int N);
     double iSMA(const double& value[], int N);
@@ -41,11 +41,11 @@ double iCorrelation(string symbol, ENUM_TIMEFRAMES tf, int N)
 //+------------------------------------------------------------------+
 //| 傾きの算出                                                       |
 //+------------------------------------------------------------------+
-double iTrueTrend(string symbol, ENUM_TIMEFRAMES tf, int N, int shift)
+double iTrueTrend(string symbol, ENUM_TIMEFRAMES tf, double power, int N)
 {
     double value[];
     int n = CopyOpen(symbol, tf, 0, N, value);
     int periodseconds = PeriodSeconds(tf);
     double spread = SymbolInfoDouble(symbol, SYMBOL_ASK) - SymbolInfoDouble(symbol, SYMBOL_BID);
-    return ArrayTrueTrend(value, periodseconds, spread, n);
+    return ArrayTrueTrend(value, periodseconds, power, spread, n);
 }
