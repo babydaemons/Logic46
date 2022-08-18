@@ -141,8 +141,8 @@ int MQL45::OrderSend(string symbol, int cmd, double volume, double price, int sl
         _MQL45_trader.Request(request);
         double tp_points = (request.tp != 0) ? (request.tp - request.price) / point : 0;;
         double sl_points = (request.sl != 0) ? (request.sl - request.price) / point : 0;;
-        Alert(StringFormat("[%s ERROR %d]%s: PRICE:%s / TP:(%s)%.0f / SL:(%s)%.0f / STOP_LEVEL:%d",
-            EnumToString(request.type), _MQL45_trader.ResultRetcode(), _MQL45_trader.ResultComment(),
+        Alert(StringFormat("[%s ERROR %d]%s: VOLUME:%.2f / PRICE:%s / TP:(%s)%.0f / SL:(%s)%.0f / STOP_LEVEL:%d",
+            EnumToString(request.type), _MQL45_trader.ResultRetcode(), _MQL45_trader.ResultComment(), volume,
             DoubleToString(request.price, digits), DoubleToString(request.tp, digits), tp_points, DoubleToString(request.sl, digits), sl_points,
             (int)SymbolInfoInteger(symbol, SYMBOL_TRADE_STOPS_LEVEL)));
         return -1;
