@@ -15,7 +15,7 @@ sinput double   LOTS = 0.01;
 sinput int      MAGIC = 20220830;
 sinput int      SLIPPAGE = 10;
 
-#define BARS (24)
+#define BARS (24 * 5)
 #define TIMEFRAMES ArraySize(timeframes)
 
 #define MQL45_BARS 2
@@ -32,9 +32,12 @@ ENUM_TIMEFRAMES timeframes[] = {
     //PERIOD_M15,
     //PERIOD_M30,
     PERIOD_H1,
-    //PERIOD_H2,
+    PERIOD_H2,
+    PERIOD_H3,
     PERIOD_H4,
-    //PERIOD_H8,
+    PERIOD_H6,
+    PERIOD_H8,
+    PERIOD_H12,
     PERIOD_D1,
     //PERIOD_W1,
 };
@@ -51,7 +54,7 @@ enum ENUM_VALUE_TYPES {
     MAX_TYPE
 };
 
-const int HIST_BARS = 4 * PeriodSeconds(PERIOD_W1) / PeriodSeconds(timeframes[0]);
+const int HIST_BARS = 3 * 4 * PeriodSeconds(PERIOD_W1) / PeriodSeconds(timeframes[0]);
 
 //--- the number of indicator buffer for storage Open
 #define  HA_OPEN     0
@@ -117,19 +120,23 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
+/*
     static long prev_minute = 0;
     long current_minute = TimeCurrent() / 60;
     if (current_minute > prev_minute) {
         prev_minute = current_minute;
         TrailingStop();
     }
+*/
 
-    static long prev_day = 0;
-    long current_day = TimeCurrent() / PeriodSeconds(PERIOD_D1);
-    if (current_day > prev_day) {
-        prev_day = current_day;
-        if (!Clustering(TimeCurrent())) {
-            return;
+    static long prev_wday = -1;
+    long current_wday = DayOfWeek();
+    if (current_wday != prev_wday) {
+        prev_wday = current_wday;
+        if (current_wday == 1) {
+            if (!Clustering(TimeCurrent())) {
+                return;
+            }
         }
     }
 
@@ -159,7 +166,7 @@ void Trade()
 
 /*
     static double prev_correlation;
-    double current_correlation = norm[TYPE_CORRELATION * TIMEFRAMES + 4];
+    double current_correlation = norm[TYPE_CORRELATION * TIMEFRAMES + 0];
     if (Sgn(prev_correlation) != Sgn(current_correlation)) {
         ClosePositionAll();
     }
@@ -194,19 +201,19 @@ void Trade()
 
     CloseLimitPosition(entry);
 
-    if (p_max < 500) {
+    if (p_max < 50) {
         return;
     }
 
-    SL = norm[0];
+    SL = 0 * norm[0] / 4;
     string comment = IntegerToString(PeriodSeconds(timeframes[k_max]) / 3600);
     if (entry == OP_BUY) {
-        double sl = NormalizeDouble(Bid - SL, Digits);
+        double sl = SL > 0 ? NormalizeDouble(Bid - SL, Digits) : 0;
         if (!OrderSend(Symbol(), OP_BUY, LOTS, Ask, SLIPPAGE, sl, 0, comment, MAGIC, 0, clrBlue)) {
             Alert(StringFormat("ERROR: OrderSend(OP_BUY) FAILED: %d", GetLastError()));
         }
     } else if (entry == OP_SELL) {
-        double sl = NormalizeDouble(Ask + SL, Digits);
+        double sl = SL > 0 ? NormalizeDouble(Ask + SL, Digits) : 0;
         if (!OrderSend(Symbol(), OP_SELL, LOTS, Bid, SLIPPAGE, sl, 0, comment, MAGIC, 0, clrRed)) {
             Alert(StringFormat("ERROR: OrderSend(OP_BUY) FAILED: %d", GetLastError()));
         }
@@ -602,11 +609,18 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
         }
     }
     if (type == TYPE_ADX) {
+        double adx[];
+        ArrayResize(adx, N + 1);
         double d1[];
         ArrayResize(d1, N + 1);
         double d0[];
         ArrayResize(d0, N + 1);
         for (int i = 0; i < N + 1; ++i) {
+            adx[N - i] = iADX(Symbol(), tf, 14, PRICE_OPEN, MODE_MAIN, k + i);
+            if (adx[N - i] == 0) {
+                Alert(StringFormat("ERROR: iADX(%s) FAILD: %d", EnumToString(tf), GetLastError()));
+                return false;
+            }
             d1[N - i] = iADX(Symbol(), tf, 14, PRICE_OPEN, MODE_PLUSDI, k + i);
             if (d1[N - i] == 0) {
                 Alert(StringFormat("ERROR: iADX(%s) FAILD: %d", EnumToString(tf), GetLastError()));
@@ -619,8 +633,10 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             }
         }
         for (int i = 0; i < N; ++i) {
-            x[i] = d1[i] - d0[i];
+            x[i] = adx[i] * (d1[i] - d0[i]);
         }
+        norm = x.Norm(VECTOR_NORM_INF);
+        x /= norm;
     }
 */
 
