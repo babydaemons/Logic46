@@ -11,13 +11,13 @@
 #import "KTraderEA.dll"
 
 //--- input parameters
-const int       CLUSTERS = 3;
-const int       HIST_BARS = 260;
+const int       CLUSTERS = 9;
+const int       HIST_BARS = 10 * 52;
 sinput double   LOTS = 0.01;
 sinput int      MAGIC = 20220830;
 sinput int      SLIPPAGE = 10;
 
-#define BARS (240)
+#define BARS (52)
 #define TIMEFRAMES ArraySize(timeframes)
 
 #define MQL45_BARS 2
@@ -25,12 +25,12 @@ sinput int      SLIPPAGE = 10;
 #include "ActiveLabel.mqh"
 #include "TrueTrend.mqh"
 
-const int     CORRELATION_BARS = 48;
+const int     CORRELATION_BARS = BARS;
 sinput string MODULE = "KTrader.exe";
 sinput string COMMON_DIR = "C:\\Users\\shingo\\AppData\\Roaming\\MetaQuotes\\Terminal\\Common\\Files";
 
 #define USE_HEIKIN_ASHI
-#define USE_ADX
+//#define USE_ADX
 //#define USE_RSI
 //#define USE_MACD
 #define USE_CORRELATION
@@ -40,6 +40,7 @@ ENUM_TIMEFRAMES timeframes[] = {
     //PERIOD_M2,
     //PERIOD_M3,
     //PERIOD_M4,
+/*
     PERIOD_M5,
     PERIOD_M6,
     PERIOD_M12,
@@ -53,11 +54,13 @@ ENUM_TIMEFRAMES timeframes[] = {
     PERIOD_H6,
     PERIOD_H8,
     PERIOD_H12,
+*/
     PERIOD_D1,
     PERIOD_W1,
+    PERIOD_MN1,
 };
 
-#define TRADE_TF_INDEX 6
+#define TRADE_TF_INDEX 2
 
 enum ENUM_VALUE_TYPES {
     TYPE_SD,
@@ -104,8 +107,10 @@ double SL;
 
 struct TF_ITEM {
     datetime         t0;
+#ifdef USE_SD
     int              hSD;
     double           sd[];
+#endif
 #ifdef USE_HEIKIN_ASHI
     int              hHeikinAshi;
     double           open[];
@@ -169,7 +174,9 @@ int OnInit()
     ActiveLabel::POSITION_X = 200;
 
     for (int i = 0; i < TIMEFRAMES; ++i) {
+#ifdef USD_SD
         TF[i].hSD = iStdDev(Symbol(), timeframes[i], 24, 0, MODE_SMA, PRICE_OPEN);
+#endif
 #ifdef USE_HEIKIN_ASHI
         TF[i].hHeikinAshi = iCustom(Symbol(), timeframes[i], "Examples\\Heiken_Ashi");
 #endif
@@ -260,7 +267,7 @@ void OnTick()
     }
 
     static long prev_trade = 0;
-    long current_trade = TimeCurrent() / PeriodSeconds(PERIOD_H4);
+    long current_trade = TimeCurrent() / PeriodSeconds(PERIOD_H1);
     if (current_trade > prev_trade) {
         prev_trade = current_trade;
         Trade();
@@ -322,13 +329,11 @@ void Trade()
         return;
     }
 
-    if (p_max < 25.0) {
+    if (p_max < 0.5) {
         return;
     }
 
-    double SD0[];
-    CopyBuffer(TF[TRADE_TF_INDEX].hSD, MAIN_LINE, 0, 1, SD0);
-    SL = 3 * SD0[0];
+    SL = MathAbs(TF[0].high[BARS - 1] - TF[0].low[BARS - 1]) * 3;
     string comment = IntegerToString(PeriodSeconds(timeframes[l_max]) / 3600);
     if (entry == OP_BUY) {
         double sl = SL > 0 ? NormalizeDouble(Bid - SL, Digits) : 0;
@@ -503,9 +508,10 @@ int iX;
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void Append(double x, ENUM_TIMEFRAMES tf)
+void Append(double x, ENUM_TIMEFRAMES tf, int type)
 {
-    double x1 = x * (MathLog10((double)PeriodSeconds(tf) / PeriodSeconds(timeframes[0])) + 1.0);
+    double M = MathLog10((double)PeriodSeconds(tf) / PeriodSeconds(timeframes[0])) + 1.0;
+    double x1 = type > 0 ? x * M : x / M;
     if (MathAbs(x1) > 10000) {
         DebugBreak();
     }
@@ -624,7 +630,7 @@ bool GetVector(datetime T0, int K, int N)
         for (int i = 0; i < TIMEFRAMES; ++i) {
             double pC = ::iOpen(Symbol(), timeframes[i], k[i] + 1);
             double pF = ::iOpen(Symbol(), timeframes[i], k[i] + 0);
-            Append((pF - pC) / pC * 10000.0, timeframes[0]);
+            Append((pF - pC) / pC * 10000.0, timeframes[0], -1);
         }
     }
 
@@ -646,10 +652,12 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
     datetime t = ::iTime(Symbol(), tf, k + N);
     if (t > TF[tf_index].t0) {
         TF[tf_index].t0 = t;
+#ifdef USE_SD
         if (CopyBuffer(TF[tf_index].hSD, MAIN_LINE, t, NN, TF[tf_index].sd) != NN) {
             //printf("ERROR: HA_OPEN(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
+#endif
 #ifdef USE_HEIKIN_ASHI
         if (CopyBuffer(TF[tf_index].hHeikinAshi, HA_OPEN, t, NN, TF[tf_index].open) != NN) {
             //printf("ERROR: HA_OPEN(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
@@ -714,6 +722,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
 #endif
     }
 
+#ifdef USE_SD
     if (type == TYPE_SD) {
         if (ArraySize(TF[tf_index].sd) < NN) {
             //printf("ERROR: SD(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
@@ -728,7 +737,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             Append(sdr, tf);
         }
     }
-
+#endif
 #ifdef USE_HEIKIN_ASHI
     if (type == TYPE_HEIKIN_ASHI0) {
         if (ArraySize(TF[tf_index].open) < NN) {
@@ -736,7 +745,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 1; i < NN; ++i) {
-            Append((TF[tf_index].open[i] - TF[tf_index].open[i - 1]) / x0, tf);
+            Append((TF[tf_index].open[i] - TF[tf_index].open[i - 1]) / x0, tf, +1);
         }
     }
 
@@ -750,7 +759,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 1; i < NN; ++i) {
-            Append((TF[tf_index].close[i] - TF[tf_index].open[i]) / x0, tf);
+            Append((TF[tf_index].close[i] - TF[tf_index].open[i]) / x0, tf, +1);
         }
     }
     if (type == TYPE_HEIKIN_ASHI2) {
@@ -763,7 +772,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 1; i < NN; ++i) {
-            Append((TF[tf_index].high[i] - TF[tf_index].close[i]) / x0, tf);
+            Append((TF[tf_index].high[i] - TF[tf_index].close[i]) / x0, tf, +1);
         }
     }
     if (type == TYPE_HEIKIN_ASHI3) {
@@ -776,7 +785,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 1; i < NN; ++i) {
-            Append((TF[tf_index].open[i] - TF[tf_index].low[i]) / x0, tf);
+            Append((TF[tf_index].open[i] - TF[tf_index].low[i]) / x0, tf, +1);
         }
     }
 #endif
@@ -882,7 +891,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 0; i < N; ++i) {
-            Append(X1[i], tf);
+            Append(5 * X1[i], tf, +1);
         }
     }
 #endif
