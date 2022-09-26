@@ -149,6 +149,7 @@ MQL45_APPLICATION_START()
 
 vector History[];
 vector Profit[];
+double lots[2];
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -220,7 +221,6 @@ void OnTick()
         ++scanned_bars;
     }
 
-    double lots[2];
     GetPositionCount(lots);
 
     string msg = "";
@@ -246,7 +246,7 @@ void OnTick()
     }
 
     static long prev_minute = 0;
-    long current_minute = t / 60;
+    long current_minute = t / 3600;
     if (current_minute > prev_minute) {
         prev_minute = current_minute;
         TrailingStop();
@@ -295,6 +295,9 @@ void Trade()
         x0[i] = X[i];
     }
 
+    double latest_bar = TF[0].high[BARS - 1] - TF[0].low[BARS - 1];
+    ClosePositionSide(latest_bar > 0 ? OP_SELL : OP_BUY);
+
     double performance = 0;
     int k_min = 0;
     double d_min = +FLT_MAX;
@@ -321,7 +324,7 @@ void Trade()
         }
     }
 
-    if (CloseLimitPosition(entry)) {
+    if (CloseMinProfit(entry)) {
         return;
     }
 
@@ -333,7 +336,7 @@ void Trade()
         return;
     }
 
-    SL = MathAbs(TF[0].high[BARS - 1] - TF[0].low[BARS - 1]) * 3;
+    SL = MathAbs(latest_bar) * 2;
     string comment = IntegerToString(PeriodSeconds(timeframes[l_max]) / 3600);
     if (entry == OP_BUY) {
         double sl = SL > 0 ? NormalizeDouble(Bid - SL, Digits) : 0;
@@ -389,7 +392,7 @@ void TrailingStop()
 //+------------------------------------------------------------------+
 //| 全ポジションクローズ                                             |
 //+------------------------------------------------------------------+
-bool CloseLimitPosition(int entry)
+bool CloseMinProfit(int entry)
 {
     double min_profit = +FLT_MAX;
     int min_ticket = -1;
@@ -464,6 +467,37 @@ void ClosePositionAll()
 }
 
 //+------------------------------------------------------------------+
+//| 片側ポジションクローズ                                           |
+//+------------------------------------------------------------------+
+void ClosePositionSide(int type)
+{
+    for (int i = OrdersTotal() - 1; i >= 0; --i) {
+        if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            continue;
+        }
+        if (OrderMagicNumber() != MAGIC) {
+            continue;
+        }
+        if (OrderSymbol() != Symbol()) {
+            continue;
+        }
+        if (OrderType() != type) {
+            continue;
+        }
+
+        int ticket = OrderTicket();
+        double price = OrderType() == OP_BUY ? Bid : Ask;
+        double lots = OrderLots();
+        color arrow = OrderType() == OP_BUY ? clrRed : clrBlue;
+        double profit = OrderProfit() + OrderSwap();
+        OrderCloseComment(StringFormat("%+.0f", profit));
+        if (!OrderClose(ticket, lots, price, SLIPPAGE, arrow)) {
+            //printf("ERROR: OrderClose(#%d) FAILED: %d", ticket, GetLastError());
+        }
+    }
+}
+
+//+------------------------------------------------------------------+
 //| ポジション数のカウント                                           |
 //+------------------------------------------------------------------+
 int GetPositionCount(double& lots[])
@@ -511,7 +545,10 @@ int iX;
 void Append(double x, ENUM_TIMEFRAMES tf, int type)
 {
     double M = MathLog10((double)PeriodSeconds(tf) / PeriodSeconds(timeframes[0])) + 1.0;
-    double x1 = type > 0 ? x * M : x / M;
+    double x1 = x;
+    if (type != 0) {
+        x1 = type > 0 ? x * M : x / M;
+    }
     if (MathAbs(x1) > 10000) {
         DebugBreak();
     }
@@ -891,7 +928,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 0; i < N; ++i) {
-            Append(5 * X1[i], tf, +1);
+            Append(10 * X1[i], tf, 0);
         }
     }
 #endif
