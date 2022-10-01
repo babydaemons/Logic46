@@ -11,13 +11,14 @@
 #import "KTraderEA.dll"
 
 //--- input parameters
-const int       CLUSTERS = 9;
-const int       HIST_BARS = 10 * 52;
+const int       CLUSTERS = 3;
+const int       HIST_BARS = 3 * 12;
 sinput double   LOTS = 0.01;
 sinput int      MAGIC = 20220830;
 sinput int      SLIPPAGE = 10;
 
-#define BARS (52)
+const int       BARS = 12;
+
 #define TIMEFRAMES ArraySize(timeframes)
 
 #define MQL45_BARS 2
@@ -143,12 +144,15 @@ struct TF_ITEM {
 };
 TF_ITEM TF[TIMEFRAMES];
 
+const int SCAN_BARS = HIST_BARS + BARS;
 int scanned_bars;
 
-MQL45_APPLICATION_START()
+double Performance;
 
 vector History[];
 vector Profit[];
+
+MQL45_APPLICATION_START()
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -229,6 +233,7 @@ void OnTick()
     msg += TimeToString(t, TIME_DATE) + "(" + wdays[TimeDayOfWeek(t)] + ") " + TimeToString(t, TIME_SECONDS) + "\n";
     msg += StringFormat("%.0f %+.0f %.0f%%\n", AccountBalance(), AccountProfit(), AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
     msg += StringFormat("%s L:%.2f S:%.2f\n", Symbol(), lots[0], lots[1]);
+    msg += StringFormat("期待利益：%+.4fbp\n", Performance);
     msg += StringFormat("進捗: %.3f%%\n", 100.0 * scanned_bars / HIST_BARS);
     ActiveLabel::Comment(msg);
 
@@ -241,7 +246,7 @@ void OnTick()
         return;
     }
 
-    if (AccountProfit() / RemainingBalance() < -0.05) {
+    if (RemainingBalance() + AccountProfit() < 10000) {
         ClosePositionAll();
     }
 
@@ -287,7 +292,7 @@ void Trade()
     ArrayResize(X, COLUMNS - TIMEFRAMES);
 
     int K = 0;
-    if (!GetVector(TimeCurrent(), BARS, K)) {
+    if (!GetVector(TimeCurrent(), K, BARS)) {
         return;
     }
     vector x0(ArraySize(X));
@@ -295,7 +300,6 @@ void Trade()
         x0[i] = X[i];
     }
 
-    double performance = 0;
     int k_min = 0;
     double d_min = +FLT_MAX;
     for (int k = 0; k < ArraySize(History); ++k) {
@@ -309,13 +313,13 @@ void Trade()
     }
 
     vector p0 = Profit[k_min];
-    double p_max = -FLT_MAX;
+    Performance = -FLT_MAX;
     int l_max = -1;
     int entry = 0;
     for (int l = 0; l < TIMEFRAMES; ++l) {
         double p = p0[l];
-        if (MathAbs(p) > p_max) {
-            p_max = MathAbs(p);
+        if (MathAbs(p) > Performance) {
+            Performance = MathAbs(p);
             l_max = l;
             entry = p > 0 ? OP_BUY : OP_SELL;
         }
@@ -329,11 +333,11 @@ void Trade()
         return;
     }
 
-    if (p_max < 0.5) {
+    if (Performance < 0.75) {
         return;
     }
 
-    SL = MathAbs(TF[0].high[BARS - 1] - TF[0].low[BARS - 1]) * 3;
+    SL = 100.0 / Ask * 2;
     string comment = IntegerToString(PeriodSeconds(timeframes[l_max]) / 3600);
     if (entry == OP_BUY) {
         double sl = SL > 0 ? NormalizeDouble(Bid - SL, Digits) : 0;
@@ -353,6 +357,7 @@ void Trade()
 //+------------------------------------------------------------------+
 void TrailingStop()
 {
+    int minute = TimeMinute(TimeCurrent());
     for (int i = OrdersTotal() - 1; i >= 0; --i) {
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
             continue;
@@ -361,9 +366,13 @@ void TrailingStop()
             continue;
         }
 
+        int ticket = OrderTicket();
+        if ((ticket % 60) != minute) {
+            continue;
+        }
+
         double TRAILING_START = SL / 3;
 
-        int ticket = OrderTicket();
         int type = OrderType();
         double entry = OrderOpenPrice();
         double price = type == OP_BUY ? Bid : Ask;
@@ -421,7 +430,7 @@ bool CloseLimitPosition(int entry)
         }
     }
 
-    if (min_ticket != -1 && min_profit < 0 && OrderSelect(min_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
+    if (min_ticket != -1 && OrderSelect(min_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         int ticket = OrderTicket();
         double price = OrderType() == OP_BUY ? Bid : Ask;
         double lots = OrderLots();
@@ -456,7 +465,7 @@ void ClosePositionAll()
         double lots = OrderLots();
         color arrow = OrderType() == OP_BUY ? clrRed : clrBlue;
         double profit = OrderProfit() + OrderSwap();
-        OrderCloseComment(StringFormat("%+.0f", profit));
+        OrderCloseComment(StringFormat("Account SL %+.0f", profit));
         if (!OrderClose(ticket, lots, price, SLIPPAGE, arrow)) {
             //printf("ERROR: OrderClose(#%d) FAILED: %d", ticket, GetLastError());
         }
