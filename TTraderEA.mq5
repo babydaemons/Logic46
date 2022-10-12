@@ -9,9 +9,9 @@
 #property strict
 
 //--- input parameters
-const int       SCAN_BARS1 = 3 * 20;
-const int       SCAN_BARS2 = 6 * 40;
-const double    SL_RATIO = 0.08;
+const int       SCAN_BARS1 = 4 * 20;
+const int       SCAN_BARS2 = 8 * 40;
+const double    SL_RATIO = 0.16;
 sinput double   LOTS = 0.01;
 sinput int      MAGIC = 20220830;
 sinput int      SLIPPAGE = 10;
