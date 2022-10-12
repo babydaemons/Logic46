@@ -37,6 +37,32 @@ public:
         Initialized = true;
     }
 
+    //+------------------------------------------------------------------+
+    //| 3桁おきにカンマ区切りの表記の文字列を返す                        |
+    //+------------------------------------------------------------------+
+    static string FormatComma(double number, int precision, string pcomma = ",", string ppoint = ".")
+    {
+    	string sign   = number >= 0 ? "+" : "-";
+        string snum   = DoubleToString(MathAbs(number), precision);
+        int    decp   = StringFind(snum, ".", 0);
+        string sright = StringSubstr(snum, decp + 1, precision);
+        string sleft  = StringSubstr(snum, 0, decp);
+        string formated = "";
+        string comma    = "";
+    
+        while (StringLen(sleft) > 3) {
+            int    length = StringLen(sleft);
+            string part   = StringSubstr(sleft, length - 3);
+            formated = part + comma + formated;
+            comma    = pcomma;
+            sleft    = StringSubstr(sleft, 0, length - 3);
+        }
+    
+        if (sleft != "")   formated = sleft + comma + formated;
+        if (precision > 0) formated = formated + ppoint + sright;
+        return(sign + formated);
+    }  
+
 private:
     //+------------------------------------------------------------------+
     //| プレフィックスで始まるオブジェクトを全削除する                   |
