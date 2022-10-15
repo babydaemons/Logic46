@@ -11,13 +11,20 @@
 #import "KTraderEA.dll"
 
 //--- input parameters
-const int       CLUSTERS = 3;
-const int       HIST_BARS = 3 * 12;
+const int       CLUSTERS = 256;
+const int       HIST_BARS = 12 * 52;
 sinput double   LOTS = 0.01;
 sinput int      MAGIC = 20220830;
 sinput int      SLIPPAGE = 10;
 
 const int       BARS = 12;
+const int       CORRELATION_BARS = 5;
+const double    ENTRY_PERFORMANCE = 0.1;
+
+const double    RISK_REWARD_RATIO = 3.0;
+#define         ACCOUNT_SL (0.25 * AccountInfoDouble(ACCOUNT_BALANCE))
+#define         ACCOUNT_TP (RISK_REWARD_RATIO * ACCOUNT_SL)
+const double    SL_PERCENTAGE = 4.0;
 
 #define TIMEFRAMES ArraySize(timeframes)
 
@@ -26,11 +33,11 @@ const int       BARS = 12;
 #include "ActiveLabel.mqh"
 #include "TrueTrend.mqh"
 
-const int     CORRELATION_BARS = BARS;
 sinput string MODULE = "KTrader.exe";
 sinput string COMMON_DIR = "C:\\Users\\shingo\\AppData\\Roaming\\MetaQuotes\\Terminal\\Common\\Files";
 
 #define USE_HEIKIN_ASHI
+//#define USE_BB_TREND
 //#define USE_ADX
 //#define USE_RSI
 //#define USE_MACD
@@ -41,27 +48,23 @@ ENUM_TIMEFRAMES timeframes[] = {
     //PERIOD_M2,
     //PERIOD_M3,
     //PERIOD_M4,
-/*
-    PERIOD_M5,
-    PERIOD_M6,
-    PERIOD_M12,
-    PERIOD_M15,
-    PERIOD_M20,
-    PERIOD_M30,
+    //PERIOD_M5,
+    //PERIOD_M6,
+    //PERIOD_M12,
+    //PERIOD_M15,
+    //PERIOD_M20,
+    //PERIOD_M30,
     PERIOD_H1,
-    PERIOD_H2,
-    PERIOD_H3,
+    //PERIOD_H2,
+    //PERIOD_H3,
     PERIOD_H4,
-    PERIOD_H6,
-    PERIOD_H8,
-    PERIOD_H12,
-*/
+    //PERIOD_H6,
+    //PERIOD_H8,
+    //PERIOD_H12,
     PERIOD_D1,
     PERIOD_W1,
-    PERIOD_MN1,
+    //PERIOD_MN1,
 };
-
-#define TRADE_TF_INDEX 2
 
 enum ENUM_VALUE_TYPES {
     TYPE_SD,
@@ -152,6 +155,8 @@ double Performance;
 vector History[];
 vector Profit[];
 
+double AccountMaxProfit;
+
 MQL45_APPLICATION_START()
 
 //+------------------------------------------------------------------+
@@ -175,14 +180,18 @@ double RemainingBalance()
 //+------------------------------------------------------------------+
 int OnInit()
 {
-    ActiveLabel::POSITION_X = 200;
+    ActiveLabel::POSITION_X = 240;
+    ActiveLabel::FONT_SIZE = 14;
 
     for (int i = 0; i < TIMEFRAMES; ++i) {
 #ifdef USD_SD
         TF[i].hSD = iStdDev(Symbol(), timeframes[i], 24, 0, MODE_SMA, PRICE_OPEN);
 #endif
 #ifdef USE_HEIKIN_ASHI
-        TF[i].hHeikinAshi = iCustom(Symbol(), timeframes[i], "Examples\\Heiken_Ashi");
+        TF[i].hHeikinAshi = iCustom(Symbol(), timeframes[i], "KTrader", 5);
+        if (TF[i].hHeikinAshi == INVALID_HANDLE) {
+            return INIT_FAILED;
+        }
 #endif
 #ifdef USE_BB_TREND
         TF[i].hBB20 = iBands(Symbol(), timeframes[i], 20, 3.0, 0, PRICE_OPEN);
@@ -231,23 +240,34 @@ void OnTick()
     string wdays[] = { "日", "月", "火", "水", "木", "金", "土" };
 
     msg += TimeToString(t, TIME_DATE) + "(" + wdays[TimeDayOfWeek(t)] + ") " + TimeToString(t, TIME_SECONDS) + "\n";
-    msg += StringFormat("%.0f %+.0f %.0f%%\n", AccountBalance(), AccountProfit(), AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
+    msg += StringFormat("残高      %s\n", ActiveLabel::FormatComma(AccountBalance(), 0));
+    msg += StringFormat("損益      %s\n", ActiveLabel::FormatComma(AccountProfit(), 0));
+    msg += StringFormat("証拠金    %s\n", ActiveLabel::FormatComma(RemainingMargin(), 0));
+    msg += StringFormat("維持率    %.2f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
+    msg += StringFormat("期待利益  %+.4fbp\n", Performance);
+    msg += StringFormat("進捗      %.3f%%\n", 100.0 * scanned_bars / HIST_BARS);
     msg += StringFormat("%s L:%.2f S:%.2f\n", Symbol(), lots[0], lots[1]);
-    msg += StringFormat("期待利益：%+.4fbp\n", Performance);
-    msg += StringFormat("進捗: %.3f%%\n", 100.0 * scanned_bars / HIST_BARS);
     ActiveLabel::Comment(msg);
 
     if (scanned_bars < HIST_BARS) {
         return;
     }
 
-    if (RemainingMargin() < 1000) {
+    if (RemainingMargin() < 10000) {
         ExpertRemove();
         return;
     }
 
-    if (RemainingBalance() + AccountProfit() < 10000) {
-        ClosePositionAll();
+    double account_profit = AccountProfit();
+    if (account_profit < -ACCOUNT_SL) {
+        ClosePositionAll(StringFormat("SL(%+.0f)", account_profit));
+        return;
+    }
+
+    double account_max_profit = MathMax(AccountMaxProfit, account_profit);
+    if (account_profit > +ACCOUNT_TP && account_profit < 0.50 * account_max_profit) {
+        ClosePositionAll(StringFormat("TP(%+.0f)", account_profit));
+        return;
     }
 
     static long prev_minute = 0;
@@ -271,12 +291,15 @@ void OnTick()
         }
     }
 
-    static long prev_trade = 0;
-    long current_trade = TimeCurrent() / PeriodSeconds(PERIOD_H1);
-    if (current_trade > prev_trade) {
-        prev_trade = current_trade;
+    long interval = PeriodSeconds(PERIOD_D1);
+    if (AccountProfit() > 0 && account_profit > account_max_profit) {
+        interval = PeriodSeconds(PERIOD_H1);
+    }
+    long current_fraction = (TimeCurrent() - PeriodSeconds(PERIOD_H1)) % interval;
+    if (current_fraction == 0) {
         Trade();
     }
+    AccountMaxProfit = account_max_profit;
 }
 
 //+------------------------------------------------------------------+
@@ -316,35 +339,41 @@ void Trade()
     Performance = -FLT_MAX;
     int l_max = -1;
     int entry = 0;
+    static int prev_entry = 0;
+    int bar = Ask - TF[TIMEFRAMES - 1].close[BARS] > 0 ? +1 : -1;
     for (int l = 0; l < TIMEFRAMES; ++l) {
-        double p = p0[l];
-        if (MathAbs(p) > Performance) {
-            Performance = MathAbs(p);
+        double perfomance = MathAbs(p0[l]);
+        if (perfomance > Performance && perfomance > ENTRY_PERFORMANCE) {
+            Performance = perfomance;
             l_max = l;
-            entry = p > 0 ? OP_BUY : OP_SELL;
+            entry = p0[l] > 0 && bar > 0 ? +1 : p0[l] < 0 && bar < 0 ? -1 : 0;
         }
     }
+    if (l_max == -1) {
+        Performance = 0;
+    }
 
-    if (CloseLimitPosition(entry)) {
-        return;
+    if (entry != 0 && entry != prev_entry) {
+        ClosePositionAll(StringFormat("Entry(%+d)", entry));
+        prev_entry = entry;
     }
 
     if (AccountInfoDouble(ACCOUNT_PROFIT) < 0) {
         return;
     }
 
-    if (Performance < 0.75) {
+    if (Performance < ENTRY_PERFORMANCE) {
         return;
     }
 
-    SL = 100.0 / Ask * 2;
+    SL = Ask / 100.0 * SL_PERCENTAGE;
     string comment = IntegerToString(PeriodSeconds(timeframes[l_max]) / 3600);
-    if (entry == OP_BUY) {
+    if (entry > 0) {
         double sl = SL > 0 ? NormalizeDouble(Bid - SL, Digits) : 0;
         if (!OrderSend(Symbol(), OP_BUY, LOTS, Ask, SLIPPAGE, sl, 0, comment, MAGIC, 0, clrBlue)) {
             Alert(StringFormat("ERROR: OrderSend(OP_BUY) FAILED: %d", GetLastError()));
         }
-    } else if (entry == OP_SELL) {
+    } else if (entry < 0) {
         double sl = SL > 0 ? NormalizeDouble(Ask + SL, Digits) : 0;
         if (!OrderSend(Symbol(), OP_SELL, LOTS, Bid, SLIPPAGE, sl, 0, comment, MAGIC, 0, clrRed)) {
             Alert(StringFormat("ERROR: OrderSend(OP_BUY) FAILED: %d", GetLastError()));
@@ -371,22 +400,27 @@ void TrailingStop()
             continue;
         }
 
-        double TRAILING_START = SL / 3;
-
         int type = OrderType();
         double entry = OrderOpenPrice();
         double price = type == OP_BUY ? Bid : Ask;
         double profit_price = type == OP_BUY ? price - entry : entry - price;
+
+        double TRAILING_START = SL * 1.0;
+        double TRAILING_FIX = TRAILING_START * 0.5;
+        double TRAILING_STEP = 0.5 * profit_price;
+        if (TRAILING_STEP < TRAILING_FIX) {
+            TRAILING_STEP = TRAILING_FIX;
+        } 
         color arrow = type == OP_BUY ? clrRed : clrBlue;
         int digits = (int)MarketInfo(OrderSymbol(), MODE_DIGITS);
         if (type == OP_BUY && profit_price > TRAILING_START) {
-            double sl = NormalizeDouble(price - SL, digits);
+            double sl = NormalizeDouble(price - TRAILING_STEP, digits);
             double tp = 0;
             if (sl > OrderStopLoss() && !OrderModify(ticket, price, sl, tp, 0, arrow)) {
                 //printf("ERROR: OrderModify(#%d) FAILED: %d", ticket, GetLastError());
             }
         } else if (type == OP_SELL && profit_price > TRAILING_START) {
-            double sl = NormalizeDouble(price + SL, digits);
+            double sl = NormalizeDouble(price + TRAILING_STEP, digits);
             double tp = 0;
             if (sl < OrderStopLoss() && !OrderModify(ticket, price, sl, tp, 0, arrow)) {
                 //printf("ERROR: OrderModify(#%d) FAILED: %d", ticket, GetLastError());
@@ -402,6 +436,7 @@ bool CloseLimitPosition(int entry)
 {
     double min_profit = +FLT_MAX;
     int min_ticket = -1;
+    int type = entry > 0 ? OP_BUY : OP_SELL;
 
     for (int i = OrdersTotal() - 1; i >= 0; --i) {
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
@@ -419,7 +454,7 @@ bool CloseLimitPosition(int entry)
             continue;
         }
 
-        if (OrderType() == entry) {
+        if (OrderType() == type) {
             continue;
         }
 
@@ -447,7 +482,7 @@ bool CloseLimitPosition(int entry)
 //+------------------------------------------------------------------+
 //| 全ポジションクローズ                                             |
 //+------------------------------------------------------------------+
-void ClosePositionAll()
+void ClosePositionAll(string reason)
 {
     for (int i = OrdersTotal() - 1; i >= 0; --i) {
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
@@ -465,11 +500,13 @@ void ClosePositionAll()
         double lots = OrderLots();
         color arrow = OrderType() == OP_BUY ? clrRed : clrBlue;
         double profit = OrderProfit() + OrderSwap();
-        OrderCloseComment(StringFormat("Account SL %+.0f", profit));
+        OrderCloseComment(reason);
         if (!OrderClose(ticket, lots, price, SLIPPAGE, arrow)) {
             //printf("ERROR: OrderClose(#%d) FAILED: %d", ticket, GetLastError());
         }
     }
+
+    AccountMaxProfit = -FLT_MAX;
 }
 
 //+------------------------------------------------------------------+
@@ -637,9 +674,9 @@ bool GetVector(datetime T0, int K, int N)
 
     if (N > BARS) {
         for (int i = 0; i < TIMEFRAMES; ++i) {
-            double pC = ::iOpen(Symbol(), timeframes[i], k[i] + 1);
-            double pF = ::iOpen(Symbol(), timeframes[i], k[i] + 0);
-            Append((pF - pC) / pC * 10000.0, timeframes[0], -1);
+            double P1 = ::iOpen(Symbol(), timeframes[i], k[i] + 1);
+            double P0 = ::iOpen(Symbol(), timeframes[i], k[i] + 0);
+            Append((P0 - P1) / P0 * 10000.0, timeframes[0], -1);
         }
     }
 
@@ -838,7 +875,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             }
             double Upper = MathAbs(TF[tf_index].BB20U[i] - TF[tf_index].BB50U[i]);
             double Lower = MathAbs(TF[tf_index].BB20L[i] - TF[tf_index].BB50L[i]);
-            Append(10000 * (Lower - Upper) / TF[tf_index].BB20M[i], tf);
+            Append(10000 * (Lower - Upper) / TF[tf_index].BB20M[i], tf, 0);
         }
     }
 #endif
@@ -868,7 +905,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
                 //printf("ERROR: RSI(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
                 return false;
             }
-            Append((TF[tf_index].RSI[i] - 50) / 50, tf);
+            Append((TF[tf_index].RSI[i] - 50) / 50, tf, 0);
         }
     }
 #endif
