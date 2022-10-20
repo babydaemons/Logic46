@@ -11,7 +11,7 @@
 #import "KTraderEA.dll"
 
 //--- input parameters
-const int       CLUSTERS = 256;
+const int       CLUSTERS = 32;
 const int       HIST_BARS = 12 * 52;
 sinput double   LOTS = 0.01;
 sinput int      MAGIC = 20220830;
@@ -24,7 +24,7 @@ const double    ENTRY_PERFORMANCE = 0.1;
 const double    RISK_REWARD_RATIO = 3.0;
 #define         ACCOUNT_SL (0.25 * AccountInfoDouble(ACCOUNT_BALANCE))
 #define         ACCOUNT_TP (RISK_REWARD_RATIO * ACCOUNT_SL)
-const double    SL_PERCENTAGE = 4.0;
+const double    SL_PERCENTAGE = 8.0;
 
 #define TIMEFRAMES ArraySize(timeframes)
 
@@ -54,16 +54,16 @@ ENUM_TIMEFRAMES timeframes[] = {
     //PERIOD_M15,
     //PERIOD_M20,
     //PERIOD_M30,
-    PERIOD_H1,
+    //PERIOD_H1,
     //PERIOD_H2,
     //PERIOD_H3,
-    PERIOD_H4,
+    //PERIOD_H4,
     //PERIOD_H6,
     //PERIOD_H8,
     //PERIOD_H12,
     PERIOD_D1,
     PERIOD_W1,
-    //PERIOD_MN1,
+    PERIOD_MN1,
 };
 
 enum ENUM_VALUE_TYPES {
@@ -147,15 +147,14 @@ struct TF_ITEM {
 };
 TF_ITEM TF[TIMEFRAMES];
 
-const int SCAN_BARS = HIST_BARS + BARS;
-int scanned_bars;
-
 double Performance;
 
 vector History[];
 vector Profit[];
 
 double AccountMaxProfit;
+
+double progress;
 
 MQL45_APPLICATION_START()
 
@@ -188,7 +187,7 @@ int OnInit()
         TF[i].hSD = iStdDev(Symbol(), timeframes[i], 24, 0, MODE_SMA, PRICE_OPEN);
 #endif
 #ifdef USE_HEIKIN_ASHI
-        TF[i].hHeikinAshi = iCustom(Symbol(), timeframes[i], "KTrader", 5);
+        TF[i].hHeikinAshi = iCustom(Symbol(), timeframes[i], "Examples\\Heiken_Ashi", 5, 5);
         if (TF[i].hHeikinAshi == INVALID_HANDLE) {
             return INIT_FAILED;
         }
@@ -226,13 +225,6 @@ void OnTick()
 {
     datetime t = TimeCurrent();
 
-    static long prev_bar = 0;
-    long current_bar = t / PeriodSeconds(timeframes[TIMEFRAMES - 1]);
-    if (current_bar > prev_bar) {
-        prev_bar = current_bar;
-        ++scanned_bars;
-    }
-
     double lots[2];
     GetPositionCount(lots);
 
@@ -245,13 +237,9 @@ void OnTick()
     msg += StringFormat("証拠金    %s\n", ActiveLabel::FormatComma(RemainingMargin(), 0));
     msg += StringFormat("維持率    %.2f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
     msg += StringFormat("期待利益  %+.4fbp\n", Performance);
-    msg += StringFormat("進捗      %.3f%%\n", 100.0 * scanned_bars / HIST_BARS);
+    msg += StringFormat("進捗      %.3f%%\n", progress);
     msg += StringFormat("%s L:%.2f S:%.2f\n", Symbol(), lots[0], lots[1]);
     ActiveLabel::Comment(msg);
-
-    if (scanned_bars < HIST_BARS) {
-        return;
-    }
 
     if (RemainingMargin() < 10000) {
         ExpertRemove();
@@ -293,7 +281,7 @@ void OnTick()
 
     long interval = PeriodSeconds(PERIOD_D1);
     if (AccountProfit() > 0 && account_profit > account_max_profit) {
-        interval = PeriodSeconds(PERIOD_H1);
+        interval = PeriodSeconds(PERIOD_H4);
     }
     long current_fraction = (TimeCurrent() - PeriodSeconds(PERIOD_H1)) % interval;
     if (current_fraction == 0) {
@@ -405,7 +393,7 @@ void TrailingStop()
         double price = type == OP_BUY ? Bid : Ask;
         double profit_price = type == OP_BUY ? price - entry : entry - price;
 
-        double TRAILING_START = SL * 1.0;
+        double TRAILING_START = SL * 0.5;
         double TRAILING_FIX = TRAILING_START * 0.5;
         double TRAILING_STEP = 0.5 * profit_price;
         if (TRAILING_STEP < TRAILING_FIX) {
@@ -413,14 +401,14 @@ void TrailingStop()
         } 
         color arrow = type == OP_BUY ? clrRed : clrBlue;
         int digits = (int)MarketInfo(OrderSymbol(), MODE_DIGITS);
-        if (type == OP_BUY && profit_price > TRAILING_START) {
-            double sl = NormalizeDouble(price - TRAILING_STEP, digits);
+        if (type == OP_BUY) {
+            double sl = NormalizeDouble(price - (profit_price > TRAILING_START ? TRAILING_STEP : SL), digits);
             double tp = 0;
             if (sl > OrderStopLoss() && !OrderModify(ticket, price, sl, tp, 0, arrow)) {
                 //printf("ERROR: OrderModify(#%d) FAILED: %d", ticket, GetLastError());
             }
-        } else if (type == OP_SELL && profit_price > TRAILING_START) {
-            double sl = NormalizeDouble(price + TRAILING_STEP, digits);
+        } else if (type == OP_SELL) {
+            double sl = NormalizeDouble(price + (profit_price > TRAILING_START ? TRAILING_STEP : SL), digits);
             double tp = 0;
             if (sl < OrderStopLoss() && !OrderModify(ticket, price, sl, tp, 0, arrow)) {
                 //printf("ERROR: OrderModify(#%d) FAILED: %d", ticket, GetLastError());
@@ -554,17 +542,18 @@ int iX;
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void Append(double x, ENUM_TIMEFRAMES tf, int type)
+bool AppendValue(double x, ENUM_TIMEFRAMES tf, int type)
 {
     double M = MathLog10((double)PeriodSeconds(tf) / PeriodSeconds(timeframes[0])) + 1.0;
     double x1 = type > 0 ? x * M : x / M;
     if (MathAbs(x1) > 10000) {
-        DebugBreak();
+        return false;
     }
     if (iX >= ArraySize(X)) {
-        DebugBreak();
+        return false;
     }
     X[iX++] = x1;
+    return true;
 }
 
 //+------------------------------------------------------------------+
@@ -590,14 +579,13 @@ bool Clustering(datetime T0)
         datetime t1 = ::iTime(Symbol(), timeframes[0], k + i);
         if (!GetVector(t1, k + i, N + 1)) {
             FileClose(file1);
+            progress = 100.0 * (long)i / (long)HIST_BARS;
             return false;
         }
-        long current_percentage = 100 * (long)i / (long)HIST_BARS;
-        if (current_percentage > percentage) {
-            percentage = current_percentage;
-            //printf("INFO: creating dataset: %d/%d %d%%", i, HIST_WEEKS, percentage);
-        }
+        progress = 100.0 * (long)i / (long)HIST_BARS;
     }
+    progress = 100.0;
+
     FileWriteArray(file1, X, 0, iX);
     FileClose(file1);
     printf("INFO: saved dataset: %d vectors ---> %d clusters...", HIST_BARS, CLUSTERS);
@@ -676,7 +664,7 @@ bool GetVector(datetime T0, int K, int N)
         for (int i = 0; i < TIMEFRAMES; ++i) {
             double P1 = ::iOpen(Symbol(), timeframes[i], k[i] + 1);
             double P0 = ::iOpen(Symbol(), timeframes[i], k[i] + 0);
-            Append((P0 - P1) / P0 * 10000.0, timeframes[0], -1);
+            AppendValue((P0 - P1) / P0 * 10000.0, timeframes[0], -1);
         }
     }
 
@@ -791,7 +779,9 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 1; i < NN; ++i) {
-            Append((TF[tf_index].open[i] - TF[tf_index].open[i - 1]) / x0, tf, +1);
+            if (!AppendValue((TF[tf_index].open[i] - TF[tf_index].open[i - 1]) / x0, tf, +1)) {
+                return false;
+            }
         }
     }
 
@@ -805,7 +795,9 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 1; i < NN; ++i) {
-            Append((TF[tf_index].close[i] - TF[tf_index].open[i]) / x0, tf, +1);
+            if (!AppendValue((TF[tf_index].close[i] - TF[tf_index].open[i]) / x0, tf, +1)) {
+                return false;
+            }
         }
     }
     if (type == TYPE_HEIKIN_ASHI2) {
@@ -818,7 +810,9 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 1; i < NN; ++i) {
-            Append((TF[tf_index].high[i] - TF[tf_index].close[i]) / x0, tf, +1);
+            if (!AppendValue((TF[tf_index].high[i] - TF[tf_index].close[i]) / x0, tf, +1)) {
+                return false;
+            }
         }
     }
     if (type == TYPE_HEIKIN_ASHI3) {
@@ -831,7 +825,9 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 1; i < NN; ++i) {
-            Append((TF[tf_index].open[i] - TF[tf_index].low[i]) / x0, tf, +1);
+            if (!AppendValue((TF[tf_index].open[i] - TF[tf_index].low[i]) / x0, tf, +1)) {
+                return false;
+            }
         }
     }
 #endif
@@ -937,7 +933,9 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
             return false;
         }
         for (int i = 0; i < N; ++i) {
-            Append(5 * X1[i], tf, +1);
+            if (!AppendValue(5 * X1[i], tf, +1)) {
+                return false;
+            }
         }
     }
 #endif
