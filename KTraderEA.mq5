@@ -183,7 +183,7 @@ int OnInit()
     ActiveLabel::FONT_SIZE = 14;
 
     for (int i = 0; i < TIMEFRAMES; ++i) {
-#ifdef USD_SD
+#ifdef USE_SD
         TF[i].hSD = iStdDev(Symbol(), timeframes[i], 24, 0, MODE_SMA, PRICE_OPEN);
 #endif
 #ifdef USE_HEIKIN_ASHI
@@ -405,13 +405,13 @@ void TrailingStop()
             double sl = NormalizeDouble(price - (profit_price > TRAILING_START ? TRAILING_STEP : SL), digits);
             double tp = 0;
             if (sl > OrderStopLoss() && !OrderModify(ticket, price, sl, tp, 0, arrow)) {
-                //printf("ERROR: OrderModify(#%d) FAILED: %d", ticket, GetLastError());
+                printf("ERROR: OrderModify(#%d) FAILED: %d", ticket, GetLastError());
             }
         } else if (type == OP_SELL) {
             double sl = NormalizeDouble(price + (profit_price > TRAILING_START ? TRAILING_STEP : SL), digits);
             double tp = 0;
             if (sl < OrderStopLoss() && !OrderModify(ticket, price, sl, tp, 0, arrow)) {
-                //printf("ERROR: OrderModify(#%d) FAILED: %d", ticket, GetLastError());
+                printf("ERROR: OrderModify(#%d) FAILED: %d", ticket, GetLastError());
             }
         }
     }
@@ -490,7 +490,7 @@ void ClosePositionAll(string reason)
         double profit = OrderProfit() + OrderSwap();
         OrderCloseComment(reason);
         if (!OrderClose(ticket, lots, price, SLIPPAGE, arrow)) {
-            //printf("ERROR: OrderClose(#%d) FAILED: %d", ticket, GetLastError());
+            printf("ERROR: OrderClose(#%d) FAILED: %d", ticket, GetLastError());
         }
     }
 
@@ -679,7 +679,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
     int NN = N + 1;
     const double x0 = ::iOpen(Symbol(), tf, k + NN) / 100;
     if (x0 == 0.0) {
-        //printf("ERROR: iOpen(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+        printf("ERROR: iOpen(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
         return false;
     }
 
@@ -688,69 +688,69 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
         TF[tf_index].t0 = t;
 #ifdef USE_SD
         if (CopyBuffer(TF[tf_index].hSD, MAIN_LINE, t, NN, TF[tf_index].sd) != NN) {
-            //printf("ERROR: HA_OPEN(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_OPEN(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
 #endif
 #ifdef USE_HEIKIN_ASHI
         if (CopyBuffer(TF[tf_index].hHeikinAshi, HA_OPEN, t, NN, TF[tf_index].open) != NN) {
-            //printf("ERROR: HA_OPEN(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_OPEN(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (CopyBuffer(TF[tf_index].hHeikinAshi, HA_HIGH, t, NN, TF[tf_index].high) != NN) {
-            //printf("ERROR: HA_HIGH(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_HIGH(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (CopyBuffer(TF[tf_index].hHeikinAshi, HA_LOW, t, NN, TF[tf_index].low) != NN) {
-            //printf("ERROR: HA_LOW(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_LOW(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (CopyBuffer(TF[tf_index].hHeikinAshi, HA_CLOSE, t, NN, TF[tf_index].close) != NN) {
-            //printf("ERROR: HA_CLOSE(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_CLOSE(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
 #endif
 #ifdef USE_BB_TREND
         if (CopyBuffer(TF[tf_index].hBB20, MAIN_LINE, t, NN, TF[tf_index].BB20M) != NN) {
-            //printf("ERROR: BB20M(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB20M(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (CopyBuffer(TF[tf_index].hBB20, UPPER_LINE, t, NN, TF[tf_index].BB20U) != NN) {
-            //printf("ERROR: BB20U(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB20U(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (CopyBuffer(TF[tf_index].hBB20, LOWER_LINE, t, NN, TF[tf_index].BB20L) != NN) {
-            //printf("ERROR: BB20L(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB20L(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (CopyBuffer(TF[tf_index].hBB50, UPPER_LINE, t, NN, TF[tf_index].BB50U) != NN) {
-            //printf("ERROR: BB50U(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB50U(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (CopyBuffer(TF[tf_index].hBB50, LOWER_LINE, t, NN, TF[tf_index].BB50L) != NN) {
-            //printf("ERROR: BB50L(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB50L(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
 #endif
 #ifdef USE_ADX
         if (CopyBuffer(TF[tf_index].hADX, PLUSDI_LINE, t, NN, TF[tf_index].DI1) != NN) {
-            //printf("ERROR: DI1(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: DI1(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (CopyBuffer(TF[tf_index].hADX, MINUSDI_LINE, t, NN, TF[tf_index].DI0) != NN) {
-            //printf("ERROR: DI0(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: DI0(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
 #endif
 #ifdef USE_RSI
         if (CopyBuffer(TF[tf_index].hRSI, MAIN_LINE, t, NN, TF[tf_index].RSI) != NN) {
-            //printf("ERROR: RSI(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: RSI(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
 #endif
 #ifdef USE_MACD
         if (CopyBuffer(TF[tf_index].hMACD, MAIN_LINE, t, NN, TF[tf_index].MACD) != NN) {
-            //printf("ERROR: MACD(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: MACD(%s) FAILD: %d: %d/%d %.2f%%", EnumToString(tf), GetLastError(), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
 #endif
@@ -759,13 +759,13 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
 #ifdef USE_SD
     if (type == TYPE_SD) {
         if (ArraySize(TF[tf_index].sd) < NN) {
-            //printf("ERROR: SD(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: SD(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         for (int i = 1; i < NN; ++i) {
             double sdr = TF[tf_index].sd[i] / x0;
             if (sdr < 0 || 10 < sdr) {
-                //printf("ERROR: SD(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+                printf("ERROR: SD(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
                 return false;
             }
             Append(sdr, tf);
@@ -775,7 +775,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
 #ifdef USE_HEIKIN_ASHI
     if (type == TYPE_HEIKIN_ASHI0) {
         if (ArraySize(TF[tf_index].open) < NN) {
-            //printf("ERROR: HA_OPEN(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_OPEN(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         for (int i = 1; i < NN; ++i) {
@@ -787,11 +787,11 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
 
     if (type == TYPE_HEIKIN_ASHI1) {
         if (ArraySize(TF[tf_index].open) < NN) {
-            //printf("ERROR: HA_OPEN(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_OPEN(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (ArraySize(TF[tf_index].close) < NN) {
-            //printf("ERROR: HA_CLOSE(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_CLOSE(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         for (int i = 1; i < NN; ++i) {
@@ -802,11 +802,11 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
     }
     if (type == TYPE_HEIKIN_ASHI2) {
         if (ArraySize(TF[tf_index].high) < NN) {
-            //printf("ERROR: HA_HIGH(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_HIGH(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (ArraySize(TF[tf_index].close) < NN) {
-            //printf("ERROR: HA_CLOSE(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_CLOSE(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         for (int i = 1; i < NN; ++i) {
@@ -817,11 +817,11 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
     }
     if (type == TYPE_HEIKIN_ASHI3) {
         if (ArraySize(TF[tf_index].open) < NN) {
-            //printf("ERROR: HA_OPEN(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_OPEN(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (ArraySize(TF[tf_index].low) < NN) {
-            //printf("ERROR: HA_LOW(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: HA_LOW(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         for (int i = 1; i < NN; ++i) {
@@ -834,40 +834,40 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
 #ifdef USE_BB_TREND
     if (type == TYPE_BB_TREND) {
         if (ArraySize(TF[tf_index].BB20M) < NN) {
-            //printf("ERROR: BB20M(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB20M(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (ArraySize(TF[tf_index].BB20U) < NN) {
-            //printf("ERROR: BB20U(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB20U(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (ArraySize(TF[tf_index].BB20L) < NN) {
-            //printf("ERROR: BB20L(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB20L(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (ArraySize(TF[tf_index].BB50U) < NN) {
-            //printf("ERROR: BB50U(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB50U(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (ArraySize(TF[tf_index].BB50L) < NN) {
-            //printf("ERROR: BB50L(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: BB50L(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         for (int i = 1; i < NN; ++i) {
             if (TF[tf_index].BB20M[i] == 0.0) {
-                //printf("ERROR: BB20M(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+                printf("ERROR: BB20M(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             }
             if (TF[tf_index].BB20U[i] == 0.0) {
-                //printf("ERROR: BB20U(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+                printf("ERROR: BB20U(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             }
             if (TF[tf_index].BB20L[i] == 0.0) {
-                //printf("ERROR: BB20L(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+                printf("ERROR: BB20L(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             }
             if (TF[tf_index].BB50U[i] == 0.0) {
-                //printf("ERROR: BB50U(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+                printf("ERROR: BB50U(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             }
             if (TF[tf_index].BB50L[i] == 0.0) {
-                //printf("ERROR: BB50L(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+                printf("ERROR: BB50L(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             }
             double Upper = MathAbs(TF[tf_index].BB20U[i] - TF[tf_index].BB50U[i]);
             double Lower = MathAbs(TF[tf_index].BB20L[i] - TF[tf_index].BB50L[i]);
@@ -878,11 +878,11 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
 #ifdef USE_ADX
     if (type == TYPE_ADX) {
         if (ArraySize(TF[tf_index].DI1) < NN) {
-            //printf("ERROR: DI1(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: DI1(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         if (ArraySize(TF[tf_index].DI0) < NN) {
-            //printf("ERROR: DI0(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: DI0(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         for (int i = 1; i < NN; ++i) {
@@ -893,12 +893,12 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
 #ifdef USE_RSI
     if (type == TYPE_RSI) {
         if (ArraySize(TF[tf_index].RSI) < NN) {
-            //printf("ERROR: RSI(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: RSI(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         for (int i = 1; i < NN; ++i) {
             if (TF[tf_index].RSI[i] < -100 || +100 < TF[tf_index].RSI[i]) {
-                //printf("ERROR: RSI(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+                printf("ERROR: RSI(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
                 return false;
             }
             Append((TF[tf_index].RSI[i] - 50) / 50, tf, 0);
@@ -909,7 +909,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
     if (type == TYPE_MACD) {
         for (int i = 1; i < NN; ++i) {
             if (TF[tf_index].MACD[i] < -100 || +100 < TF[tf_index].MACD[i]) {
-                //printf("ERROR: MACD(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+                printf("ERROR: MACD(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
                 return false;
             }
             Append(TF[tf_index].MACD[i] / x0, tf);
@@ -921,7 +921,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
         datetime t0 = ::iTime(Symbol(), tf, k + N + CORRELATION_BARS);
         double X0[];
         if (CopyOpen(Symbol(), tf, t0, N + CORRELATION_BARS, X0) != N + CORRELATION_BARS) {
-            //printf("ERROR: CopyOpen(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: CopyOpen(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
 
@@ -929,7 +929,7 @@ bool GetVector(ENUM_TIMEFRAMES tf, int tf_index, ENUM_VALUE_TYPES type, int N, i
         ArrayResize(X1, N);
         int count = KTrader::CopyCorrelation(CORRELATION_BARS, X0, ArraySize(X0), X1, ArraySize(X1));
         if (count != N) {
-            //printf("ERROR: CopyCorrelation(%s) FAILD: %d/%d %.2f%%", EnumToString(tf), iX, iTotalX, 100.0 * iX / iTotalX);
+            printf("ERROR: CopyCorrelation(%s) FAILD(%d): %d/%d %.2f%%", EnumToString(tf), count, iX, iTotalX, 100.0 * iX / iTotalX);
             return false;
         }
         for (int i = 0; i < N; ++i) {
