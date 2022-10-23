@@ -80,7 +80,7 @@ private:
     //+------------------------------------------------------------------+
     //| 1行ごとにラベルオブジェクトを作成する                            |
     //+------------------------------------------------------------------+
-    static void DrawLine(int i, string line, int X, int Y)
+    static void DrawLine(int i, string line, int x, int y)
     {
         string objname = StringFormat("{{LabelComment}}-%08d", i);
         if (!Initialized) {
@@ -91,8 +91,8 @@ private:
             ObjectSetInteger(0, objname, OBJPROP_FONTSIZE, FONT_SIZE);
             ObjectSetInteger(0, objname, OBJPROP_COLOR, FONT_COLOR);
             ObjectSetInteger(0, objname, OBJPROP_CORNER, CORNER_RIGHT_LOWER);
-            ObjectSetInteger(0, objname, OBJPROP_XDISTANCE, X);
-            ObjectSetInteger(0, objname, OBJPROP_YDISTANCE, Y);
+            ObjectSetInteger(0, objname, OBJPROP_XDISTANCE, x);
+            ObjectSetInteger(0, objname, OBJPROP_YDISTANCE, y);
         }
         ObjectSetString(0, objname, OBJPROP_TEXT, line);
     }
