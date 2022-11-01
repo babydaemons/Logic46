@@ -21,31 +21,31 @@ public static class KTrader
     public static int CopyCorrelation(int N, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] double[] x0, int N0, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 4)] double[] r1, int N1)
     {
         int n = 0;
-        for (int i = 0; i < N1; i++)
+        for (int k = 0; k < r1.Length; k++)
         {
-            r1[i] = Correlation(N, x0, N0, i);
-            if (r1[i] >= -1.0)
+            r1[k] = Correlation(N, x0, N0, k, N1);
+            if (r1[k] >= -1.0)
             {
                 n++;
                 continue;
             }
-            return (int)r1[i];
+            return (int)r1[k];
         }
         return n;
     }
 
-    private static double Correlation(int N, double[] x0, int N0, int k)
+    private static double Correlation(int N, double[] x0, int N0, int k, int N1)
     {
         double sum_y = 0.0;
         double sum_x = 0.0;
-        for (int i = k; i < N + k; i++)
+        for (int i = 0; i < N; i++)
         {
-            if (i >= N0)
+            if (k + i >= x0.Length)
             {
-                return -2.0;
+                throw new Exception($"i = {i} / N = {N} / x0.Length = {x0.Length} / N0 = {N0} / k = {k} / N1 = {N1}");
             }
             double x = i;
-            double y = x0[i];
+            double y = x0[k + i];
             if (y == 0.0)
             {
                 return -3.0;
@@ -54,15 +54,15 @@ public static class KTrader
             sum_x += x;
         }
 
-        double mean_y = sum_y / (double)N;
-        double mean_x = sum_x / (double)N;
+        double mean_y = sum_y / N;
+        double mean_x = sum_x / N;
         double sum_xy = 0.0;
         double sum_xx = 0.0;
         double sum_yy = 0.0;
-        for (int i = k; i < N + k; i++)
+        for (int i = 0; i < N; i++)
         {
-            double dx = (double)i - mean_x;
-            double dy = x0[i] - mean_y;
+            double dx = (k + i) - mean_x;
+            double dy = x0[k + i] - mean_y;
             sum_xy += dx * dy;
             sum_xx += dx * dx;
             sum_yy += dy * dy;

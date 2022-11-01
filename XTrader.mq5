@@ -10,41 +10,56 @@
 
 #import "KTraderEA.dll"
 
-#define PERIOD  PERIOD_W1
+#define PERIOD  PERIOD_H4
 //--- input parameters
-const int       UNIT_BARS = 3 * PeriodSeconds(PERIOD_MN1) / PeriodSeconds(PERIOD);
-const int       SCAN_BARS = UNIT_BARS;
+const int       UNIT_BARS = PeriodSeconds(PERIOD_W1) / PeriodSeconds(PERIOD);
+const int       SCAN_BARS = 6 * UNIT_BARS;
 const int       HIST_BARS = 12 * UNIT_BARS;
-const int       CLUSTER_LEVELS = 8;
-const double    ENTRY_PERFORMANCE = 0.75;
-const double    ENTRY_LIMIT_MARGIN_LEVEL = 20000.0;
-const double    EXIT_LIMIT_MARGIN_LEVEL = 10000.0;
-const double    SL_PERCENTAGE = 3.0 * MathLog10(1.0 + PeriodSeconds(PERIOD) / PeriodSeconds(PERIOD_M5));
+const int       CLUSTER_LEVELS = 10;
+const double    ENTRY_PERFORMANCE = 0.0075;
+const double    ENTRY_LIMIT_MARGIN_LEVEL = 10000.0;
+const double    EXIT_LIMIT_MARGIN_LEVEL = 5000.0;
+const double    SL_RATIO = 1.0;
 sinput double   LOTS = 0.01;
 sinput int      MAGIC = 20221022;
 sinput int      SLIPPAGE = 10;
 const string    COMMON_DIR = "C:\\Users\\shingo\\AppData\\Roaming\\MetaQuotes\\Terminal\\Common\\Files\\";
-const string    MODULE_FILE = "DTWTrader.exe";
+const string    MODULE_FILE = "XTrader.exe";
 const bool      HIDE_CONSOLE = true;
 const int       FETCH_BARS = SCAN_BARS + UNIT_BARS;
 
-//--- the number of indicator buffer for storage Open
-#define  HA_OPEN     5
-//--- the number of indicator buffer for storage High
-#define  HA_HIGH     8
-//--- the number of indicator buffer for storage Low
-#define  HA_LOW      7
-//--- the number of indicator buffer for storage Close
-#define  HA_CLOSE    6
-
-const int POINT_DIMENSION = 4;
-const int VECTOR_DIMENSION = POINT_DIMENSION * SCAN_BARS;
-const int VECTOR_DIMENSION_X = POINT_DIMENSION * (SCAN_BARS - 1);
+const int POINT_DIMENSION = 8;
+const int VECTOR_DIMENSION = POINT_DIMENSION * (SCAN_BARS + 1);
+const int VECTOR_DIMENSION_X = POINT_DIMENSION * SCAN_BARS;
 const int VECTOR_DIMENSION_Y = POINT_DIMENSION;
 const int XX_Size = VECTOR_DIMENSION * SCAN_BARS * HIST_BARS;
 
-const static int T0 = SCAN_BARS - 1;
+const int CORRELATION_BARS = 12 * PeriodSeconds(PERIOD_MN1) / PeriodSeconds(PERIOD);
+const int CORRELATION_FETCH_BARS = (FETCH_BARS + 1) + CORRELATION_BARS + 1;
+const double ENTRY_CORRELATION = 0.125;
+
+const static int T0 = SCAN_BARS;
 const static int T1 = FETCH_BARS - 1;
+
+double XO[];
+double XH[];
+double XL[];
+double XC[];
+
+double Xo[];
+double Xh[];
+double Xl[];
+double Xc[];
+
+double RO[];
+double RH[];
+double RL[];
+double RC[];
+
+double Ro[];
+double Rh[];
+double Rl[];
+double Rc[];
 
 vector XD[];
 vector YD[];
@@ -59,6 +74,7 @@ int Position;
 double Lots[2];
 double SL;
 
+double R;
 double Performance;
 double Entry;
 double PrevEntry;
@@ -136,7 +152,8 @@ void OnTick()
     msg += StringFormat("損益     %s\n", ActiveLabel::FormatComma(AccountProfit(), 0));
     msg += StringFormat("証拠金   %s\n", ActiveLabel::FormatComma(RemainingMargin(), 0));
     msg += StringFormat("維持率   %.2f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
-    msg += StringFormat("期待利益 %+.4fbp\n", Performance);
+    msg += StringFormat("相関係数 %+.4fpt\n", R);
+    msg += StringFormat("期待利益 %+.4fpt\n", Performance);
     msg += StringFormat("%s L:%.2f S:%.2f\n", Symbol(), Lots[0], Lots[1]);
     ActiveLabel::Comment(msg);
 
@@ -179,7 +196,7 @@ bool Clustering()
     string output_file = StringFormat(file_base, "OUT");
 
     int n = 0;
-    int file1 = FileOpen(input_file, FILE_WRITE | FILE_COMMON | FILE_BIN);
+    int file1 = FileOpen(input_file, FILE_WRITE | FILE_SHARE_WRITE | FILE_COMMON | FILE_BIN);
     if (file1 == INVALID_HANDLE) {
         printf("ERROR(%d): opening dataset file failed: %s: %d", __LINE__, input_file, GetLastError());
         return false;
@@ -199,12 +216,12 @@ bool Clustering()
     printf("INFO: saved dataset: %d vectors ---> %d cluster levels...", HIST_BARS, CLUSTER_LEVELS);
 
     string module_path = COMMON_DIR + MODULE_FILE;
-    string args = StringFormat("0 %d %d %d 1 %s %s", CLUSTER_LEVELS, POINT_DIMENSION, SCAN_BARS, COMMON_DIR + input_file, COMMON_DIR + output_file);
+    string args = StringFormat("0 %d %d %d %s %s", CLUSTER_LEVELS, VECTOR_DIMENSION, VECTOR_DIMENSION - VECTOR_DIMENSION_X, COMMON_DIR + input_file, COMMON_DIR + output_file);
     printf("%s %s", module_path, args);
     
     KTrader::Execute(module_path, args, HIDE_CONSOLE);
 
-    int file2 = FileOpen(output_file, FILE_READ | FILE_COMMON | FILE_BIN);
+    int file2 = FileOpen(output_file, FILE_READ | FILE_SHARE_READ | FILE_COMMON | FILE_BIN);
     if (file2 == INVALID_HANDLE) {
         printf("ERROR(%d): opening cluster file failed: %s: %d", __LINE__, output_file, GetLastError());
         return false;
@@ -220,12 +237,12 @@ bool Clustering()
         return false;
     }
 
-    const int CLUSTERS = (int)count1 / VECTOR_DIMENSION;
-    ArrayResize(XD, CLUSTERS);
-    ArrayResize(YD, CLUSTERS);
+    const int clusters = (int)count1 / VECTOR_DIMENSION;
+    ArrayResize(XD, clusters);
+    ArrayResize(YD, clusters);
 
     uint k = 0;
-    for (int j = 0; j < CLUSTERS; ++j) {
+    for (int j = 0; j < clusters; ++j) {
         vector x(VECTOR_DIMENSION_X);
         for (int i = 0; i < VECTOR_DIMENSION_X; ++i) {
             x[i] = Y0[k++];
@@ -237,10 +254,10 @@ bool Clustering()
             y[i] = Y0[k++];
         }
         YD[j] = y;
-        printf("INFO: cluster #%d: performance = %+.3f", j, y[0]);
+        printf("INFO: cluster #%d: performance = %+.5f", j, y[0]);
     }
 
-    if (CLUSTERS > 0) {
+    if (CLUSTER_LEVELS > 0) {
         FileDelete(input_file, FILE_COMMON);
         FileDelete(output_file, FILE_COMMON);
     }
@@ -260,48 +277,87 @@ bool CreateDataSetVectors(double& XX[], int N, int& n)
 
     for (n = 0; n < N; ++n) {
         datetime t = ::iTime(Symbol(), Period(), n);
-
-        double XO[];
-        if (CopyOpen(Symbol(), Period(), t, FETCH_BARS, XO) != FETCH_BARS) {
+        if (CopyOpen(Symbol(), PERIOD, t, FETCH_BARS, XO) != FETCH_BARS) {
             return false;
         }
-        double XH[];
-        if (CopyHigh(Symbol(), Period(), t, FETCH_BARS, XH) != FETCH_BARS) {
+        if (CopyHigh(Symbol(), PERIOD, t, FETCH_BARS, XH) != FETCH_BARS) {
             return false;
         }
-        double XL[];
-        if (CopyLow(Symbol(), Period(), t, FETCH_BARS, XL) != FETCH_BARS) {
+        if (CopyLow(Symbol(), PERIOD, t, FETCH_BARS, XL) != FETCH_BARS) {
             return false;
         }
-        double XC[];
-        if (CopyClose(Symbol(), Period(), t, FETCH_BARS, XC) != FETCH_BARS) {
+        if (CopyClose(Symbol(), PERIOD, t, FETCH_BARS, XC) != FETCH_BARS) {
             return false;
         }
 
-        const double XC0 = XC[SCAN_BARS - 1];
-        double Xo[];
+        const double XC0 = XC[SCAN_BARS];
         if (!CreateDataSetValue(XC0, XO, Xo)) {
             return false;
         }
-        double Xh[];
         if (!CreateDataSetValue(XC0, XH, Xh)) {
             return false;
         }
-        double Xl[];
         if (!CreateDataSetValue(XC0, XL, Xl)) {
             return false;
         }
-        double Xc[];
         if (!CreateDataSetValue(XC0, XC, Xc)) {
             return false;
         }
+
+        int count = 0;
+        if (CopyOpen(Symbol(), PERIOD, t, CORRELATION_FETCH_BARS, RO) != CORRELATION_FETCH_BARS) {
+            return false;
+        }
+        ArrayResize(Ro, FETCH_BARS);
+        if ((count = KTrader::CopyCorrelation(CORRELATION_BARS, RO, CORRELATION_FETCH_BARS, Ro, FETCH_BARS)) != FETCH_BARS) {
+            printf("ERROR(%d): CopyCorrelation() = %d", __LINE__, count);
+            return false;
+        }
+        if (CopyHigh(Symbol(), PERIOD, t, CORRELATION_FETCH_BARS, RH) != CORRELATION_FETCH_BARS) {
+            return false;
+        }
+        ArrayResize(Rh, FETCH_BARS);
+        if ((count = KTrader::CopyCorrelation(CORRELATION_BARS, RH, CORRELATION_FETCH_BARS, Rh, FETCH_BARS)) != FETCH_BARS) {
+            printf("ERROR(%d): CopyCorrelation() = %d", __LINE__, count);
+            return false;
+        }
+        if (CopyLow(Symbol(), PERIOD, t, CORRELATION_FETCH_BARS, RL) != CORRELATION_FETCH_BARS) {
+            return false;
+        }
+        ArrayResize(Rl, FETCH_BARS);
+        if ((count = KTrader::CopyCorrelation(CORRELATION_BARS, RL, CORRELATION_FETCH_BARS, Rl, FETCH_BARS)) != FETCH_BARS) {
+            printf("ERROR(%d): CopyCorrelation() = %d", __LINE__, count);
+            return false;
+        }
+        if (CopyClose(Symbol(), PERIOD, t, CORRELATION_FETCH_BARS, RC) != CORRELATION_FETCH_BARS) {
+            return false;
+        }
+        ArrayResize(Rc, FETCH_BARS);
+        if ((count = KTrader::CopyCorrelation(CORRELATION_BARS, RC, CORRELATION_FETCH_BARS, Rc, FETCH_BARS)) != FETCH_BARS) {
+            printf("ERROR(%d): CopyCorrelation() = %d", __LINE__, count);
+            return false;
+        }
+        R = Rc[FETCH_BARS - 1];
 
         for (int i = 0; i < SCAN_BARS; ++i) {
             XX[k++] = Xo[i];
             XX[k++] = Xh[i];
             XX[k++] = Xl[i];
             XX[k++] = Xc[i];
+            XX[k++] = Ro[i];
+            XX[k++] = Rh[i];
+            XX[k++] = Rl[i];
+            XX[k++] = Rc[i];
         }
+        int i = FETCH_BARS - 1;
+        XX[k++] = Xo[i];
+        XX[k++] = Xh[i];
+        XX[k++] = Xl[i];
+        XX[k++] = Xc[i];
+        XX[k++] = Ro[i];
+        XX[k++] = Rh[i];
+        XX[k++] = Rl[i];
+        XX[k++] = Rc[i];
     }
 
     return true;
@@ -309,23 +365,18 @@ bool CreateDataSetVectors(double& XX[], int N, int& n)
 
 bool CreateDataSetValue(const double XC0, const double& X[], double& x[])
 {
-    ArrayResize(x, SCAN_BARS);
+    ArrayResize(x, FETCH_BARS);
 
-    for (int i = T0 - 1; i >= 0; --i) {
+    for (int i = T1; i >= 0; --i) {
         if (X[i] == 0.0) {
             return false;
         }
         if (MathAbs(X[i]) > 10000) {
             return false;
         }
-        x[i] = 1000.0 * (XC0 - X[i]) / X[T0];
+        x[i] = 1000.0 * (XC0 - X[i]) / XC0;
     }
 
-    if (X[T1] == 0.0) {
-        return false;
-    }
-    x[SCAN_BARS - 1] = 1000.0 * (X[T1] - XC0) / XC0;
-    
     return true;
 }
 
@@ -371,15 +422,21 @@ void Trade()
     Performance = y[0];
 
     double profit = AccountInfoDouble(ACCOUNT_PROFIT);
+/*
     if (profit < 0) {
         return;
     }
+*/
 
     if (MathAbs(Performance) < ENTRY_PERFORMANCE) {
         return;
     }
 
-    int entry = Performance > 0 ? +1 : -1;
+    if (MathAbs(R) < ENTRY_CORRELATION) {
+        return;
+    }
+
+    int entry = Performance > 0 && R > 0 ? +1 : Performance < 0 && R < 0 ? -1 : 0;
     static int prev_entry = 0;
     if (entry != 0 && entry != prev_entry) {
         ClosePositionAll(StringFormat("Entry(%+d)", entry));
@@ -392,11 +449,16 @@ void Trade()
         return;
     }
 
+    if (Sgn(R) != Sgn(entry)) {
+        ClosePositionAll(StringFormat("R(%+.3f)", R));
+        return;
+    }
+
     if (0.0 < margin_level && margin_level < ENTRY_LIMIT_MARGIN_LEVEL) {
         return;
     }
 
-    SL = Ask / 100.0 * SL_PERCENTAGE;
+    SL = SL_RATIO * iStdDev(Symbol(), PERIOD, 3 * PeriodSeconds(PERIOD_MN1) / PeriodSeconds(PERIOD), 0, MODE_SMA, PRICE_CLOSE, 0);
     string comment = StringFormat("ExpectedProfit: %+.3f", Performance);
     if (entry > 0) {
         double sl = SL > 0 ? NormalizeDouble(Bid - SL, Digits) : 0;
@@ -435,8 +497,8 @@ void TrailingStop()
         double price = type == OP_BUY ? Bid : Ask;
         double profit_price = type == OP_BUY ? price - entry : entry - price;
 
-        double TRAILING_START = SL * 0.75;
-        double TRAILING_STEP0 = TRAILING_START * 0.75;
+        double TRAILING_START = SL * 0.5;
+        double TRAILING_STEP0 = TRAILING_START * 0.5;
         double TRAILING_STEP = 0.5 * MathSqrt(profit_price / Point()) * Point();
         if (TRAILING_STEP < TRAILING_STEP0) {
             TRAILING_STEP = TRAILING_STEP0;

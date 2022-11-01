@@ -13,8 +13,8 @@
 #define PERIOD  PERIOD_W1
 //--- input parameters
 const int       UNIT_BARS = 3 * PeriodSeconds(PERIOD_MN1) / PeriodSeconds(PERIOD);
-const int       SCAN_BARS = UNIT_BARS;
-const int       HIST_BARS = 12 * UNIT_BARS;
+const int       SCAN_BARS = 3 * 4 * UNIT_BARS;
+const int       HIST_BARS = 3 * 3 * 4 * UNIT_BARS;
 const int       CLUSTER_LEVELS = 8;
 const double    ENTRY_PERFORMANCE = 0.75;
 const double    ENTRY_LIMIT_MARGIN_LEVEL = 20000.0;
@@ -45,6 +45,8 @@ const int XX_Size = VECTOR_DIMENSION * SCAN_BARS * HIST_BARS;
 
 const static int T0 = SCAN_BARS - 1;
 const static int T1 = FETCH_BARS - 1;
+
+int hEMA[4];
 
 vector XD[];
 vector YD[];
@@ -91,6 +93,20 @@ int OnInit()
 
     if (XX_Size < 0) {
         printf("Array Size exceed 0x7FFFFFFF: VECTOR_DIMENSION = %d, SCAN_BARS = %d, HIST_BARS = %d", VECTOR_DIMENSION, SCAN_BARS, HIST_BARS);
+        return INIT_FAILED;
+    }
+
+    int EMA_BARS = 12 * 4;
+    if ((hEMA[0] = iMA(Symbol(), PERIOD, EMA_BARS, 0, MODE_EMA, PRICE_OPEN)) == INVALID_HANDLE) {
+        return INIT_FAILED;
+    }
+    if ((hEMA[1] = iMA(Symbol(), PERIOD, EMA_BARS, 0, MODE_EMA, PRICE_HIGH)) == INVALID_HANDLE) {
+        return INIT_FAILED;
+    }
+    if ((hEMA[2] = iMA(Symbol(), PERIOD, EMA_BARS, 0, MODE_EMA, PRICE_LOW)) == INVALID_HANDLE) {
+        return INIT_FAILED;
+    }
+    if ((hEMA[3] = iMA(Symbol(), PERIOD, EMA_BARS, 0, MODE_EMA, PRICE_CLOSE)) == INVALID_HANDLE) {
         return INIT_FAILED;
     }
 
@@ -262,19 +278,19 @@ bool CreateDataSetVectors(double& XX[], int N, int& n)
         datetime t = ::iTime(Symbol(), Period(), n);
 
         double XO[];
-        if (CopyOpen(Symbol(), Period(), t, FETCH_BARS, XO) != FETCH_BARS) {
+        if (CopyBuffer(hEMA[0], MAIN_LINE, t, FETCH_BARS, XO) != FETCH_BARS) {
             return false;
         }
         double XH[];
-        if (CopyHigh(Symbol(), Period(), t, FETCH_BARS, XH) != FETCH_BARS) {
+        if (CopyBuffer(hEMA[1], MAIN_LINE, t, FETCH_BARS, XH) != FETCH_BARS) {
             return false;
         }
         double XL[];
-        if (CopyLow(Symbol(), Period(), t, FETCH_BARS, XL) != FETCH_BARS) {
+        if (CopyBuffer(hEMA[2], MAIN_LINE, t, FETCH_BARS, XL) != FETCH_BARS) {
             return false;
         }
         double XC[];
-        if (CopyClose(Symbol(), Period(), t, FETCH_BARS, XC) != FETCH_BARS) {
+        if (CopyBuffer(hEMA[3], MAIN_LINE, t, FETCH_BARS, XC) != FETCH_BARS) {
             return false;
         }
 
@@ -371,9 +387,11 @@ void Trade()
     Performance = y[0];
 
     double profit = AccountInfoDouble(ACCOUNT_PROFIT);
+/*
     if (profit < 0) {
         return;
     }
+*/
 
     if (MathAbs(Performance) < ENTRY_PERFORMANCE) {
         return;
