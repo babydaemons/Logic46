@@ -8,9 +8,9 @@
 #property version   "1.00"
 
 #import "TrueTrend.dll"
-    double ArrayTrueTrend(const double& value[], int periodseconds, double power, double spread, int N);
-    double ArrayTrend(const double& value[], int periodseconds, double spread, int N);
-    double ArrayCorrelation(const double& value[], int periodseconds, double spread, int N);
+    double ArrayTrueTrend(const double& value[], int periodseconds, double power, int N);
+    double ArrayTrend(const double& value[], int periodseconds, int N);
+    double ArrayCorrelation(const double& value[], int periodseconds, int N);
     double iSMA(const double& value[], int N);
 #import
 
@@ -22,8 +22,7 @@ double iTrend(string symbol, ENUM_TIMEFRAMES tf, int N)
     double value[];
     int n = CopyOpen(symbol, tf, 0, N, value);
     int periodseconds = PeriodSeconds(tf);
-    double spread = SymbolInfoDouble(symbol, SYMBOL_ASK) - SymbolInfoDouble(symbol, SYMBOL_BID);
-    return ArrayTrend(value, periodseconds, spread, n);
+    return ArrayTrend(value, periodseconds, n);
 }
 
 //+------------------------------------------------------------------+
@@ -34,8 +33,7 @@ double iCorrelation(string symbol, ENUM_TIMEFRAMES tf, int N)
     double value[];
     int n = CopyOpen(symbol, tf, 0, N, value);
     int periodseconds = PeriodSeconds(tf);
-    double spread = SymbolInfoDouble(symbol, SYMBOL_ASK) - SymbolInfoDouble(symbol, SYMBOL_BID);
-    return ArrayCorrelation(value, periodseconds, spread, n);
+    return ArrayCorrelation(value, periodseconds, n);
 }
 
 //+------------------------------------------------------------------+
@@ -46,6 +44,5 @@ double iTrueTrend(string symbol, ENUM_TIMEFRAMES tf, double power, int N)
     double value[];
     int n = CopyOpen(symbol, tf, 0, N, value);
     int periodseconds = PeriodSeconds(tf);
-    double spread = SymbolInfoDouble(symbol, SYMBOL_ASK) - SymbolInfoDouble(symbol, SYMBOL_BID);
-    return ArrayTrueTrend(value, periodseconds, power, spread, n);
+    return ArrayTrueTrend(value, periodseconds, power, n);
 }

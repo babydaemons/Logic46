@@ -1,20 +1,20 @@
 #include <math.h>
 
 extern "C" {
-    __declspec(dllexport) double _stdcall ArrayTrueTrend(const double value[], int periodseconds, double power, double spread, int N);
-    __declspec(dllexport) double _stdcall ArrayTrend(const double value[], int periodseconds, double spread, int N);
-    __declspec(dllexport) double _stdcall ArrayCorrelation(const double value[], int periodseconds, double spread, int N);
+    __declspec(dllexport) double _stdcall ArrayTrueTrend(const double value[], int periodseconds, double power, int N);
+    __declspec(dllexport) double _stdcall ArrayTrend(const double value[], int periodseconds, int N);
+    __declspec(dllexport) double _stdcall ArrayCorrelation(const double value[], int periodseconds, int N);
     __declspec(dllexport) double _stdcall iSMA(const double value[], int N);
 }
 
-__declspec(dllexport) double _stdcall ArrayTrueTrend(const double value[], int periodseconds, double power, double spread, int N)
+__declspec(dllexport) double _stdcall ArrayTrueTrend(const double value[], int periodseconds, double power, int N)
 {
-    double trend = ArrayTrend(value, periodseconds, spread, N);
-    double r = ArrayCorrelation(value, periodseconds, spread, N);
+    double trend = ArrayTrend(value, periodseconds, N);
+    double r = ArrayCorrelation(value, periodseconds, N);
     return fabs(pow(r, power)) * trend;
 }
 
-__declspec(dllexport) double _stdcall ArrayTrend(const double value[], int periodseconds, double spread, int N)
+__declspec(dllexport) double _stdcall ArrayTrend(const double value[], int periodseconds, int N)
 {
     double sum_xy = 0;
     double sum_xx = 0;
@@ -33,10 +33,10 @@ __declspec(dllexport) double _stdcall ArrayTrend(const double value[], int perio
     double diff_xx = N * sum_xx - sum_x * sum_x;
     if (diff_xx == 0.0) { return 0.0; }
     double trend = diff_xy / diff_xx;
-    return trend / spread;
+    return trend / value[N - 1];
 }
 
-__declspec(dllexport) double _stdcall ArrayCorrelation(const double value[], int periodseconds, double spread, int N)
+__declspec(dllexport) double _stdcall ArrayCorrelation(const double value[], int periodseconds, int N)
 {
     double sum_y = 0;
     double sum_x = 0;
