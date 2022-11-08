@@ -13,14 +13,15 @@ sinput double   LOTS = 0.01;
 sinput int      MAGIC = 20220830;
 sinput int      SLIPPAGE = 10;
 
-const int       BARS = PeriodSeconds(PERIOD_D1) / PeriodSeconds(PERIOD_CURRENT);
+#define PERIOD  PERIOD_H1
+const int       BARS = 3 * PeriodSeconds(PERIOD_MN1) / PeriodSeconds(PERIOD);
 
-const double    ENTRY_TREND = 0.150;
+const double    ENTRY_TREND = 0.035;
 const double    RISK_REWARD_RATIO = 2.0;
 const double    ACCOUNT_SL = 1000000000;
 const double    ACCOUNT_TP = RISK_REWARD_RATIO * ACCOUNT_SL;
-const double    SL_PRICE_PERCENTAGE = 2.0;
-const double    TIME_SPAN = PeriodSeconds(PERIOD_D1);
+const double    SL_PRICE_PERCENTAGE = 5.0;
+const double    TIME_SPAN = 3 * PeriodSeconds(PERIOD_MN1);
 
 #define MQL45_BARS 2
 #include "MQL45/MQL45.mqh"
@@ -42,7 +43,15 @@ public:
         double lots[2];
         m_profit = GetPositionCount(lots);
 
-        R = iTrueTrend(m_symbol, Period(), 1.0, BARS) * 100.0;
+        R = iTrueTrend(m_symbol, PERIOD, 1.0, BARS) * 100.0;
+
+        if (R <= 0 && lots[0] > 0) {
+            CloseLimitPosition(+1);
+        }
+    
+        if (R >= 0 && lots[1] > 0) {
+            CloseLimitPosition(-1);
+        }
 
         if (m_profit < -ACCOUNT_SL) {
             ClosePositionAll(StringFormat("SL(%+.0f)", m_profit));
@@ -61,7 +70,7 @@ public:
             TrailingStop();
         }
     
-        long interval = PeriodSeconds(PERIOD_CURRENT);
+        long interval = PeriodSeconds(PERIOD);
         if (m_profit > 0 /*&& m_profit > m_max_profit*/) {
             interval /= 12;
         }
@@ -89,14 +98,6 @@ public:
             prev_entry = entry;
         }
     
-        if (R <= 0 && lots[0] > 0) {
-            CloseLimitPosition(+1);
-        }
-    
-        if (R >= 0 && lots[1] > 0) {
-            CloseLimitPosition(-1);
-        }
-
         if (MathAbs(R) < ENTRY_TREND) {
             return;
         }
@@ -184,8 +185,8 @@ public:
                 time_ratio = 0;
             }
             double SL = time_ratio * m_StopLoss;
-            double TRAILING_START = m_StopLoss * 0.5;
-            double TRAILING_FIX = TRAILING_START * 0.5;
+            double TRAILING_START = m_StopLoss * 1.5;
+            double TRAILING_FIX = TRAILING_START / 3.0;
             double TRAILING_STEP = 0.5 * profit_price;
             if (TRAILING_STEP < TRAILING_FIX) {
                 TRAILING_STEP = TRAILING_FIX;
