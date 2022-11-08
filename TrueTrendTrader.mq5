@@ -17,10 +17,10 @@ sinput int      SLIPPAGE = 10;
 const int       BARS = 3 * PeriodSeconds(PERIOD_MN1) / PeriodSeconds(PERIOD);
 
 const double    ENTRY_TREND = 0.035;
-const double    RISK_REWARD_RATIO = 2.0;
-const double    ACCOUNT_SL = 1000000000;
+const double    RISK_REWARD_RATIO = 2;
+const double    ACCOUNT_SL = 500000;
 const double    ACCOUNT_TP = RISK_REWARD_RATIO * ACCOUNT_SL;
-const double    SL_PRICE_PERCENTAGE = 5.0;
+const double    SL_PRICE_PERCENTAGE = 4.0;
 const double    TIME_SPAN = 3 * PeriodSeconds(PERIOD_MN1);
 
 #define MQL45_BARS 2
@@ -232,7 +232,7 @@ public:
                 continue;
             }
     
-            if (OrderType() == type) {
+            if (OrderType() != type) {
                 continue;
             }
     
@@ -325,6 +325,7 @@ int OnInit()
 {
     ActiveLabel::POSITION_X = 440;
     ActiveLabel::FONT_SIZE = 14;
+    ActiveLabel::FONT_COLOR = clrMagenta;
 
     string symbols[];
     for (int i = 0; i < MAX_SYMBOLS; ++i) {
