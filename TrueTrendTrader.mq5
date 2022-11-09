@@ -14,7 +14,8 @@ sinput int      MAGIC = 20220830;
 sinput int      SLIPPAGE = 10;
 
 #define PERIOD  PERIOD_H1
-const int       BARS = 3 * PeriodSeconds(PERIOD_MN1) / PeriodSeconds(PERIOD);
+const int       TREND_BARS = 3 * PeriodSeconds(PERIOD_MN1) / PeriodSeconds(PERIOD);
+const int       EMA_BARS = PeriodSeconds(PERIOD_D1) / PeriodSeconds(PERIOD);
 
 const double    ENTRY_TREND = 0.035;
 const double    RISK_REWARD_RATIO = 2;
@@ -34,6 +35,7 @@ public:
     bool Initialize(string symbol) {
         m_symbol = symbol;
         m_max_profit = -FLT_MAX;
+        m_hEMA = iMA(m_symbol, PERIOD, EMA_BARS, 0, MODE_EMA, PRICE_HIGH);
         return true;
     }
 
@@ -43,7 +45,7 @@ public:
         double lots[2];
         m_profit = GetPositionCount(lots);
 
-        R = iTrueTrend(m_symbol, PERIOD, 1.0, BARS) * 100.0;
+        R = iSignalTrueTrend(m_hEMA, MAIN_LINE, PERIOD, 1.0, TREND_BARS) * 100.0;
 
         if (R <= 0 && lots[0] > 0) {
             CloseLimitPosition(+1);
@@ -305,6 +307,7 @@ public:
 
 private:
     string m_symbol;
+    int m_hEMA;
     double m_profit;
     double m_max_profit;
     long m_prev_minute;

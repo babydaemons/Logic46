@@ -26,6 +26,17 @@ double iTrend(string symbol, ENUM_TIMEFRAMES tf, int N)
 }
 
 //+------------------------------------------------------------------+
+//| 傾きの算出                                                       |
+//+------------------------------------------------------------------+
+double iSignalTrend(int handle, int buffer_num, ENUM_TIMEFRAMES tf, int N)
+{
+    double value[];
+    int n = CopyBuffer(handle, buffer_num, 0, N, value);
+    int periodseconds = PeriodSeconds(tf);
+    return ArrayTrend(value, periodseconds, n);
+}
+
+//+------------------------------------------------------------------+
 //| 相関係数の算出                                                   |
 //+------------------------------------------------------------------+
 double iCorrelation(string symbol, ENUM_TIMEFRAMES tf, int N)
@@ -39,10 +50,32 @@ double iCorrelation(string symbol, ENUM_TIMEFRAMES tf, int N)
 //+------------------------------------------------------------------+
 //| 傾きの算出                                                       |
 //+------------------------------------------------------------------+
+double iSignalCorrelation(int handle, int buffer_num, ENUM_TIMEFRAMES tf, int N)
+{
+    double value[];
+    int n = CopyBuffer(handle, buffer_num, 0, N, value);
+    int periodseconds = PeriodSeconds(tf);
+    return ArrayCorrelation(value, periodseconds, n);
+}
+
+//+------------------------------------------------------------------+
+//| 傾きの算出                                                       |
+//+------------------------------------------------------------------+
 double iTrueTrend(string symbol, ENUM_TIMEFRAMES tf, double power, int N)
 {
     double value[];
     int n = CopyOpen(symbol, tf, 0, N, value);
+    int periodseconds = PeriodSeconds(tf);
+    return ArrayTrueTrend(value, periodseconds, power, n);
+}
+
+//+------------------------------------------------------------------+
+//| 傾きの算出                                                       |
+//+------------------------------------------------------------------+
+double iSignalTrueTrend(int handle, int buffer_num, ENUM_TIMEFRAMES tf, double power, int N)
+{
+    double value[];
+    int n = CopyBuffer(handle, buffer_num, 0, N, value);
     int periodseconds = PeriodSeconds(tf);
     return ArrayTrueTrend(value, periodseconds, power, n);
 }
