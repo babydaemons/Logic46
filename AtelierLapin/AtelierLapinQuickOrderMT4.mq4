@@ -60,6 +60,10 @@ public:
         }
     }
 
+    string Name() {
+        return obj_name;
+    }
+
 private:
     string obj_name;
     ENUM_OBJECT obj_type;
@@ -80,6 +84,10 @@ public:
         SetInteger(line, OBJPROP_FONTSIZE, FONT_SIZE);
     }
 
+    void SetText(int line, string text) {
+        SetString(line, OBJPROP_TEXT, text);
+    }
+
 private:
     static string FONT_NAME;
     static int FONT_SIZE;
@@ -88,24 +96,44 @@ private:
 string TextObject::FONT_NAME;
 int TextObject::FONT_SIZE;
 
+class LabelObject : public TextObject {
+public:
+    LabelObject(int line, string name) : TextObject(line, OBJ_LABEL, name) {}
+
+    void Initialize(int line, int x, int y, int size_x, int size_y) {
+        TextObject::Initialize(line, x, y, size_x, size_y);
+        SetText(line, Name());
+        SetInteger(line, OBJPROP_COLOR, COLOR);
+    }
+
+    static void SetColor(color foreground_color) {
+        COLOR = foreground_color;
+    }
+
+private:
+    static color COLOR;
+};
+
+color LabelObject::COLOR;
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 DrawObject Background(__LINE__, OBJ_RECTANGLE_LABEL, "Background");
 TextObject ButtonSell(__LINE__, OBJ_BUTTON, "ButtonSell");
 TextObject ButtonBuy(__LINE__, OBJ_BUTTON, "ButtonBuy");
-TextObject LabelPrice2(__LINE__, OBJ_LABEL, "銘柄２価格");
-TextObject LabelPrice1(__LINE__, OBJ_LABEL, "銘柄１価格");
-TextObject LabelRatio(__LINE__, OBJ_LABEL, "価格比");
+LabelObject LabelPrice2(__LINE__, "銘柄２価格");
+LabelObject LabelPrice1(__LINE__, "銘柄１価格");
+LabelObject LabelRatio(__LINE__, "価格比");
 TextObject EditSymbol2(__LINE__, OBJ_EDIT, "EditSymbol2");
 TextObject EditSymbol1(__LINE__, OBJ_EDIT, "EditSymbol1");
 TextObject EditLots(__LINE__, OBJ_EDIT, "EditLots");
 TextObject EditMagicNumber(__LINE__, OBJ_EDIT, "EditMagicNumber");
-TextObject LabelEnableOrder(__LINE__, OBJ_LABEL, "クイック発注ボタン表示");
-TextObject LabelSymbol2(__LINE__, OBJ_LABEL, "銘柄２");
-TextObject LabelSymbol1(__LINE__, OBJ_LABEL, "銘柄１");
-TextObject LabelLots(__LINE__, OBJ_LABEL, "発注ロット数");
-TextObject LabelMagicNumber(__LINE__, OBJ_LABEL, "マジックナンバー");
+LabelObject LabelEnableOrder(__LINE__, "クイック発注ボタン表示");
+LabelObject LabelSymbol2(__LINE__, "銘柄２");
+LabelObject LabelSymbol1(__LINE__, "銘柄１");
+LabelObject LabelLots(__LINE__, "発注ロット数");
+LabelObject LabelMagicNumber(__LINE__, "マジックナンバー");
 TextObject CheckboxEnableOrder(__LINE__, OBJ_BUTTON, "CheckboxEnableOrder");
 
 //+------------------------------------------------------------------+
@@ -120,6 +148,7 @@ int OnInit() {
     const color LABEL_COLOR = clrCyan;
 
     TextObject::SetFont(FONT_NAME, FONT_SIZE);
+    LabelObject::SetColor(LABEL_COLOR);
 
     int x0 = 10;
     int y0 = 10;
@@ -159,18 +188,15 @@ int OnInit() {
     int x22 = x0 + size_x + FONT_SIZE;
     int y22 = y11 + 2 * size_y;
     LabelPrice2.Initialize(__LINE__, x22, y22, size_x, size_y);
-    LabelPrice2.SetString(__LINE__, OBJPROP_TEXT, "1756.60");
-    LabelPrice2.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelPrice2.SetText(__LINE__, "1756.60");
 
     y22 += size_y;
     LabelPrice1.Initialize(__LINE__, x22, y22, size_x, size_y);
-    LabelPrice1.SetString(__LINE__, OBJPROP_TEXT, "245771");
-    LabelPrice1.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelPrice1.SetText(__LINE__, "245771");
 
     y22 += size_y;
     LabelRatio.Initialize(__LINE__, x22, y22, size_x, size_y);
-    LabelRatio.SetString(__LINE__, OBJPROP_TEXT, "132.913");
-    LabelRatio.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelRatio.SetText(__LINE__, "132.913");
 
     // パラメータ入力エディットオブジェクトの描画
     int x33 = x0 + 2 * size_x + (int)(1.75 * FONT_SIZE);
@@ -202,28 +228,23 @@ int OnInit() {
     int x44 = x11 + 4 * FONT_SIZE - 5;
     int y44 = y11 + size_y;
     LabelEnableOrder.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelEnableOrder.SetString(__LINE__, OBJPROP_TEXT, "クイック発注ボタン表示");
-    LabelEnableOrder.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelEnableOrder.SetText(__LINE__, "クイック発注ボタン表示");
 
     y44 += size_y;
     LabelSymbol2.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelSymbol2.SetString(__LINE__, OBJPROP_TEXT, "　　　　　　　　銘柄２");
-    LabelSymbol2.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelSymbol2.SetText(__LINE__, "　　　　　　　　銘柄２");
 
     y44 += size_y;
     LabelSymbol1.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelSymbol1.SetString(__LINE__, OBJPROP_TEXT, "　　　　　　　　銘柄１");
-    LabelSymbol1.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelSymbol1.SetText(__LINE__, "　　　　　　　　銘柄１");
 
     y44 += size_y;
     LabelLots.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelLots.SetString(__LINE__, OBJPROP_TEXT, "　　　　　発注ロット数");
-    LabelLots.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelLots.SetText(__LINE__, "　　　　　発注ロット数");
 
     y44 += size_y;
     LabelMagicNumber.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelMagicNumber.SetString(__LINE__, OBJPROP_TEXT, "　　　マジックナンバー");
-    LabelMagicNumber.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelMagicNumber.SetText(__LINE__, "　　　マジックナンバー");
 
     // クイック発注ボタン表示チェックボックスの描画
     TextObject::SetFont(FONT_NAME, FONT_SIZE - 4);
