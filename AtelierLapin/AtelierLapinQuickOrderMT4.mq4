@@ -28,7 +28,7 @@ public:
         SetInteger(line, OBJPROP_BACK, false);                      // オブジェクトの背景表示設定
         SetInteger(line, OBJPROP_SELECTABLE, false);                // オブジェクトの選択可否設定
         SetInteger(line, OBJPROP_SELECTED, false);                  // オブジェクトの選択状態
-        SetInteger(line, OBJPROP_HIDDEN, false);                    // オブジェクトリスト表示設定
+        SetInteger(line, OBJPROP_HIDDEN, true);                    // オブジェクトリスト表示設定
         SetInteger(line, OBJPROP_CORNER, CORNER_RIGHT_LOWER);       // コーナーアンカー設定
         SetInteger(line, OBJPROP_ZORDER, 0);
     }
@@ -65,22 +65,48 @@ private:
     ENUM_OBJECT obj_type;
 };
 
+class TextObject : public DrawObject {
+public:
+    TextObject(int line, ENUM_OBJECT type, string name) : DrawObject(line, type, name) {}
+
+    static void SetFont(string name, int size) {
+        FONT_NAME = name;
+        FONT_SIZE = size;
+    }
+
+    void Initialize(int line, int x, int y, int size_x, int size_y) {
+        DrawObject::Initialize(line, x, y, size_x, size_y);
+        SetString(line, OBJPROP_FONT, FONT_NAME);
+        SetInteger(line, OBJPROP_FONTSIZE, FONT_SIZE);
+    }
+
+private:
+    static string FONT_NAME;
+    static int FONT_SIZE;
+};
+
+string TextObject::FONT_NAME;
+int TextObject::FONT_SIZE;
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 DrawObject Background(__LINE__, OBJ_RECTANGLE_LABEL, "Background");
-DrawObject ButtonSell(__LINE__, OBJ_BUTTON, "ButtonSell");
-DrawObject ButtonBuy(__LINE__, OBJ_BUTTON, "ButtonBuy");
-DrawObject LabelPrice2(__LINE__, OBJ_LABEL, "LabelPrice2");
-DrawObject LabelPrice1(__LINE__, OBJ_LABEL, "LabelPrice1");
-DrawObject LabelRatio(__LINE__, OBJ_LABEL, "LabelRatio");
-DrawObject EditSymbol2(__LINE__, OBJ_EDIT, "EditSymbol2");
-DrawObject EditSymbol1(__LINE__, OBJ_EDIT, "EditSymbol1");
-DrawObject EditLots(__LINE__, OBJ_EDIT, "EditLots");
-DrawObject EditMagicNumber(__LINE__, OBJ_EDIT, "EditMagicNumber");
-DrawObject LabelEnableOrder(__LINE__, OBJ_LABEL, "LabelEnableOrder");
-DrawObject LabelSymbol2(__LINE__, OBJ_LABEL, "LabelSymbol2");
-DrawObject LabelSymbol1(__LINE__, OBJ_LABEL, "LabelSymbol1");
-DrawObject LabelLots(__LINE__, OBJ_LABEL, "LabelLots");
-DrawObject LabelMagicNumber(__LINE__, OBJ_LABEL, "LabelMagicNumber");
-DrawObject CheckboxEnableOrder(__LINE__, OBJ_BUTTON, "CheckboxEnableOrder");
+TextObject ButtonSell(__LINE__, OBJ_BUTTON, "ButtonSell");
+TextObject ButtonBuy(__LINE__, OBJ_BUTTON, "ButtonBuy");
+TextObject LabelPrice2(__LINE__, OBJ_LABEL, "銘柄２価格");
+TextObject LabelPrice1(__LINE__, OBJ_LABEL, "銘柄１価格");
+TextObject LabelRatio(__LINE__, OBJ_LABEL, "価格比");
+TextObject EditSymbol2(__LINE__, OBJ_EDIT, "EditSymbol2");
+TextObject EditSymbol1(__LINE__, OBJ_EDIT, "EditSymbol1");
+TextObject EditLots(__LINE__, OBJ_EDIT, "EditLots");
+TextObject EditMagicNumber(__LINE__, OBJ_EDIT, "EditMagicNumber");
+TextObject LabelEnableOrder(__LINE__, OBJ_LABEL, "クイック発注ボタン表示");
+TextObject LabelSymbol2(__LINE__, OBJ_LABEL, "銘柄２");
+TextObject LabelSymbol1(__LINE__, OBJ_LABEL, "銘柄１");
+TextObject LabelLots(__LINE__, OBJ_LABEL, "発注ロット数");
+TextObject LabelMagicNumber(__LINE__, OBJ_LABEL, "マジックナンバー");
+TextObject CheckboxEnableOrder(__LINE__, OBJ_BUTTON, "CheckboxEnableOrder");
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -89,9 +115,11 @@ int OnInit() {
     // オブジェクト全削除
     ObjectsDeleteAll();
 
-    const int FONT_SIZE = 14;
     const string FONT_NAME = "HGｺﾞｼｯｸE";
+    const int FONT_SIZE = 14;
     const color LABEL_COLOR = clrCyan;
+
+    TextObject::SetFont(FONT_NAME, FONT_SIZE);
 
     int x0 = 10;
     int y0 = 10;
@@ -115,44 +143,32 @@ int OnInit() {
     int x11 = x0 + size_x1 + (size_x / 2);
     int y11 = y0 + size_y1 + 10;
     ButtonSell.Initialize(__LINE__, x11, y11, size_x1, size_y1);
-    ButtonSell.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
     ButtonSell.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'183,183,255');
     ButtonSell.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'205,205,255');
     ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'0,0,255');
-    ButtonSell.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     ButtonSell.SetString(__LINE__, OBJPROP_TEXT, "▼Ｓｅｌｌ");
-    ButtonSell.SetInteger(__LINE__, OBJPROP_HIDDEN, true);
 
     x11 += size_x1 + (int)(2.5 * FONT_SIZE);
     ButtonBuy.Initialize(__LINE__, x11, y11, size_x1, size_y1);
-    ButtonBuy.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
     ButtonBuy.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'255,183,183');
     ButtonBuy.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,205,205');
     ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
-    ButtonBuy.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     ButtonBuy.SetString(__LINE__, OBJPROP_TEXT, "▲Ｂｕｙ");
-    ButtonBuy.SetInteger(__LINE__, OBJPROP_HIDDEN, true);
 
     // 価格ラベルの描画
     int x22 = x0 + size_x + FONT_SIZE;
     int y22 = y11 + 2 * size_y;
     LabelPrice2.Initialize(__LINE__, x22, y22, size_x, size_y);
-    LabelPrice2.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    LabelPrice2.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     LabelPrice2.SetString(__LINE__, OBJPROP_TEXT, "1756.60");
     LabelPrice2.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y22 += size_y;
     LabelPrice1.Initialize(__LINE__, x22, y22, size_x, size_y);
-    LabelPrice1.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    LabelPrice1.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     LabelPrice1.SetString(__LINE__, OBJPROP_TEXT, "245771");
     LabelPrice1.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y22 += size_y;
     LabelRatio.Initialize(__LINE__, x22, y22, size_x, size_y);
-    LabelRatio.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    LabelRatio.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     LabelRatio.SetString(__LINE__, OBJPROP_TEXT, "132.913");
     LabelRatio.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
@@ -160,32 +176,24 @@ int OnInit() {
     int x33 = x0 + 2 * size_x + (int)(1.75 * FONT_SIZE);
     int y33 = y11 + 2 * size_y;
     EditSymbol2.Initialize(__LINE__, x33, y33, size_x, size_y3);
-    EditSymbol2.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    EditSymbol2.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     EditSymbol2.SetString(__LINE__, OBJPROP_TEXT, "XAUUSD");
     EditSymbol2.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
     EditSymbol2.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
 
     y33 += size_y;
     EditSymbol1.Initialize(__LINE__, x33, y33, size_x, size_y3);
-    EditSymbol1.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    EditSymbol1.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     EditSymbol1.SetString(__LINE__, OBJPROP_TEXT, "XAUJPY");
     EditSymbol1.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
     EditSymbol1.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
 
     y33 += size_y;
     EditLots.Initialize(__LINE__, x33, y33, size_x, size_y3);
-    EditLots.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    EditLots.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     EditLots.SetString(__LINE__, OBJPROP_TEXT, "0.01");
     EditLots.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
     EditLots.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
 
     y33 += size_y;
     EditMagicNumber.Initialize(__LINE__, x33, y33, size_x, size_y3);
-    EditMagicNumber.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    EditMagicNumber.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     EditMagicNumber.SetString(__LINE__, OBJPROP_TEXT, "12345678");
     EditMagicNumber.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
     EditMagicNumber.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
@@ -194,48 +202,37 @@ int OnInit() {
     int x44 = x11 + 4 * FONT_SIZE - 5;
     int y44 = y11 + size_y;
     LabelEnableOrder.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelEnableOrder.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    LabelEnableOrder.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     LabelEnableOrder.SetString(__LINE__, OBJPROP_TEXT, "クイック発注ボタン表示");
     LabelEnableOrder.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y44 += size_y;
     LabelSymbol2.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelSymbol2.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    LabelSymbol2.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     LabelSymbol2.SetString(__LINE__, OBJPROP_TEXT, "　　　　　　　　銘柄２");
     LabelSymbol2.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y44 += size_y;
     LabelSymbol1.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelSymbol1.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    LabelSymbol1.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     LabelSymbol1.SetString(__LINE__, OBJPROP_TEXT, "　　　　　　　　銘柄１");
     LabelSymbol1.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y44 += size_y;
     LabelLots.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelLots.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    LabelLots.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     LabelLots.SetString(__LINE__, OBJPROP_TEXT, "　　　　　発注ロット数");
     LabelLots.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y44 += size_y;
     LabelMagicNumber.Initialize(__LINE__, x44, y44, size_x, size_y);
-    LabelMagicNumber.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    LabelMagicNumber.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     LabelMagicNumber.SetString(__LINE__, OBJPROP_TEXT, "　　　マジックナンバー");
     LabelMagicNumber.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     // クイック発注ボタン表示チェックボックスの描画
+    TextObject::SetFont(FONT_NAME, FONT_SIZE - 4);
     int x55 = x33;
     int y55 = y11 + size_y - 2;
     CheckboxEnableOrder.Initialize(__LINE__, x55, y55, FONT_SIZE + 2, FONT_SIZE + 2);
-    CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE - 4);
     CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);
     CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_BGCOLOR, clrWhite);
     CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    CheckboxEnableOrder.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
     CheckboxEnableOrder.SetString(__LINE__, OBJPROP_TEXT, "レ");
 
     return INIT_SUCCEEDED;
