@@ -11,14 +11,17 @@
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-class DrawObject
-{
+class DrawObject {
 public:
-    DrawObject(int line, ENUM_OBJECT obj_type, string name, int x, int y, int z, int size_x, int size_y)
-    {
+    DrawObject(int line, ENUM_OBJECT type, string name) {
         obj_name = name;
+        obj_type = type;
+    }
+
+    void Initialize(int line) {
         if (!ObjectCreate(0, obj_name, obj_type, 0, 0, 0)) {
-            printf("DrawObject::SetInger(line %d): ERROR %d", line, GetLastError());
+            int error = GetLastError();
+            printf("DrawObject::DrawObject(line %d): ERROR %d", line, error);
             ExpertRemove();
         }
 
@@ -26,42 +29,63 @@ public:
         SetInteger(line, OBJPROP_SELECTABLE, false);                // オブジェクトの選択可否設定
         SetInteger(line, OBJPROP_SELECTED, false);                  // オブジェクトの選択状態
         SetInteger(line, OBJPROP_HIDDEN, false);                    // オブジェクトリスト表示設定
+        SetInteger(line, OBJPROP_CORNER, CORNER_RIGHT_LOWER);       // コーナーアンカー設定
+        SetInteger(line, OBJPROP_ZORDER, 0);
+    }
+
+    void Initialize(int line, int x, int y, int size_x, int size_y) {
+        Initialize(line);
+
         if (obj_type != OBJ_LABEL && obj_type != OBJ_TEXT) {
             SetInteger(line, OBJPROP_XSIZE, size_x);                // ボタンサイズ幅
             SetInteger(line, OBJPROP_YSIZE, size_y);                // ボタンサイズ高さ
         }
-        SetInteger(line, OBJPROP_CORNER, CORNER_RIGHT_LOWER);       // コーナーアンカー設定
-
         SetInteger(line, OBJPROP_XDISTANCE, x);
         SetInteger(line, OBJPROP_YDISTANCE, y);
-        SetInteger(line, OBJPROP_ZORDER, z);
     }
 
-    void SetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id, long value)
-    {
+    void SetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id, long value) {
         if (!ObjectSetInteger(0, obj_name, prop_id, value)) {
-            printf("DrawObject::SetInger(line %d): ERROR %d", line, GetLastError());
+            int error = GetLastError();
+            printf("DrawObject::SetInteger(line %d): ERROR %d", line, error);
             ExpertRemove();
         }
     }
 
-    void SetString(int line, ENUM_OBJECT_PROPERTY_STRING prop_id, string value)
-    {
+    void SetString(int line, ENUM_OBJECT_PROPERTY_STRING prop_id, string value) {
         if (!ObjectSetString(0, obj_name, prop_id, value)) {
-            printf("DrawObject::SetString(line %d): ERROR %d", line, GetLastError());
+            int error = GetLastError();
+            printf("DrawObject::SetString(line %d): ERROR %d", line, error);
             ExpertRemove();
         }
     }
 
 private:
     string obj_name;
+    ENUM_OBJECT obj_type;
 };
+
+DrawObject Background(__LINE__, OBJ_RECTANGLE_LABEL, "Background");
+DrawObject ButtonSell(__LINE__, OBJ_BUTTON, "ButtonSell");
+DrawObject ButtonBuy(__LINE__, OBJ_BUTTON, "ButtonBuy");
+DrawObject LabelPrice2(__LINE__, OBJ_LABEL, "LabelPrice2");
+DrawObject LabelPrice1(__LINE__, OBJ_LABEL, "LabelPrice1");
+DrawObject LabelRatio(__LINE__, OBJ_LABEL, "LabelRatio");
+DrawObject EditSymbol2(__LINE__, OBJ_EDIT, "EditSymbol2");
+DrawObject EditSymbol1(__LINE__, OBJ_EDIT, "EditSymbol1");
+DrawObject EditLots(__LINE__, OBJ_EDIT, "EditLots");
+DrawObject EditMagicNumber(__LINE__, OBJ_EDIT, "EditMagicNumber");
+DrawObject LabelEnableOrder(__LINE__, OBJ_LABEL, "LabelEnableOrder");
+DrawObject LabelSymbol2(__LINE__, OBJ_LABEL, "LabelSymbol2");
+DrawObject LabelSymbol1(__LINE__, OBJ_LABEL, "LabelSymbol1");
+DrawObject LabelLots(__LINE__, OBJ_LABEL, "LabelLots");
+DrawObject LabelMagicNumber(__LINE__, OBJ_LABEL, "LabelMagicNumber");
+DrawObject CheckboxEnableOrder(__LINE__, OBJ_BUTTON, "CheckboxEnableOrder");
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
-int OnInit()
-{
+int OnInit() {
     // オブジェクト全削除
     ObjectsDeleteAll();
 
@@ -77,8 +101,8 @@ int OnInit()
     int size_y0 = 16 * FONT_SIZE;
     int x00 = x0 + size_x0;
     int y00 = y0 + size_y0;
-    DrawObject background(__LINE__, OBJ_RECTANGLE_LABEL, "Background", x00, y00, 0, size_x0, size_y0);
-    background.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'  0,   0,  70');
+    Background.Initialize(__LINE__, x00, y00, size_x0, size_y0);
+    Background.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,0,70');
 
     int padding_y3 = 8;
     int size_y3 = FONT_SIZE + padding_y3;
@@ -90,127 +114,129 @@ int OnInit()
     int size_y1 = (int)(1.5 * size_y);
     int x11 = x0 + size_x1 + (size_x / 2);
     int y11 = y0 + size_y1 + 10;
-    DrawObject buttonSell(__LINE__, OBJ_BUTTON, "buttonSell", x11, y11, 0, size_x1, size_y1);
-    buttonSell.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    buttonSell.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'183, 183, 255');
-    buttonSell.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'205, 205, 255');
-    buttonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'  0,   0, 255');
-    buttonSell.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    buttonSell.SetString(__LINE__, OBJPROP_TEXT, "▼Ｓｅｌｌ");
+    ButtonSell.Initialize(__LINE__, x11, y11, size_x1, size_y1);
+    ButtonSell.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    ButtonSell.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'183,183,255');
+    ButtonSell.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'205,205,255');
+    ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'0,0,255');
+    ButtonSell.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    ButtonSell.SetString(__LINE__, OBJPROP_TEXT, "▼Ｓｅｌｌ");
+    ButtonSell.SetInteger(__LINE__, OBJPROP_HIDDEN, true);
 
     x11 += size_x1 + (int)(2.5 * FONT_SIZE);
-    DrawObject buttonBuy(__LINE__, OBJ_BUTTON, "buttonBuy", x11, y11, 0, size_x1, size_y1);
-    buttonBuy.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    buttonBuy.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'255, 183, 183');
-    buttonBuy.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255, 205, 205');
-    buttonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,   0,   0');
-    buttonBuy.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    buttonBuy.SetString(__LINE__, OBJPROP_TEXT, "▲Ｂｕｙ");
+    ButtonBuy.Initialize(__LINE__, x11, y11, size_x1, size_y1);
+    ButtonBuy.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    ButtonBuy.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'255,183,183');
+    ButtonBuy.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,205,205');
+    ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
+    ButtonBuy.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    ButtonBuy.SetString(__LINE__, OBJPROP_TEXT, "▲Ｂｕｙ");
+    ButtonBuy.SetInteger(__LINE__, OBJPROP_HIDDEN, true);
 
     // 価格ラベルの描画
     int x22 = x0 + size_x + FONT_SIZE;
     int y22 = y11 + 2 * size_y;
-    DrawObject labelPrice2(__LINE__, OBJ_LABEL, "labelPrice2", x22, y22, 0, size_x, size_y);
-    labelPrice2.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    labelPrice2.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    labelPrice2.SetString(__LINE__, OBJPROP_TEXT, "1756.60");
-    labelPrice2.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelPrice2.Initialize(__LINE__, x22, y22, size_x, size_y);
+    LabelPrice2.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    LabelPrice2.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    LabelPrice2.SetString(__LINE__, OBJPROP_TEXT, "1756.60");
+    LabelPrice2.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y22 += size_y;
-    DrawObject labelPrice1(__LINE__, OBJ_LABEL, "labelPrice1", x22, y22, 0, size_x, size_y);
-    labelPrice1.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    labelPrice1.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    labelPrice1.SetString(__LINE__, OBJPROP_TEXT, "245771");
-    labelPrice1.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelPrice1.Initialize(__LINE__, x22, y22, size_x, size_y);
+    LabelPrice1.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    LabelPrice1.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    LabelPrice1.SetString(__LINE__, OBJPROP_TEXT, "245771");
+    LabelPrice1.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y22 += size_y;
-    DrawObject labelRatio(__LINE__, OBJ_LABEL, "labelRatio", x22, y22, 0, size_x, size_y);
-    labelRatio.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    labelRatio.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    labelRatio.SetString(__LINE__, OBJPROP_TEXT, "132.913");
-    labelRatio.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelRatio.Initialize(__LINE__, x22, y22, size_x, size_y);
+    LabelRatio.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    LabelRatio.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    LabelRatio.SetString(__LINE__, OBJPROP_TEXT, "132.913");
+    LabelRatio.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     // パラメータ入力エディットオブジェクトの描画
     int x33 = x0 + 2 * size_x + (int)(1.75 * FONT_SIZE);
     int y33 = y11 + 2 * size_y;
-    DrawObject editSymbol2(__LINE__, OBJ_EDIT, "editSymbol2", x33, y33, 0, size_x, size_y3);
-    editSymbol2.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    editSymbol2.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    editSymbol2.SetString(__LINE__, OBJPROP_TEXT, "XAUUSD");
-    editSymbol2.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    editSymbol2.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
+    EditSymbol2.Initialize(__LINE__, x33, y33, size_x, size_y3);
+    EditSymbol2.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    EditSymbol2.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    EditSymbol2.SetString(__LINE__, OBJPROP_TEXT, "XAUUSD");
+    EditSymbol2.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
+    EditSymbol2.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
 
     y33 += size_y;
-    DrawObject editSymbol1(__LINE__, OBJ_EDIT, "editSymbol1", x33, y33, 0, size_x, size_y3);
-    editSymbol1.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    editSymbol1.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    editSymbol1.SetString(__LINE__, OBJPROP_TEXT, "XAUJPY");
-    editSymbol1.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    editSymbol1.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
+    EditSymbol1.Initialize(__LINE__, x33, y33, size_x, size_y3);
+    EditSymbol1.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    EditSymbol1.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    EditSymbol1.SetString(__LINE__, OBJPROP_TEXT, "XAUJPY");
+    EditSymbol1.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
+    EditSymbol1.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
 
     y33 += size_y;
-    DrawObject editLots(__LINE__, OBJ_EDIT, "editLots", x33, y33, 0, size_x, size_y3);
-    editLots.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    editLots.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    editLots.SetString(__LINE__, OBJPROP_TEXT, "0.01");
-    editLots.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    editLots.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
+    EditLots.Initialize(__LINE__, x33, y33, size_x, size_y3);
+    EditLots.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    EditLots.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    EditLots.SetString(__LINE__, OBJPROP_TEXT, "0.01");
+    EditLots.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
+    EditLots.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
 
     y33 += size_y;
-    DrawObject editMagicNumber(__LINE__, OBJ_EDIT, "editMagicNumber", x33, y33, 0, size_x, size_y3);
-    editMagicNumber.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    editMagicNumber.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    editMagicNumber.SetString(__LINE__, OBJPROP_TEXT, "12345678");
-    editMagicNumber.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    editMagicNumber.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
+    EditMagicNumber.Initialize(__LINE__, x33, y33, size_x, size_y3);
+    EditMagicNumber.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    EditMagicNumber.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    EditMagicNumber.SetString(__LINE__, OBJPROP_TEXT, "12345678");
+    EditMagicNumber.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
+    EditMagicNumber.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
 
     // パラメータ入力ラベルオブジェクトの描画
     int x44 = x11 + 4 * FONT_SIZE - 5;
     int y44 = y11 + size_y;
-    DrawObject labelEnableOrder(__LINE__, OBJ_LABEL, "labelEnableOrder", x44, y44, 0, size_x, size_y);
-    labelEnableOrder.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    labelEnableOrder.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    labelEnableOrder.SetString(__LINE__, OBJPROP_TEXT, "クイック発注ボタン表示");
-    labelEnableOrder.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelEnableOrder.Initialize(__LINE__, x44, y44, size_x, size_y);
+    LabelEnableOrder.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    LabelEnableOrder.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    LabelEnableOrder.SetString(__LINE__, OBJPROP_TEXT, "クイック発注ボタン表示");
+    LabelEnableOrder.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y44 += size_y;
-    DrawObject labelSymbol2(__LINE__, OBJ_LABEL, "labelSymbol2", x44, y44, 0, size_x, size_y);
-    labelSymbol2.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    labelSymbol2.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    labelSymbol2.SetString(__LINE__, OBJPROP_TEXT, "　　　　　　　　銘柄２");
-    labelSymbol2.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelSymbol2.Initialize(__LINE__, x44, y44, size_x, size_y);
+    LabelSymbol2.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    LabelSymbol2.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    LabelSymbol2.SetString(__LINE__, OBJPROP_TEXT, "　　　　　　　　銘柄２");
+    LabelSymbol2.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y44 += size_y;
-    DrawObject labelSymbol1(__LINE__, OBJ_LABEL, "labelSymbol1", x44, y44, 0, size_x, size_y);
-    labelSymbol1.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    labelSymbol1.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    labelSymbol1.SetString(__LINE__, OBJPROP_TEXT, "　　　　　　　　銘柄１");
-    labelSymbol1.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelSymbol1.Initialize(__LINE__, x44, y44, size_x, size_y);
+    LabelSymbol1.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    LabelSymbol1.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    LabelSymbol1.SetString(__LINE__, OBJPROP_TEXT, "　　　　　　　　銘柄１");
+    LabelSymbol1.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y44 += size_y;
-    DrawObject labelLots(__LINE__, OBJ_LABEL, "labelLots", x44, y44, 0, size_x, size_y);
-    labelLots.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    labelLots.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    labelLots.SetString(__LINE__, OBJPROP_TEXT, "　　　　　発注ロット数");
-    labelLots.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelLots.Initialize(__LINE__, x44, y44, size_x, size_y);
+    LabelLots.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    LabelLots.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    LabelLots.SetString(__LINE__, OBJPROP_TEXT, "　　　　　発注ロット数");
+    LabelLots.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     y44 += size_y;
-    DrawObject labelMagicNumber(__LINE__, OBJ_LABEL, "labelMagicNumber", x44, y44, 0, size_x, size_y);
-    labelMagicNumber.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
-    labelMagicNumber.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    labelMagicNumber.SetString(__LINE__, OBJPROP_TEXT, "　　　マジックナンバー");
-    labelMagicNumber.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
+    LabelMagicNumber.Initialize(__LINE__, x44, y44, size_x, size_y);
+    LabelMagicNumber.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE);
+    LabelMagicNumber.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    LabelMagicNumber.SetString(__LINE__, OBJPROP_TEXT, "　　　マジックナンバー");
+    LabelMagicNumber.SetInteger(__LINE__, OBJPROP_COLOR, LABEL_COLOR);
 
     // クイック発注ボタン表示チェックボックスの描画
     int x55 = x33;
     int y55 = y11 + size_y - 2;
-    DrawObject checkEnableOrder(__LINE__, OBJ_BUTTON, "checkEnableOrder", x55, y55, 0, FONT_SIZE + 2, FONT_SIZE + 2);
-    checkEnableOrder.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE - 4);
-    checkEnableOrder.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);
-    checkEnableOrder.SetInteger(__LINE__, OBJPROP_BGCOLOR, clrWhite);
-    checkEnableOrder.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    checkEnableOrder.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
-    checkEnableOrder.SetString(__LINE__, OBJPROP_TEXT, "レ");
+    CheckboxEnableOrder.Initialize(__LINE__, x55, y55, FONT_SIZE + 2, FONT_SIZE + 2);
+    CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_FONTSIZE, FONT_SIZE - 4);
+    CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);
+    CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_BGCOLOR, clrWhite);
+    CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
+    CheckboxEnableOrder.SetString(__LINE__, OBJPROP_FONT, FONT_NAME);
+    CheckboxEnableOrder.SetString(__LINE__, OBJPROP_TEXT, "レ");
 
     return INIT_SUCCEEDED;
 }
@@ -218,16 +244,14 @@ int OnInit()
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
 //+------------------------------------------------------------------+
-void OnDeinit(const int reason)
-{
+void OnDeinit(const int reason) {
 
 }
 
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
-void OnTick()
-{
+void OnTick() {
 //---
 
 }
@@ -235,8 +259,7 @@ void OnTick()
 //+------------------------------------------------------------------+
 //| Timer function                                                   |
 //+------------------------------------------------------------------+
-void OnTimer()
-{
+void OnTimer() {
 //---
 
 }
@@ -247,9 +270,13 @@ void OnTimer()
 void OnChartEvent(const int id,
                   const long &lparam,
                   const double &dparam,
-                  const string &sparam)
-{
-//---
+                  const string &sparam) {
+    if (id == CHARTEVENT_OBJECT_CLICK && sparam == "CheckboxEnableOrder") {
+        bool pressed = (bool)ObjectGetInteger(0, "CheckboxEnableOrder", OBJPROP_STATE);
+        if (pressed) {
+        }
+        Sleep(500);
+    }
 
 }
 //+------------------------------------------------------------------+
