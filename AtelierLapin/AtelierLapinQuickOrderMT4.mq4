@@ -116,6 +116,33 @@ private:
 
 color LabelObject::COLOR;
 
+class EditObject : public TextObject {
+public:
+    EditObject(int line, string name) : TextObject(line, OBJ_EDIT, name) {}
+
+    void Initialize(int line, int x, int y, int size_x, int size_y) {
+        TextObject::Initialize(line, x, y, size_x, size_y);
+        SetInteger(line, OBJPROP_COLOR, COLOR);
+        SetInteger(line, OBJPROP_BORDER_COLOR, BORDER_COLOR);
+        SetInteger(line, OBJPROP_BGCOLOR, BACKGROUND_COLOR);
+    }
+
+    static void SetColor(color foreground_color, color border_color, color background_color) {
+        COLOR = foreground_color;
+        BORDER_COLOR = border_color;
+        BACKGROUND_COLOR = background_color;
+    }
+
+private:
+    static color COLOR;
+    static color BORDER_COLOR;
+    static color BACKGROUND_COLOR;
+};
+
+color EditObject::COLOR;
+color EditObject::BORDER_COLOR;
+color EditObject::BACKGROUND_COLOR;
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -125,10 +152,10 @@ TextObject ButtonBuy(__LINE__, OBJ_BUTTON, "ButtonBuy");
 LabelObject LabelPrice2(__LINE__, "銘柄２価格");
 LabelObject LabelPrice1(__LINE__, "銘柄１価格");
 LabelObject LabelRatio(__LINE__, "価格比");
-TextObject EditSymbol2(__LINE__, OBJ_EDIT, "EditSymbol2");
-TextObject EditSymbol1(__LINE__, OBJ_EDIT, "EditSymbol1");
-TextObject EditLots(__LINE__, OBJ_EDIT, "EditLots");
-TextObject EditMagicNumber(__LINE__, OBJ_EDIT, "EditMagicNumber");
+EditObject EditSymbol2(__LINE__, "EditSymbol2");
+EditObject EditSymbol1(__LINE__, "EditSymbol1");
+EditObject EditLots(__LINE__, "EditLots");
+EditObject EditMagicNumber(__LINE__, "EditMagicNumber");
 LabelObject LabelEnableOrder(__LINE__, "クイック発注ボタン表示");
 LabelObject LabelSymbol2(__LINE__, "銘柄２");
 LabelObject LabelSymbol1(__LINE__, "銘柄１");
@@ -199,30 +226,24 @@ int OnInit() {
     LabelRatio.SetText(__LINE__, "132.913");
 
     // パラメータ入力エディットオブジェクトの描画
+    EditObject::SetColor(clrBlack, clrGray, clrWhite);
+
     int x33 = x0 + 2 * size_x + (int)(1.75 * FONT_SIZE);
     int y33 = y11 + 2 * size_y;
     EditSymbol2.Initialize(__LINE__, x33, y33, size_x, size_y3);
-    EditSymbol2.SetString(__LINE__, OBJPROP_TEXT, "XAUUSD");
-    EditSymbol2.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    EditSymbol2.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
+    EditSymbol2.SetText(__LINE__, "XAUUSD");
 
     y33 += size_y;
     EditSymbol1.Initialize(__LINE__, x33, y33, size_x, size_y3);
-    EditSymbol1.SetString(__LINE__, OBJPROP_TEXT, "XAUJPY");
-    EditSymbol1.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    EditSymbol1.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
+    EditSymbol1.SetText(__LINE__, "XAUJPY");
 
     y33 += size_y;
     EditLots.Initialize(__LINE__, x33, y33, size_x, size_y3);
-    EditLots.SetString(__LINE__, OBJPROP_TEXT, "0.01");
-    EditLots.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    EditLots.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
+    EditLots.SetText(__LINE__, "0.01");
 
     y33 += size_y;
     EditMagicNumber.Initialize(__LINE__, x33, y33, size_x, size_y3);
-    EditMagicNumber.SetString(__LINE__, OBJPROP_TEXT, "12345678");
-    EditMagicNumber.SetInteger(__LINE__, OBJPROP_COLOR, clrBlack);
-    EditMagicNumber.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrLightGray);
+    EditMagicNumber.SetText(__LINE__, "12345678");
 
     // パラメータ入力ラベルオブジェクトの描画
     int x44 = x11 + 4 * FONT_SIZE - 5;
