@@ -73,7 +73,7 @@ class TextObject : public DrawObject {
 public:
     TextObject(int line, ENUM_OBJECT type, string name) : DrawObject(line, type, name) {}
 
-    static void SetFont(string name, int size) {
+    static void SetDefaultFont(string name, int size) {
         FONT_NAME = name;
         FONT_SIZE = size;
     }
@@ -106,7 +106,7 @@ public:
         SetInteger(line, OBJPROP_COLOR, COLOR);
     }
 
-    static void SetColor(color foreground_color) {
+    static void SetDefaultColor(color foreground_color) {
         COLOR = foreground_color;
     }
 
@@ -127,7 +127,7 @@ public:
         SetInteger(line, OBJPROP_BGCOLOR, BACKGROUND_COLOR);
     }
 
-    static void SetColor(color foreground_color, color border_color, color background_color) {
+    static void SetDefaultColor(color foreground_color, color border_color, color background_color) {
         COLOR = foreground_color;
         BORDER_COLOR = border_color;
         BACKGROUND_COLOR = background_color;
@@ -172,10 +172,10 @@ int OnInit() {
 
     const string FONT_NAME = "HGｺﾞｼｯｸE";
     const int FONT_SIZE = 14;
-    const color LABEL_COLOR = clrCyan;
 
-    TextObject::SetFont(FONT_NAME, FONT_SIZE);
-    LabelObject::SetColor(LABEL_COLOR);
+    TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE);
+    LabelObject::SetDefaultColor(clrCyan);
+    EditObject::SetDefaultColor(clrBlack, clrGray, clrWhite);
 
     int x0 = 10;
     int y0 = 10;
@@ -226,8 +226,6 @@ int OnInit() {
     LabelRatio.SetText(__LINE__, "132.913");
 
     // パラメータ入力エディットオブジェクトの描画
-    EditObject::SetColor(clrBlack, clrGray, clrWhite);
-
     int x33 = x0 + 2 * size_x + (int)(1.75 * FONT_SIZE);
     int y33 = y11 + 2 * size_y;
     EditSymbol2.Initialize(__LINE__, x33, y33, size_x, size_y3);
@@ -268,9 +266,9 @@ int OnInit() {
     LabelMagicNumber.SetText(__LINE__, "　　　マジックナンバー");
 
     // クイック発注ボタン表示チェックボックスの描画
-    TextObject::SetFont(FONT_NAME, FONT_SIZE - 4);
     int x55 = x33;
     int y55 = y11 + size_y - 2;
+    TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE - 4);
     CheckboxEnableOrder.Initialize(__LINE__, x55, y55, FONT_SIZE + 2, FONT_SIZE + 2);
     CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);
     CheckboxEnableOrder.SetInteger(__LINE__, OBJPROP_BGCOLOR, clrWhite);
