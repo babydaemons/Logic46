@@ -1,0 +1,188 @@
+﻿//+------------------------------------------------------------------+
+//|                                    AtelierLapinQuickOrderGUI.mqh |
+//|                        Copyright 2022, MetaQuotes Software Corp. |
+//|                                             https://www.mql5.com |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2022, MetaQuotes Software Corp."
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+#property strict
+
+#include "DrawObject.mqh"
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+DrawObject Border(__LINE__, OBJ_RECTANGLE_LABEL, "Boder");
+DrawObject Background(__LINE__, OBJ_RECTANGLE_LABEL, "Background");
+
+LabelObject LabelMagicNumber(__LINE__, "マジックナンバー");
+LabelObject LabelLots(__LINE__, "発注ロット数");
+LabelObject LabelSymbol(__LINE__, "銘柄");
+LabelObject LabelMargin(__LINE__, "必要証拠金");
+LabelObject LabelSize(__LINE__, "契約サイズ");
+LabelObject LabelSwapType(__LINE__, "SwapType");
+LabelObject LabelBuySwap(__LINE__, "BuySwap");
+LabelObject LabelSellSwap(__LINE__, "SellSwap");
+LabelObject LabelProfit(__LINE__, "マジックナンバー全損益");
+LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
+
+EditObject EditMagicNumber(__LINE__, "EditMagicNumber");
+EditObject EditLots(__LINE__, "EditLots");
+LabelObject LabelOrderSymbol(__LINE__, "発注銘柄");
+LabelObject LabelOrderMargin(__LINE__, "発注必要証拠金");
+LabelObject LabelOrderSize(__LINE__, "発注契約サイズ");
+LabelObject LabelOrderSwapType(__LINE__, "OrderSwapType");
+LabelObject LabelOrderBuySwap(__LINE__, "OrderBuySwap");
+LabelObject LabelOrderSellSwap(__LINE__, "OrderSellSwap");
+LabelObject LabelOrderProfit(__LINE__, "OrderProfit");
+
+ButtonObject ButtonSell(__LINE__, "ButtonSell");
+ButtonObject ButtonBuy(__LINE__, "ButtonBuy");
+
+CheckboxObject CheckboxEnableSettlement(__LINE__, "CheckboxEnableSettlement", false);
+
+ButtonObject ButtonSettlement(__LINE__, "ButtonSettlement");
+
+void InitGUI() {
+    // オブジェクト全削除
+    ObjectsDeleteAll();
+
+    const string FONT_NAME = "BIZ UDゴシック";
+    const int FONT_SIZE = 12;
+
+    TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE);
+    LabelObject::SetDefaultColor(clrCyan);
+    EditObject::SetDefaultColor(clrBlack, clrGray, clrWhite);
+
+    int x0 = 12;
+    int y0 = 22;
+
+    // 背景パネルの描画
+    int size_x0 = (int)(29.6 * FONT_SIZE);
+    int size_y0 = (int)(25.2 * FONT_SIZE);
+    int x00 = x0;
+    int y00 = y0;
+    int line_width = 3;
+    Border.Initialize(__LINE__, x00 - line_width, y00 - line_width, size_x0 + 2 * line_width, size_y0 + 2 * line_width);
+    Border.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,70,140');
+
+    Background.Initialize(__LINE__, x00, y00, size_x0, size_y0);
+    Background.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,0,70');
+
+    int margin_y = 3;
+    int padding_y = 3;
+    int size_y = FONT_SIZE + 2 * margin_y + 2 * padding_y;
+    int size_x = FONT_SIZE * 7;
+
+    // パラメータ入力ラベルオブジェクトの描画
+    int x1 = x0 + 8;
+    int y1 = y0 + 8;
+    int y2 = y1;
+    LabelMagicNumber.Initialize(__LINE__, x1, y1, size_x, size_y);
+
+    y1 += size_y;
+    LabelLots.Initialize(__LINE__, x1, y1, size_x, size_y);
+
+    y1 += size_y;
+    LabelSymbol.Initialize(__LINE__, x1, y1, size_x, size_y);
+
+    y1 += size_y;
+    LabelMargin.Initialize(__LINE__, x1, y1, size_x, size_y);
+
+    y1 += size_y;
+    LabelSize.Initialize(__LINE__, x1, y1, size_x, size_y);
+
+    y1 += size_y;
+    LabelSwapType.Initialize(__LINE__, x1, y1, size_x, size_y);
+
+    y1 += size_y;
+    LabelBuySwap.Initialize(__LINE__, x1, y1, size_x, size_y);
+
+    y1 += size_y;
+    LabelSellSwap.Initialize(__LINE__, x1, y1, size_x, size_y);
+
+    // パラメータ入力エディットオブジェクトの描画
+    int x2 = x0 + (int)(2.4 * size_x);
+    EditMagicNumber.Initialize(__LINE__, x2, y2 - margin_y, size_x, size_y - padding_y);
+    EditMagicNumber.SetText(__LINE__, "12345678");
+
+    y2 += size_y;
+    EditLots.Initialize(__LINE__, x2, y2 - margin_y, size_x, size_y - padding_y);
+    EditLots.SetText(__LINE__, "0.01");
+
+    y2 += size_y;
+    LabelOrderSymbol.Initialize(__LINE__, x2, y2, size_x, size_y);
+    LabelOrderSymbol.SetText(__LINE__, Symbol());
+
+    y2 += size_y;
+    LabelOrderMargin.Initialize(__LINE__, x2, y2, size_x, size_y);
+    LabelOrderMargin.SetText(__LINE__, "98,326");
+
+    y2 += size_y;
+    LabelOrderSize.Initialize(__LINE__, x2, y2, size_x, size_y);
+    LabelOrderSize.SetText(__LINE__, "100");
+
+    y2 += size_y;
+    LabelOrderSwapType.Initialize(__LINE__, x2, y2, size_x, size_y);
+    LabelOrderSwapType.SetText(__LINE__, "ポイント");
+
+    y2 += size_y;
+    LabelOrderBuySwap.Initialize(__LINE__, x2, y2, size_x, size_y);
+    LabelOrderBuySwap.SetText(__LINE__, "-22.26");
+    LabelOrderBuySwap.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
+
+    y2 += size_y;
+    LabelOrderSellSwap.Initialize(__LINE__, x2, y2, size_x, size_y);
+    LabelOrderSellSwap.SetText(__LINE__, "6.36");
+
+    // 発注ボタンの描画
+    int size_x1 = (int)(1.75 * size_x);
+    int size_y1 = (int)(1.5 * size_y);
+    int x3 = x1;
+    int y3 = y2 + (int)(2.1 * FONT_SIZE);
+    ButtonBuy.Initialize(__LINE__, x3, y3, size_x1, size_y1);
+    ButtonBuy.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'255,183,183');
+    ButtonBuy.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,205,205');
+    ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
+    ButtonBuy.SetString(__LINE__, OBJPROP_TEXT, "Ｂｕｙ");
+
+    x3 += (int)(1.3 * size_x1);
+    ButtonSell.Initialize(__LINE__, x3, y3, size_x1, size_y1);
+    ButtonSell.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'183,183,255');
+    ButtonSell.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'205,205,255');
+    ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'0,0,255');
+    ButtonSell.SetString(__LINE__, OBJPROP_TEXT, "Ｓｅｌｌ");
+
+    // クイック決済ボタン表示チェックボックスの描画
+    int y4 = y3 + size_y1 + FONT_SIZE;
+    LabelEnableOrder.Initialize(__LINE__, x1, y4, size_x, size_y);
+
+    CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE - 4);
+    CheckboxEnableSettlement.Initialize(__LINE__, x2, y4, FONT_SIZE + 2, FONT_SIZE + 2);
+
+    int y5 = y4 + size_y;
+    LabelProfit.Initialize(__LINE__, x1, y5, size_x, size_y);
+
+    LabelOrderProfit.Initialize(__LINE__, x2, y5, size_x, size_y);
+    LabelOrderProfit.SetText(__LINE__, "123,456");
+}
+
+//+------------------------------------------------------------------+
+//| ChartEvent function                                              |
+//+------------------------------------------------------------------+
+void OnChartEvent(const int id,
+                  const long &lparam,
+                  const double &dparam,
+                  const string &sparam) {
+    if (ButtonBuy.HasPressed(__LINE__, id, sparam)) {
+        ButtonBuy.Restore(__LINE__);
+    }
+
+    if (ButtonSell.HasPressed(__LINE__, id, sparam)) {
+        ButtonSell.Restore(__LINE__);
+    }
+
+    bool state = false;
+    CheckboxEnableSettlement.HasPressed(__LINE__, id, sparam, state);
+}
