@@ -67,13 +67,19 @@ public:
         }
     }
 
-    string Name() {
-        return obj_name;
-    }
-
     long GetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id) {
         long value = 0;
         if (!ObjectGetInteger(0, obj_name, prop_id, 0, value)) {
+            int error = GetLastError();
+            printf("DrawObject::GetInteger(line %d): ERROR %d", line, error);
+            ExpertRemove();
+        }
+        return value;
+    }
+
+    string GetString(int line, ENUM_OBJECT_PROPERTY_STRING prop_id) {
+        string value = "";
+        if (!ObjectGetString(0, obj_name, prop_id, 0, value)) {
             int error = GetLastError();
             printf("DrawObject::GetInteger(line %d): ERROR %d", line, error);
             ExpertRemove();
@@ -91,7 +97,15 @@ public:
             printf("DrawObject::Remove(line %d): ERROR %d", line, error);
             ExpertRemove();
         }
+        OnRemoved();
     }
+
+    string Name() {
+        return obj_name;
+    }
+
+protected:
+    virtual void OnRemoved() {}
 
 private:
     string obj_name;
@@ -100,7 +114,7 @@ private:
 
 class TextObject : public DrawObject {
 public:
-    TextObject(int line, ENUM_OBJECT type, string name) : DrawObject(line, type, name) {}
+    TextObject(int line, ENUM_OBJECT type, string name) : DrawObject(line, type, name), prev_text("") {}
 
     static void SetDefaultFont(string name, int size) {
         FONT_NAME = name;
@@ -123,12 +137,52 @@ public:
     }
 
     void SetText(int line, string text) {
+        if (text == prev_text) {
+            return;
+        }
         SetString(line, OBJPROP_TEXT, text);
+        prev_text = text;
+    }
+
+    string GetText(int line) {
+        prev_text = GetString(line, OBJPROP_TEXT);
+        return prev_text;
+    }
+
+    //+------------------------------------------------------------------+
+    //| 3桁おきにカンマ区切りの表記の文字列を返す                        |
+    //+------------------------------------------------------------------+
+    static string FormatComma(double number, int precision, string pcomma = ",", string ppoint = ".") {
+        string sign   = number >= 0 ? "" : "-";
+        string snum   = DoubleToString(MathAbs(number), precision);
+        int    decp   = StringFind(snum, ".", 0);
+        string sright = StringSubstr(snum, decp + 1, precision);
+        string sleft  = StringSubstr(snum, 0, decp);
+        string formated = "";
+        string comma    = "";
+
+        while (StringLen(sleft) > 3) {
+            int    length = StringLen(sleft);
+            string part   = StringSubstr(sleft, length - 3);
+            formated = part + comma + formated;
+            comma    = pcomma;
+            sleft    = StringSubstr(sleft, 0, length - 3);
+        }
+
+        if (sleft != "")   formated = sleft + comma + formated;
+        if (precision > 0) formated = formated + ppoint + sright;
+        return sign + formated;
+    }
+
+protected:
+    virtual void OnRemoved() {
+        prev_text = "";
     }
 
 private:
     string font_name;
     int font_size;
+    string prev_text;
 
 private:
     static string FONT_NAME;
@@ -140,7 +194,7 @@ int TextObject::FONT_SIZE;
 
 class LabelObject : public TextObject {
 public:
-    LabelObject(int line, string name) : TextObject(line, OBJ_LABEL, name) {}
+    LabelObject(int line, string name) : TextObject(line, OBJ_LABEL, name), prev_value(FLT_MAX) {}
 
     void Initialize(int line, int x, int y, int size_x, int size_y) {
         TextObject::Initialize(line, x, y, size_x, size_y);
@@ -151,6 +205,35 @@ public:
     static void SetDefaultColor(color foreground_color) {
         COLOR = foreground_color;
     }
+
+
+    void SetValue(int line, double value, int digit) {
+        if (value == prev_value) {
+            return;
+        }
+
+        SetText(line, FormatComma(value, digit));
+        if (value < 0) {
+            SetInteger(line, OBJPROP_COLOR, clrRed);
+        } else {
+            SetInteger(line, OBJPROP_COLOR, COLOR);
+        }
+
+        prev_value = value;
+    }
+
+    double GetValue(int line) {
+        return prev_value;
+    }
+
+protected:
+    virtual void OnRemoved() {
+        TextObject::OnRemoved();
+        prev_value = FLT_MAX;
+    }
+
+private:
+    double prev_value;
 
 private:
     static color COLOR;
@@ -212,7 +295,7 @@ public:
 
         Sleep(100);
         SetInteger(line, OBJPROP_STATE, false);
-        
+
         return true;
     }
 };
@@ -250,8 +333,7 @@ private:
     void UpdateCheck(int line) {
         if (checked) {
             SetInteger(line, OBJPROP_COLOR, clrBlack);
-        }
-        else {
+        } else {
             SetInteger(line, OBJPROP_COLOR, clrWhite);
         }
     }
@@ -259,3 +341,4 @@ private:
 private:
     bool checked;
 };
+//+------------------------------------------------------------------+

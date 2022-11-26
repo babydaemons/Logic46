@@ -16,6 +16,9 @@
 DrawObject Border(__LINE__, OBJ_RECTANGLE_LABEL, "Boder");
 DrawObject Background(__LINE__, OBJ_RECTANGLE_LABEL, "Background");
 
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 LabelObject LabelMagicNumber(__LINE__, "マジックナンバー");
 LabelObject LabelLots(__LINE__, "発注ロット数");
 LabelObject LabelSymbol(__LINE__, "銘柄");
@@ -27,6 +30,9 @@ LabelObject LabelSellSwap(__LINE__, "SellSwap");
 LabelObject LabelProfit(__LINE__, "マジックナンバー全損益");
 LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
 
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 EditObject EditMagicNumber(__LINE__, "EditMagicNumber");
 EditObject EditLots(__LINE__, "EditLots");
 LabelObject LabelOrderSymbol(__LINE__, "発注銘柄");
@@ -37,6 +43,9 @@ LabelObject LabelOrderBuySwap(__LINE__, "OrderBuySwap");
 LabelObject LabelOrderSellSwap(__LINE__, "OrderSellSwap");
 LabelObject LabelOrderProfit(__LINE__, "OrderProfit");
 
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 ButtonObject ButtonSell(__LINE__, "ButtonSell");
 ButtonObject ButtonBuy(__LINE__, "ButtonBuy");
 
@@ -47,7 +56,10 @@ ButtonObject ButtonSettlement(__LINE__, "ButtonSettlement");
 const string FONT_NAME = "BIZ UDゴシック";
 const int FONT_SIZE = 12;
 
-void InitGUI() {
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void InitPanel() {
     // オブジェクト全削除
     ObjectsDeleteAll();
 
@@ -117,24 +129,18 @@ void InitGUI() {
 
     y2 += size_y;
     LabelOrderMargin.Initialize(__LINE__, x2, y2, size_x, size_y);
-    LabelOrderMargin.SetText(__LINE__, "98,326");
 
     y2 += size_y;
     LabelOrderSize.Initialize(__LINE__, x2, y2, size_x, size_y);
-    LabelOrderSize.SetText(__LINE__, "100");
 
     y2 += size_y;
     LabelOrderSwapType.Initialize(__LINE__, x2, y2, size_x, size_y);
-    LabelOrderSwapType.SetText(__LINE__, "ポイント");
 
     y2 += size_y;
     LabelOrderBuySwap.Initialize(__LINE__, x2, y2, size_x, size_y);
-    LabelOrderBuySwap.SetText(__LINE__, "-22.26");
-    LabelOrderBuySwap.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
 
     y2 += size_y;
     LabelOrderSellSwap.Initialize(__LINE__, x2, y2, size_x, size_y);
-    LabelOrderSellSwap.SetText(__LINE__, "6.36");
 
     // 発注ボタンの描画
     int size_x1 = (int)(1.75 * size_x);
@@ -165,7 +171,25 @@ void InitGUI() {
     LabelProfit.Initialize(__LINE__, x1, y5, size_x, size_y);
 
     LabelOrderProfit.Initialize(__LINE__, x2, y5, size_x, size_y);
-    LabelOrderProfit.SetText(__LINE__, "123,456");
+
+    UpdatePanel();
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void UpdatePanel() {
+    LabelOrderMargin.SetValue(__LINE__, GetInitMargin(), 0);
+
+    LabelOrderSize.SetValue(__LINE__, GetLotSize(), 0);
+
+    LabelOrderSwapType.SetText(__LINE__, GetSwapType());
+
+    LabelOrderBuySwap.SetValue(__LINE__, GetBuySwap(), 2);
+
+    LabelOrderSellSwap.SetValue(__LINE__, GetSellSwap(), 2);
+
+    LabelOrderProfit.SetValue(__LINE__, GetMagicNumberProfit(), 0);
 }
 
 //+------------------------------------------------------------------+
@@ -193,14 +217,16 @@ void OnChartEvent(const int id,
     if (check_changed && check_state != prev_check_state) {
         if (check_state) {
             DispSettlementButton();
-        }
-        else {
+        } else {
             HideSettlementButton();
         }
         prev_check_state = check_state;
     }
 }
 
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 void DispSettlementButton() {
     int panel_x = 0;
     int panel_y = 0;
@@ -219,6 +245,16 @@ void DispSettlementButton() {
     ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
 }
 
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 void HideSettlementButton() {
     ButtonSettlement.Remove(__LINE__);
 }
+
+#ifdef __MQL4__
+#include "AtelierLapinQuickOrderMT4.mqh"
+#else
+#include "AtelierLapinQuickOrderMT5.mqh"
+#endif
+//+------------------------------------------------------------------+
