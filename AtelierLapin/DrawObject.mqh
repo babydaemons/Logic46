@@ -44,6 +44,13 @@ public:
         SetInteger(line, OBJPROP_YDISTANCE, y);
     }
 
+    void GetRectangle(int line, int& x, int& y, int& size_x, int& size_y) {
+        x = (int)GetInteger(line, OBJPROP_XDISTANCE);
+        y = (int)GetInteger(line, OBJPROP_YDISTANCE);
+        size_x = (int)GetInteger(line, OBJPROP_XSIZE);
+        size_y = (int)GetInteger(line, OBJPROP_YSIZE);
+    }
+
     void SetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id, long value) {
         if (!ObjectSetInteger(0, obj_name, prop_id, value)) {
             int error = GetLastError();
@@ -76,6 +83,14 @@ public:
 
     bool IsTarget(string sparam) {
         return obj_name == sparam;
+    }
+
+    void Remove(int line) {
+        if (!ObjectDelete(0, obj_name)) {
+            int error = GetLastError();
+            printf("DrawObject::Remove(line %d): ERROR %d", line, error);
+            ExpertRemove();
+        }
     }
 
 private:

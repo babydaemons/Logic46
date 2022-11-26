@@ -44,12 +44,12 @@ CheckboxObject CheckboxEnableSettlement(__LINE__, "CheckboxEnableSettlement", fa
 
 ButtonObject ButtonSettlement(__LINE__, "ButtonSettlement");
 
+const string FONT_NAME = "BIZ UDゴシック";
+const int FONT_SIZE = 12;
+
 void InitGUI() {
     // オブジェクト全削除
     ObjectsDeleteAll();
-
-    const string FONT_NAME = "BIZ UDゴシック";
-    const int FONT_SIZE = 12;
 
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE);
     LabelObject::SetDefaultColor(clrCyan);
@@ -63,9 +63,9 @@ void InitGUI() {
     int size_y0 = (int)(25.2 * FONT_SIZE);
     int x00 = x0;
     int y00 = y0;
-    int line_width = 3;
+    int line_width = 1;
     Border.Initialize(__LINE__, x00 - line_width, y00 - line_width, size_x0 + 2 * line_width, size_y0 + 2 * line_width);
-    Border.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,70,140');
+    Border.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,0,255');
 
     Background.Initialize(__LINE__, x00, y00, size_x0, size_y0);
     Background.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,0,70');
@@ -142,14 +142,14 @@ void InitGUI() {
     int x3 = x1;
     int y3 = y2 + (int)(2.1 * FONT_SIZE);
     ButtonBuy.Initialize(__LINE__, x3, y3, size_x1, size_y1);
-    ButtonBuy.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'255,183,183');
+    ButtonBuy.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'255,0,0');
     ButtonBuy.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,205,205');
     ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
     ButtonBuy.SetString(__LINE__, OBJPROP_TEXT, "Ｂｕｙ");
 
     x3 += (int)(1.3 * size_x1);
     ButtonSell.Initialize(__LINE__, x3, y3, size_x1, size_y1);
-    ButtonSell.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'183,183,255');
+    ButtonSell.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'0,0,255');
     ButtonSell.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'205,205,255');
     ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'0,0,255');
     ButtonSell.SetString(__LINE__, OBJPROP_TEXT, "Ｓｅｌｌ");
@@ -183,6 +183,42 @@ void OnChartEvent(const int id,
         ButtonSell.Restore(__LINE__);
     }
 
-    bool state = false;
-    CheckboxEnableSettlement.HasPressed(__LINE__, id, sparam, state);
+    if (ButtonSettlement.HasPressed(__LINE__, id, sparam)) {
+        ButtonSettlement.Restore(__LINE__);
+    }
+
+    static bool prev_check_state = false;
+    bool check_state = prev_check_state;
+    bool check_changed = CheckboxEnableSettlement.HasPressed(__LINE__, id, sparam, check_state);
+    if (check_changed && check_state != prev_check_state) {
+        if (check_state) {
+            DispSettlementButton();
+        }
+        else {
+            HideSettlementButton();
+        }
+        prev_check_state = check_state;
+    }
+}
+
+void DispSettlementButton() {
+    int panel_x = 0;
+    int panel_y = 0;
+    int panel_size_x = 0;
+    int panel_size_y = 0;
+    Border.GetRectangle(__LINE__, panel_x, panel_y, panel_size_x, panel_size_y);
+    int x = panel_x;
+    int y = panel_y + panel_size_y;
+    int size_x = panel_size_x;
+    int size_y = (int)(FONT_SIZE * 2.8);
+    ButtonSettlement.SetFont(FONT_NAME, (int)(1.2 * FONT_SIZE));
+    ButtonSettlement.Initialize(__LINE__, x, y, size_x, size_y);
+    ButtonSettlement.SetInteger(__LINE__, OBJPROP_COLOR, clrRed);
+    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, clrOrange);
+    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrRed);
+    ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
+}
+
+void HideSettlementButton() {
+    ButtonSettlement.Remove(__LINE__);
 }
