@@ -60,7 +60,7 @@ double GetInitMargin() {
 //|                                                                  |
 //+------------------------------------------------------------------+
 double GetMagicNumberProfit() {
-    int magic_number = (int)StringToInteger(EditMagicNumber.GetText(__LINE__));
+    int magic_number = GetMagicNumber();
     double profit = 0;
     for (int i = 0; i < OrdersTotal(); ++i) {
         if (!OrderSelect(i, SELECT_BY_POS)) {

@@ -210,6 +210,7 @@ void OnChartEvent(const int id,
     }
 
     if (ButtonSettlement.HasPressed(__LINE__, id, sparam)) {
+        SendOrderCloseAll();
         ButtonSettlement.Restore(__LINE__);
     }
 
@@ -278,7 +279,9 @@ void HideSettlementButton() {
 
 #ifdef __MQL4__
 #include "AtelierLapinQuickOrderMT4.mqh"
+#include "SendOrderCloseAllMT4.mqh"
 #else
 #include "AtelierLapinQuickOrderMT5.mqh"
+#include "SendOrderCloseAllMT5.mqh"
 #endif
 //+------------------------------------------------------------------+
