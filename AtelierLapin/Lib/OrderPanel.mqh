@@ -278,8 +278,8 @@ void HideSettlementButton() {
 }
 
 #ifdef __MQL4__
-#include "AtelierLapinQuickOrderMT4.mqh"
-#include "SendOrderCloseAllMT4.mqh"
+#include "MT4/QuickOrder.mqh"
+#include "MT4/SendOrderCloseAll.mqh"
 #else
 #include "AtelierLapinQuickOrderMT5.mqh"
 #include "SendOrderCloseAllMT5.mqh"

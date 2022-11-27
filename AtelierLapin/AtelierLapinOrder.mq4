@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                    AtelierLapinQuickOrderMT4.mq4 |
+//|                                            AtelierLapinOrder.mq4 |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property strict
 
-#include "AtelierLapinQuickOrderGUI.mqh"
+#include "Lib/OrderPanel.mqh"
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
