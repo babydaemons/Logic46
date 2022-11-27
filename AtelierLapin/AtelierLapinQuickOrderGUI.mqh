@@ -229,8 +229,19 @@ void OnChartEvent(const int id,
             EditMagicNumber.SetText(__LINE__, StringFormat("%d", magic_number));
         }
         else {
-            MessageBox("マジックナンバーは1以上の整数を指定してください", "エラー");
+            MessageBox("マジックナンバーは1以上の値を指定してください", "エラー");
             EditMagicNumber.SetText(__LINE__, "12345678");
+        }
+    }
+
+    if (EditLots.HasEdited(__LINE__, id, sparam)) {
+        double lots = StringToDouble(EditLots.GetText(__LINE__));
+        if (lots >= 0.01) {
+            EditLots.SetText(__LINE__, StringFormat("%.2f", lots));
+        }
+        else {
+            MessageBox("発注ロット数は0.01以上の値を指定してください", "エラー");
+            EditLots.SetText(__LINE__, "0.01");
         }
     }
 }
