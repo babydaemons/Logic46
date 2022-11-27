@@ -31,6 +31,10 @@ public:
         SetInteger(line, OBJPROP_HIDDEN, true);                     // オブジェクトリスト表示設定
         SetInteger(line, OBJPROP_CORNER, CORNER_LEFT_UPPER);        // コーナーアンカー設定
         SetInteger(line, OBJPROP_ZORDER, 0);
+
+        int n = ArraySize(obj_id_list);
+        ArrayResize(obj_id_list, n + 1);
+        obj_id_list[n] = obj_name;
     }
 
     void Initialize(int line, int x, int y, int size_x, int size_y) {
@@ -104,13 +108,25 @@ public:
         return obj_name;
     }
 
+    static void RemoveAll() {
+        int N = ArraySize(obj_id_list);
+        for (int i = 0; i < N; ++i) {
+            ObjectDelete(0, obj_id_list[i]);
+        }
+    }
+
 protected:
     virtual void OnRemoved() {}
 
 private:
     string obj_name;
     ENUM_OBJECT obj_type;
+
+private:
+    static string obj_id_list[];
 };
+
+string DrawObject::obj_id_list[];
 
 class TextObject : public DrawObject {
 public:
