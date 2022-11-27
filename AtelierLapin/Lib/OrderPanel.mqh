@@ -242,13 +242,16 @@ void OnChartEvent(const int id,
     }
 
     if (EditLots.HasEdited(__LINE__, id, sparam)) {
-        double lots = StringToDouble(EditLots.GetText(__LINE__));
-        if (lots >= 0.01) {
+        double lots = GetLots();
+        double min_lots = GetMinLot();
+        double max_lots = GetMaxLot();
+        if (min_lots <= lots && lots <= max_lots) {
             EditLots.SetText(__LINE__, StringFormat("%.2f", lots));
         }
         else {
-            MessageBox("発注ロット数は0.01以上の値を指定してください", "エラー");
-            EditLots.SetText(__LINE__, "0.01");
+            string message = StringFormat("発注ロット数は%.2f以上%.2f以下の値を指定してください", min_lots, max_lots);
+            MessageBox(message, "エラー");
+            EditLots.SetText(__LINE__, StringFormat("%.2f", min_lots));
         }
     }
 }
@@ -280,4 +283,19 @@ void DispSettlementButton() {
 void HideSettlementButton() {
     ButtonSettlement.Remove(__LINE__);
 }
+
 //+------------------------------------------------------------------+
+//| マジックナンバーの取得                                           |
+//+------------------------------------------------------------------+
+int GetMagicNumber() {
+    int magic_number = (int)StringToInteger(EditMagicNumber.GetText(__LINE__));
+    return magic_number;
+}
+
+//+------------------------------------------------------------------+
+//| 入力された発注ロット数の取得                                     |
+//+------------------------------------------------------------------+
+double GetLots() {
+    double lots = StringToDouble(EditLots.GetText(__LINE__));
+    return lots;
+}

@@ -266,6 +266,8 @@ public:
             return false;
         }
 
+		string text = GetString(line, OBJPROP_TEXT);
+        SetText(line, text);
         return true;
     }
 

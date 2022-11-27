@@ -10,12 +10,27 @@
 
 #include "../OrderPanel.mqh"
 #include "SendOrderCloseAll.mqh"
+#include "ErrorDescription.mqh"
 
 //+------------------------------------------------------------------+
 //| 契約サイズ(ロットサイズ)の取得                                   |
 //+------------------------------------------------------------------+
 int GetLotSize() {
     return (int)MarketInfo(Symbol(), MODE_LOTSIZE);
+}
+
+//+------------------------------------------------------------------+
+//| 最大ロット数の取得                                               |
+//+------------------------------------------------------------------+
+double GetMaxLot() {
+    return MarketInfo(Symbol(), MODE_MAXLOT);
+}
+
+//+------------------------------------------------------------------+
+//| 最小ロット数の取得                                               |
+//+------------------------------------------------------------------+
+double GetMinLot() {
+    return MarketInfo(Symbol(), MODE_MINLOT);
 }
 
 //+------------------------------------------------------------------+
@@ -78,23 +93,18 @@ double GetMagicNumberProfit() {
 }
 
 //+------------------------------------------------------------------+
-//| マジックナンバーの取得                                           |
-//+------------------------------------------------------------------+
-int GetMagicNumber() {
-    int magic_number = (int)StringToInteger(EditMagicNumber.GetText(__LINE__));
-    return magic_number;
-}
-
-//+------------------------------------------------------------------+
 //| 買い注文の送信                                                   |
 //+------------------------------------------------------------------+
 void SendBuyOrder() {
     int magic_number = GetMagicNumber();
-    double lots = GetLotSize();
+    double lots = GetLots();
     string comment = StringFormat("atelier lapin %d", magic_number);
     int ticket = OrderSend(Symbol(), OP_BUY, lots, Ask, 10, 0.0, 0.0, comment, magic_number, 0, clrBlue);
     if (ticket == -1) {
-        MessageBox("買い注文が約定しませんでした", "エラー");
+        int error_code = GetLastError();
+        string caption = StringFormat("エラー[%d]", error_code);
+        string message = StringFormat("%.2fロットの買い注文が約定しませんでした。\n%s", lots, ErrorDescription(error_code));
+        MessageBox(message, caption);
     }
 }
 
@@ -103,10 +113,14 @@ void SendBuyOrder() {
 //+------------------------------------------------------------------+
 void SendSellOrder() {
     int magic_number = GetMagicNumber();
-    double lots = GetLotSize();
+    double lots = GetLots();
     string comment = StringFormat("atelier lapin %d", magic_number);
     int ticket = OrderSend(Symbol(), OP_SELL, lots, Bid, 10, 0.0, 0.0, comment, magic_number, 0, clrRed);
     if (ticket == -1) {
-        MessageBox("売り注文が約定しませんでした", "エラー");
+        int error_code = GetLastError();
+        string caption = StringFormat("エラー[%d]", error_code);
+        string message = StringFormat("%.2fロットの売り注文が約定しませんでした。\n%s", lots, ErrorDescription());
+        MessageBox(message, caption);
     }
 }
+//+------------------------------------------------------------------+
