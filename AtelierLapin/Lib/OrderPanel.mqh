@@ -61,7 +61,11 @@ const int FONT_SIZE = 12;
 //+------------------------------------------------------------------+
 void InitPanel() {
     // オブジェクト全削除
+#ifdef __MQL4__
     ObjectsDeleteAll();
+#else
+    ObjectsDeleteAll(0);
+#endif
 
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE);
     LabelObject::SetDefaultColor(clrCyan);
@@ -281,7 +285,7 @@ void HideSettlementButton() {
 #include "MT4/QuickOrder.mqh"
 #include "MT4/SendOrderCloseAll.mqh"
 #else
-#include "AtelierLapinQuickOrderMT5.mqh"
-#include "SendOrderCloseAllMT5.mqh"
+#include "MT5/QuickOrder.mqh"
+#include "MT5/SendOrderCloseAll.mqh"
 #endif
 //+------------------------------------------------------------------+
