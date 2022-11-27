@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                    AtelierLapinQuickOrderGUI.mqh |
+//|                                                   OrderPanel.mqh |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -280,12 +280,4 @@ void DispSettlementButton() {
 void HideSettlementButton() {
     ButtonSettlement.Remove(__LINE__);
 }
-
-#ifdef __MQL4__
-#include "MT4/QuickOrder.mqh"
-#include "MT4/SendOrderCloseAll.mqh"
-#else
-#include "MT5/QuickOrder.mqh"
-#include "MT5/SendOrderCloseAll.mqh"
-#endif
 //+------------------------------------------------------------------+

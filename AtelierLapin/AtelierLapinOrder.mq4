@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property strict
 
-#include "Lib/OrderPanel.mqh"
+#include "Lib/MT4/AtelierLapinOrder.mqh"
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |

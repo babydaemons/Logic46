@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                         SendOrderCloseAllMT4.mqh |
+//|                                            SendOrderCloseAll.mqh |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+

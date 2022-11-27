@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                    AtelierLapinQuickOrderMT4.mqh |
+//|                                            AtelierLapinOrder.mqh |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -7,6 +7,9 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 #property strict
+
+#include "../OrderPanel.mqh"
+#include "SendOrderCloseAll.mqh"
 
 //+------------------------------------------------------------------+
 //| 契約サイズ(ロットサイズ)の取得                                   |
