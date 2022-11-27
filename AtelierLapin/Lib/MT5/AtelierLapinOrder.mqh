@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                            AtelierLapinOrder.mqh |
+//|                                                   QuickOrder.mqh |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -12,25 +12,28 @@
 #include "SendOrderCloseAll.mqh"
 #include "ErrorDescription.mqh"
 
+#include <Trade/Trade.mqh>
+CTrade trader;
+
 //+------------------------------------------------------------------+
 //| 契約サイズ(ロットサイズ)の取得                                   |
 //+------------------------------------------------------------------+
 int GetLotSize() {
-    return (int)MarketInfo(Symbol(), MODE_LOTSIZE);
+    return (int)SymbolInfoDouble(Symbol(), SYMBOL_TRADE_CONTRACT_SIZE);
 }
 
 //+------------------------------------------------------------------+
 //| 最大ロット数の取得                                               |
 //+------------------------------------------------------------------+
 double GetMaxLot() {
-    return MarketInfo(Symbol(), MODE_MAXLOT);
+    return SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MAX);
 }
 
 //+------------------------------------------------------------------+
 //| 最小ロット数の取得                                               |
 //+------------------------------------------------------------------+
 double GetMinLot() {
-    return MarketInfo(Symbol(), MODE_MINLOT);
+    return SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MIN);
 }
 
 //+------------------------------------------------------------------+
@@ -38,35 +41,40 @@ double GetMinLot() {
 //+------------------------------------------------------------------+
 string GetSwapType() {
     static const string swap_types[] = {
+        "無効",
         "ポイント",
         "決済通貨",
-        "金利",
         "証拠金通貨",
+        "口座通貨",
+        "金利(商品価格)",
+        "金利(ポジション始値)",
+        "ポイントを終値に反映後再オープン",
+        "ポイントを現在値に反映後再オープン",
     };
-    return swap_types[(int)MarketInfo(Symbol(), MODE_SWAPTYPE)];
+    return swap_types[(int)SymbolInfoInteger(Symbol(), SYMBOL_SWAP_MODE)];
 }
 
 //+------------------------------------------------------------------+
 //| BuySwapの取得                                                    |
 //+------------------------------------------------------------------+
 double GetBuySwap() {
-    return MarketInfo(Symbol(), MODE_SWAPLONG);
+    return SymbolInfoDouble(Symbol(), SYMBOL_SWAP_LONG);
 }
 
 //+------------------------------------------------------------------+
 //| SellSwapの取得                                                   |
 //+------------------------------------------------------------------+
 double GetSellSwap() {
-    return MarketInfo(Symbol(), MODE_SWAPSHORT);
+    return SymbolInfoDouble(Symbol(), SYMBOL_SWAP_SHORT);
 }
 
 //+------------------------------------------------------------------+
 //| 発注ロット数における初期証拠金の取得                             |
 //+------------------------------------------------------------------+
 double GetInitMargin() {
-    double commodity_ask = MarketInfo(Symbol(), MODE_ASK);
+    double commodity_ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
     string symbol = SymbolInfoString(Symbol(), SYMBOL_CURRENCY_PROFIT) + "JPY";
-    double currency_ask = symbol == "JPYJPY" ? 1 : MarketInfo(symbol, MODE_ASK);
+    double currency_ask = symbol == "JPYJPY" ? 1 : SymbolInfoDouble(symbol, SYMBOL_ASK);
     double volume = StringToDouble(EditLots.GetText(__LINE__));
     double lot_size = GetLotSize();
     long leverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
@@ -80,14 +88,12 @@ double GetInitMargin() {
 double GetMagicNumberProfit() {
     int magic_number = GetMagicNumber();
     double profit = 0;
-    for (int i = 0; i < OrdersTotal(); ++i) {
-        if (!OrderSelect(i, SELECT_BY_POS)) {
+    for (int i = 0; i < PositionsTotal(); ++i) {
+        ulong ticket = PositionGetTicket(i);
+        if (PositionGetInteger(POSITION_MAGIC) != magic_number) {
             continue;
         }
-        if (OrderMagicNumber() != magic_number) {
-            continue;
-        }
-        profit += OrderProfit() + OrderSwap();
+        profit += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
     }
     return profit;
 }
@@ -99,8 +105,8 @@ void SendBuyOrder() {
     int magic_number = GetMagicNumber();
     double lots = GetLots();
     string comment = StringFormat("atelier lapin %d", magic_number);
-    int ticket = OrderSend(Symbol(), OP_BUY, lots, Ask, 10, 0.0, 0.0, comment, magic_number, 0, clrBlue);
-    if (ticket == -1) {
+    bool suceed = trader.Buy(lots, Symbol(), 0.0, 0.0, 0.0, comment);
+    if (!suceed) {
         int error_code = GetLastError();
         string caption = StringFormat("エラー[%d]", error_code);
         string message = StringFormat("%.2fロットの買い注文が約定しませんでした。\n%s", lots, ErrorDescription(error_code));
@@ -115,12 +121,11 @@ void SendSellOrder() {
     int magic_number = GetMagicNumber();
     double lots = GetLots();
     string comment = StringFormat("atelier lapin %d", magic_number);
-    int ticket = OrderSend(Symbol(), OP_SELL, lots, Bid, 10, 0.0, 0.0, comment, magic_number, 0, clrRed);
-    if (ticket == -1) {
+    bool suceed = trader.Sell(lots, Symbol(), 0.0, 0.0, 0.0, comment);
+    if (!suceed) {
         int error_code = GetLastError();
         string caption = StringFormat("エラー[%d]", error_code);
         string message = StringFormat("%.2fロットの売り注文が約定しませんでした。\n%s", lots, ErrorDescription(error_code));
         MessageBox(message, caption);
     }
 }
-//+------------------------------------------------------------------+
