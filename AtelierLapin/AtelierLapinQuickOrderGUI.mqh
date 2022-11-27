@@ -200,10 +200,12 @@ void OnChartEvent(const int id,
                   const double &dparam,
                   const string &sparam) {
     if (ButtonBuy.HasPressed(__LINE__, id, sparam)) {
+        SendBuyOrder();
         ButtonBuy.Restore(__LINE__);
     }
 
     if (ButtonSell.HasPressed(__LINE__, id, sparam)) {
+        SendSellOrder();
         ButtonSell.Restore(__LINE__);
     }
 
@@ -224,7 +226,7 @@ void OnChartEvent(const int id,
     }
 
     if (EditMagicNumber.HasEdited(__LINE__, id, sparam)) {
-        int magic_number = (int)StringToInteger(EditMagicNumber.GetText(__LINE__));
+        int magic_number = GetMagicNumber();
         if (magic_number > 0) {
             EditMagicNumber.SetText(__LINE__, StringFormat("%d", magic_number));
         }

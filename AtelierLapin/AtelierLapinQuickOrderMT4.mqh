@@ -73,4 +73,37 @@ double GetMagicNumberProfit() {
     }
     return profit;
 }
+
 //+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+int GetMagicNumber() {
+    int magic_number = (int)StringToInteger(EditMagicNumber.GetText(__LINE__));
+    return magic_number;
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void SendBuyOrder() {
+    int magic_number = GetMagicNumber();
+    double lots = GetLotSize();
+    string comment = StringFormat("atelier lapin %d", magic_number);
+    int ticket = OrderSend(Symbol(), OP_BUY, lots, Ask, 10, 0.0, 0.0, comment, magic_number, 0, clrBlue);
+    if (ticket == -1) {
+        MessageBox("買い注文が約定しませんでした", "エラー");
+    }
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void SendSellOrder() {
+    int magic_number = GetMagicNumber();
+    double lots = GetLotSize();
+    string comment = StringFormat("atelier lapin %d", magic_number);
+    int ticket = OrderSend(Symbol(), OP_SELL, lots, Bid, 10, 0.0, 0.0, comment, magic_number, 0, clrRed);
+    if (ticket == -1) {
+        MessageBox("売り注文が約定しませんでした", "エラー");
+    }
+}
