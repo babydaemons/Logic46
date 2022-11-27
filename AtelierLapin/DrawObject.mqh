@@ -206,7 +206,6 @@ public:
         COLOR = foreground_color;
     }
 
-
     void SetValue(int line, double value, int digit) {
         if (value == prev_value) {
             return;
@@ -256,6 +255,18 @@ public:
         COLOR = foreground_color;
         BORDER_COLOR = border_color;
         BACKGROUND_COLOR = background_color;
+    }
+
+    bool HasEdited(int line, int id, string sparam) {
+        if (id != CHARTEVENT_OBJECT_ENDEDIT) {
+            return false;
+        }
+
+        if (!IsTarget(sparam)) {
+            return false;
+        }
+
+        return true;
     }
 
 private:

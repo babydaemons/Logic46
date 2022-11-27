@@ -222,6 +222,17 @@ void OnChartEvent(const int id,
         }
         prev_check_state = check_state;
     }
+
+    if (EditMagicNumber.HasEdited(__LINE__, id, sparam)) {
+        int magic_number = (int)StringToInteger(EditMagicNumber.GetText(__LINE__));
+        if (magic_number > 0) {
+            EditMagicNumber.SetText(__LINE__, StringFormat("%d", magic_number));
+        }
+        else {
+            MessageBox("マジックナンバーは1以上の整数を指定してください", "エラー");
+            EditMagicNumber.SetText(__LINE__, "12345678");
+        }
+    }
 }
 
 //+------------------------------------------------------------------+
