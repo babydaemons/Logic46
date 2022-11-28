@@ -164,17 +164,15 @@ void InitPanel() {
     ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'0,0,255');
     ButtonSell.SetString(__LINE__, OBJPROP_TEXT, "Ｓｅｌｌ");
 
-    // クイック決済ボタン表示チェックボックスの描画
     int y4 = y3 + size_y1 + FONT_SIZE;
-    LabelEnableOrder.Initialize(__LINE__, x1, y4, size_x, size_y);
+    LabelProfit.Initialize(__LINE__, x1, y4, size_x, size_y);
+    LabelOrderProfit.Initialize(__LINE__, x2, y4, size_x, size_y);
 
+    // クイック決済ボタン表示チェックボックスの描画
+    y4 += size_y;
+    LabelEnableOrder.Initialize(__LINE__, x1, y4, size_x, size_y);
     CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE - 4);
     CheckboxEnableSettlement.Initialize(__LINE__, x2, y4, FONT_SIZE + 2, FONT_SIZE + 2);
-
-    int y5 = y4 + size_y;
-    LabelProfit.Initialize(__LINE__, x1, y5, size_x, size_y);
-
-    LabelOrderProfit.Initialize(__LINE__, x2, y5, size_x, size_y);
 
     UpdatePanel();
 }
