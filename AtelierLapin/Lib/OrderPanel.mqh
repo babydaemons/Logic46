@@ -270,8 +270,8 @@ void DispSettlementButton() {
     ButtonSettlement.SetFont(FONT_NAME, (int)(1.2 * FONT_SIZE));
     ButtonSettlement.Initialize(__LINE__, x, y, size_x, size_y);
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_COLOR, clrRed);
-    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, clrOrange);
-    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrRed);
+    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,200,100');
+    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);
     ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
 }
 
