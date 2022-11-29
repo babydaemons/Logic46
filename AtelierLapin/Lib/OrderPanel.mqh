@@ -29,10 +29,6 @@ LabelObject LabelBuySwap(__LINE__, "BuySwap");
 LabelObject LabelSellSwap(__LINE__, "SellSwap");
 LabelObject LabelProfit(__LINE__, "マジックナンバー全損益");
 LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
 EditObject EditMagicNumber(__LINE__, "EditMagicNumber");
 EditObject EditLots(__LINE__, "EditLots");
 LabelObject LabelOrderSymbol(__LINE__, "発注銘柄");
@@ -42,15 +38,9 @@ LabelObject LabelOrderSwapType(__LINE__, "OrderSwapType");
 LabelObject LabelOrderBuySwap(__LINE__, "OrderBuySwap");
 LabelObject LabelOrderSellSwap(__LINE__, "OrderSellSwap");
 LabelObject LabelOrderProfit(__LINE__, "OrderProfit");
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
 ButtonObject ButtonSell(__LINE__, "ButtonSell");
 ButtonObject ButtonBuy(__LINE__, "ButtonBuy");
-
 CheckboxObject CheckboxEnableSettlement(__LINE__, "CheckboxEnableSettlement", false);
-
 ButtonObject ButtonSettlement(__LINE__, "ButtonSettlement");
 
 const string FONT_NAME = "BIZ UDゴシック";
@@ -194,6 +184,32 @@ void UpdatePanel() {
     LabelOrderProfit.SetValue(__LINE__, GetMagicNumberProfit(), 0);
 }
 
+void RemovePanel() {
+    LabelMagicNumber.Remove(__LINE__);
+    LabelLots.Remove(__LINE__);
+    LabelSymbol.Remove(__LINE__);
+    LabelMargin.Remove(__LINE__);
+    LabelSize.Remove(__LINE__);
+    LabelSwapType.Remove(__LINE__);
+    LabelBuySwap.Remove(__LINE__);
+    LabelSellSwap.Remove(__LINE__);
+    LabelProfit.Remove(__LINE__);
+    LabelEnableOrder.Remove(__LINE__);
+    EditMagicNumber.Remove(__LINE__);
+    EditLots.Remove(__LINE__);
+    LabelOrderSymbol.Remove(__LINE__);
+    LabelOrderMargin.Remove(__LINE__);
+    LabelOrderSize.Remove(__LINE__);
+    LabelOrderSwapType.Remove(__LINE__);
+    LabelOrderBuySwap.Remove(__LINE__);
+    LabelOrderSellSwap.Remove(__LINE__);
+    LabelOrderProfit.Remove(__LINE__);
+    ButtonSell.Remove(__LINE__);
+    ButtonBuy.Remove(__LINE__);
+    CheckboxEnableSettlement.Remove(__LINE__);
+    ButtonSettlement.Remove(__LINE__);
+}
+
 //+------------------------------------------------------------------+
 //| ChartEvent function                                              |
 //+------------------------------------------------------------------+
@@ -201,6 +217,11 @@ void OnChartEvent(const int id,
                   const long &lparam,
                   const double &dparam,
                   const string &sparam) {
+    if (DrawObject::HasChartPropertyChanged(__LINE__, id)) {
+        RemovePanel();
+        InitPanel();
+    }
+
     if (ButtonBuy.HasPressed(__LINE__, id, sparam)) {
         SendBuyOrder();
         ButtonBuy.Restore(__LINE__);

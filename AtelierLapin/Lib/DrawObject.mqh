@@ -13,10 +13,7 @@
 //+------------------------------------------------------------------+
 class DrawObject {
 public:
-    DrawObject(int line, ENUM_OBJECT type, string name) {
-        obj_name = name;
-        obj_type = type;
-    }
+    DrawObject(int line, ENUM_OBJECT type, string name) : obj_name(name), obj_type(type), initialized(false) {}
 
     enum { DPI100 = 96 };
 
@@ -26,6 +23,7 @@ public:
             printf("DrawObject::DrawObject(line %d): ERROR %d", line, error);
             ExpertRemove();
         }
+        initialized = true;
 
         SetInteger(line, OBJPROP_BACK, false);                      // オブジェクトの背景表示設定
         SetInteger(line, OBJPROP_SELECTABLE, false);                // オブジェクトの選択可否設定
@@ -33,10 +31,6 @@ public:
         SetInteger(line, OBJPROP_HIDDEN, true);                     // オブジェクトリスト表示設定
         SetInteger(line, OBJPROP_CORNER, CORNER_LEFT_UPPER);        // コーナーアンカー設定
         SetInteger(line, OBJPROP_ZORDER, 0);
-
-        int n = ArraySize(obj_id_list);
-        ArrayResize(obj_id_list, n + 1);
-        obj_id_list[n] = obj_name;
     }
 
     void Initialize(int line, int x, int y, int size_x, int size_y) {
@@ -106,23 +100,24 @@ public:
     }
 
     void Remove(int line) {
-        if (!ObjectDelete(0, obj_name)) {
-            int error = GetLastError();
-            printf("DrawObject::Remove(line %d): ERROR %d", line, error);
-            ExpertRemove();
+        if (initialized) {
+            if (!ObjectDelete(0, obj_name)) {
+                int error = GetLastError();
+                printf("DrawObject::Remove(line %d): ERROR %d", line, error);
+                ExpertRemove();
+            } else {
+                OnRemoved();
+                initialized = false;
+            }
         }
-        OnRemoved();
     }
 
     string Name() {
         return obj_name;
     }
 
-    static void RemoveAll() {
-        int N = ArraySize(obj_id_list);
-        for (int i = 0; i < N; ++i) {
-            ObjectDelete(0, obj_id_list[i]);
-        }
+    static bool HasChartPropertyChanged(int line, int id) {
+        return id == CHARTEVENT_CHART_CHANGE;
     }
 
 protected:
@@ -131,12 +126,8 @@ protected:
 private:
     string obj_name;
     ENUM_OBJECT obj_type;
-
-private:
-    static string obj_id_list[];
+    bool initialized;
 };
-
-string DrawObject::obj_id_list[];
 
 class TextObject : public DrawObject {
 public:

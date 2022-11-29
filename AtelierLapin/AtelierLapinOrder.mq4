@@ -26,7 +26,7 @@ int OnInit() {
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason) {
     EventKillTimer();
-    DrawObject::RemoveAll();
+    RemovePanel();
 }
 
 //+------------------------------------------------------------------+
