@@ -18,6 +18,8 @@ public:
         obj_type = type;
     }
 
+    enum { DPI100 = 96 };
+
     void Initialize(int line) {
         if (!ObjectCreate(0, obj_name, obj_type, 0, 0, 0)) {
             int error = GetLastError();
@@ -39,6 +41,14 @@ public:
 
     void Initialize(int line, int x, int y, int size_x, int size_y) {
         Initialize(line);
+
+        int dpi = TerminalInfoInteger(TERMINAL_SCREEN_DPI);
+        double dpi_ratio = (double)dpi / (double)DPI100;
+
+        x = (int)(dpi_ratio * x);
+        y = (int)(dpi_ratio * y);
+        size_x = (int)(dpi_ratio * size_x);
+        size_y = (int)(dpi_ratio * size_y);
 
         if (obj_type != OBJ_LABEL && obj_type != OBJ_TEXT) {
             SetInteger(line, OBJPROP_XSIZE, size_x);                // ボタンサイズ幅
