@@ -33,16 +33,21 @@ public:
         SetInteger(line, OBJPROP_ZORDER, 0);
     }
 
-    void Initialize(int line, int x, int y, int size_x, int size_y) {
-        Initialize(line);
-
+    static int ConvertDPI(int x) {
         int dpi = TerminalInfoInteger(TERMINAL_SCREEN_DPI);
         double dpi_ratio = (double)dpi / (double)DPI100;
+        return (int)(dpi_ratio * x);
+    }
 
-        x = (int)(dpi_ratio * x);
-        y = (int)(dpi_ratio * y);
-        size_x = (int)(dpi_ratio * size_x);
-        size_y = (int)(dpi_ratio * size_y);
+    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
+        Initialize(line);
+
+        if (scaled) {
+            x = ConvertDPI(x);
+            y = ConvertDPI(y);
+            size_x = ConvertDPI(size_x);
+            size_y = ConvertDPI(size_y);
+        }
 
         if (obj_type != OBJ_LABEL && obj_type != OBJ_TEXT) {
             SetInteger(line, OBJPROP_XSIZE, size_x);                // ボタンサイズ幅
@@ -143,8 +148,8 @@ public:
         font_size = size;
     }
 
-    void Initialize(int line, int x, int y, int size_x, int size_y) {
-        DrawObject::Initialize(line, x, y, size_x, size_y);
+    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
+        DrawObject::Initialize(line, x, y, size_x, size_y, scaled);
         if (font_name == "" || font_size == 0) {
             font_name = FONT_NAME;
             font_size = FONT_SIZE;
@@ -213,8 +218,8 @@ class LabelObject : public TextObject {
 public:
     LabelObject(int line, string name) : TextObject(line, OBJ_LABEL, name), prev_value(FLT_MAX) {}
 
-    void Initialize(int line, int x, int y, int size_x, int size_y) {
-        TextObject::Initialize(line, x, y, size_x, size_y);
+    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
+        TextObject::Initialize(line, x, y, size_x, size_y, scaled);
         SetText(line, Name());
         SetInteger(line, OBJPROP_COLOR, COLOR);
     }
@@ -261,8 +266,8 @@ class EditObject : public TextObject {
 public:
     EditObject(int line, string name) : TextObject(line, OBJ_EDIT, name) {}
 
-    void Initialize(int line, int x, int y, int size_x, int size_y) {
-        TextObject::Initialize(line, x, y, size_x, size_y);
+    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled) {
+        TextObject::Initialize(line, x, y, size_x, size_y, scaled);
         SetInteger(line, OBJPROP_COLOR, COLOR);
         SetInteger(line, OBJPROP_BORDER_COLOR, BORDER_COLOR);
         SetInteger(line, OBJPROP_BGCOLOR, BACKGROUND_COLOR);
@@ -302,6 +307,10 @@ class ButtonObject : public TextObject {
 public:
     ButtonObject(int line, string name) : TextObject(line, OBJ_BUTTON, name) {}
 
+    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled) {
+        TextObject::Initialize(line, x, y, size_x, size_y, scaled);
+    }
+
     bool HasPressed(int line, int id, string sparam) {
         if (id != CHARTEVENT_OBJECT_CLICK) {
             return false;
@@ -334,8 +343,8 @@ class CheckboxObject : public TextObject {
 public:
     CheckboxObject(int line, string name, bool init_state) : TextObject(line, OBJ_BUTTON, name), checked(init_state) {}
 
-    void Initialize(int line, int x, int y, int size_x, int size_y) {
-        TextObject::Initialize(line, x, y, size_x, size_y);
+    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled) {
+        TextObject::Initialize(line, x, y, size_x, size_y, scaled);
         SetInteger(line, OBJPROP_STATE, checked);
         SetInteger(line, OBJPROP_BORDER_COLOR, clrBlack);
         SetInteger(line, OBJPROP_BGCOLOR, clrWhite);

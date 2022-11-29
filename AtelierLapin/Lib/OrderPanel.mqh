@@ -284,15 +284,15 @@ void DispSettlementButton() {
     int panel_size_x = 0;
     int panel_size_y = 0;
     Border.GetRectangle(__LINE__, panel_x, panel_y, panel_size_x, panel_size_y);
-    int x = panel_x;
+    int x = panel_x + 1;
     int y = panel_y + panel_size_y;
     int size_x = panel_size_x;
-    int size_y = (int)(FONT_SIZE * 2.8);
+    int size_y = DrawObject::ConvertDPI((int)(FONT_SIZE * 2.8));
     ButtonSettlement.SetFont(FONT_NAME, (int)(1.2 * FONT_SIZE));
-    ButtonSettlement.Initialize(__LINE__, x, y, size_x, size_y);
+    ButtonSettlement.Initialize(__LINE__, x, y, size_x, size_y, false);
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_COLOR, clrRed);
-    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,200,100');
-    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);
+    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,220,110');
+    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrOrange);
     ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
 }
 
