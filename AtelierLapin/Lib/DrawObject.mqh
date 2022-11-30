@@ -343,12 +343,12 @@ class CheckboxObject : public TextObject {
 public:
     CheckboxObject(int line, string name, bool init_state) : TextObject(line, OBJ_BUTTON, name), checked(init_state) {}
 
-    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled) {
+    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
         TextObject::Initialize(line, x, y, size_x, size_y, scaled);
         SetInteger(line, OBJPROP_STATE, checked);
         SetInteger(line, OBJPROP_BORDER_COLOR, clrBlack);
         SetInteger(line, OBJPROP_BGCOLOR, clrWhite);
-        SetText(line, "レ");
+        SetText(line, checked ? "レ" : "");
         UpdateCheck(line);
     }
 
@@ -370,11 +370,8 @@ public:
 
 private:
     void UpdateCheck(int line) {
-        if (checked) {
-            SetInteger(line, OBJPROP_COLOR, clrBlack);
-        } else {
-            SetInteger(line, OBJPROP_COLOR, clrWhite);
-        }
+        SetInteger(line, OBJPROP_COLOR, checked ? clrBlack : clrWhite);
+        SetText(line, checked ? "レ" : "");
     }
 
 private:
