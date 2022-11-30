@@ -8,22 +8,25 @@
 #property version   "1.00"
 #property strict
 
+void Abort(string msg) {
+    MessageBox("このダイアログのスクリーンショットを取って\n開発者にお問い合わせください。\n\n" + msg);
+    DebugBreak();
+}
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 class DrawObject {
 public:
-    DrawObject(int line, ENUM_OBJECT type, string name) : obj_name(name), obj_type(type), initialized(false) {}
+    DrawObject(int line, ENUM_OBJECT type, string name) : obj_name(name), obj_type(type) {}
 
     enum { DPI100 = 96 };
 
     void Initialize(int line) {
-        if (!ObjectCreate(0, obj_name, obj_type, 0, 0, 0)) {
+        if (!Exist() && !ObjectCreate(0, obj_name, obj_type, 0, 0, 0)) {
             int error = GetLastError();
-            printf("DrawObject::DrawObject(line %d): ERROR %d", line, error);
-            ExpertRemove();
+            Abort(StringFormat("DrawObject::DrawObject(line %d): ERROR %d", line, error));
         }
-        initialized = true;
 
         SetInteger(line, OBJPROP_BACK, false);                      // オブジェクトの背景表示設定
         SetInteger(line, OBJPROP_SELECTABLE, false);                // オブジェクトの選択可否設定
@@ -65,37 +68,33 @@ public:
     }
 
     void SetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id, long value) {
-        if (!ObjectSetInteger(0, obj_name, prop_id, value)) {
+        if (Exist() && !ObjectSetInteger(0, obj_name, prop_id, value)) {
             int error = GetLastError();
-            printf("DrawObject::SetInteger(line %d): ERROR %d", line, error);
-            ExpertRemove();
+            Abort(StringFormat("DrawObject::SetInteger(line %d): ERROR %d", line, error));
         }
     }
 
     void SetString(int line, ENUM_OBJECT_PROPERTY_STRING prop_id, string value) {
-        if (!ObjectSetString(0, obj_name, prop_id, value)) {
+        if (Exist() && !ObjectSetString(0, obj_name, prop_id, value)) {
             int error = GetLastError();
-            printf("DrawObject::SetString(line %d): ERROR %d", line, error);
-            ExpertRemove();
+            Abort(StringFormat("DrawObject::SetString(line %d): ERROR %d", line, error));
         }
     }
 
     long GetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id) {
         long value = 0;
-        if (!ObjectGetInteger(0, obj_name, prop_id, 0, value)) {
+        if (Exist() && !ObjectGetInteger(0, obj_name, prop_id, 0, value)) {
             int error = GetLastError();
-            printf("DrawObject::GetInteger(line %d): ERROR %d", line, error);
-            ExpertRemove();
+            Abort(StringFormat("DrawObject::GetInteger(line %d): ERROR %d", line, error));
         }
         return value;
     }
 
     string GetString(int line, ENUM_OBJECT_PROPERTY_STRING prop_id) {
         string value = "";
-        if (!ObjectGetString(0, obj_name, prop_id, 0, value)) {
+        if (Exist() && !ObjectGetString(0, obj_name, prop_id, 0, value)) {
             int error = GetLastError();
-            printf("DrawObject::GetInteger(line %d): ERROR %d", line, error);
-            ExpertRemove();
+            Abort(StringFormat("DrawObject::GetInteger(line %d): ERROR %d", line, error));
         }
         return value;
     }
@@ -105,14 +104,12 @@ public:
     }
 
     void Remove(int line) {
-        if (initialized) {
+        if (Exist()) {
             if (!ObjectDelete(0, obj_name)) {
                 int error = GetLastError();
-                printf("DrawObject::Remove(line %d): ERROR %d", line, error);
-                ExpertRemove();
+                Abort(StringFormat("DrawObject::Remove(line %d): ERROR %d", line, error));
             } else {
                 OnRemoved();
-                initialized = false;
             }
         }
     }
@@ -125,13 +122,16 @@ public:
         return id == CHARTEVENT_CHART_CHANGE;
     }
 
+    bool Exist() {
+        return ObjectFind(0, obj_name) >= 0;
+    }
+
 protected:
     virtual void OnRemoved() {}
 
 private:
     string obj_name;
     ENUM_OBJECT obj_type;
-    bool initialized;
 };
 
 class TextObject : public DrawObject {
@@ -348,7 +348,6 @@ public:
         SetInteger(line, OBJPROP_STATE, checked);
         SetInteger(line, OBJPROP_BORDER_COLOR, clrBlack);
         SetInteger(line, OBJPROP_BGCOLOR, clrWhite);
-        SetText(line, checked ? "レ" : "");
         UpdateCheck(line);
     }
 
@@ -368,8 +367,14 @@ public:
         return true;
     }
 
+    bool IsChecked(int line) {
+        UpdateCheck(line);
+        return checked;
+    }
+
 private:
     void UpdateCheck(int line) {
+        SetInteger(line, OBJPROP_STATE, checked);
         SetInteger(line, OBJPROP_COLOR, checked ? clrBlack : clrWhite);
         SetText(line, checked ? "レ" : "");
     }

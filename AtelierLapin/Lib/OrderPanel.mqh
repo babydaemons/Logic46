@@ -51,11 +51,7 @@ const int FONT_SIZE = 12;
 //+------------------------------------------------------------------+
 void InitPanel() {
     // オブジェクト全削除
-#ifdef __MQL4__
-    ObjectsDeleteAll();
-#else
-    ObjectsDeleteAll(0);
-#endif
+    RemovePanel();
 
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE);
     LabelObject::SetDefaultColor(clrCyan);
@@ -182,9 +178,17 @@ void UpdatePanel() {
     LabelOrderSellSwap.SetValue(__LINE__, GetSellSwap(), 2);
 
     LabelOrderProfit.SetValue(__LINE__, GetMagicNumberProfit(), 0);
+
+    if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
+        DispSettlementButton();
+    } else {
+        HideSettlementButton();
+    }
 }
 
 void RemovePanel() {
+    Border.Remove(__LINE__);
+    Background.Remove(__LINE__);
     LabelMagicNumber.Remove(__LINE__);
     LabelLots.Remove(__LINE__);
     LabelSymbol.Remove(__LINE__);
