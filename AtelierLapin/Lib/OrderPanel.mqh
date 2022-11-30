@@ -107,11 +107,11 @@ void InitPanel() {
     // パラメータ入力エディットオブジェクトの描画
     int x2 = x0 + (int)(2.4 * size_x);
     EditMagicNumber.Initialize(__LINE__, x2, y2 - margin_y, size_x, size_y - padding_y);
-    EditMagicNumber.SetText(__LINE__, "12345678");
+    EditMagicNumber.InitText(__LINE__, "12345678");
 
     y2 += size_y;
     EditLots.Initialize(__LINE__, x2, y2 - margin_y, size_x, size_y - padding_y);
-    EditLots.SetText(__LINE__, "0.01");
+    EditLots.InitText(__LINE__, "0.01");
 
     y2 += size_y;
     LabelOrderSymbol.Initialize(__LINE__, x2, y2, size_x, size_y);

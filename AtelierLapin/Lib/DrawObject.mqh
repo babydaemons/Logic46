@@ -171,6 +171,17 @@ public:
         return prev_text;
     }
 
+    bool IsEmpty(int line) {
+        return prev_text == "";
+    }
+
+    void InitText(int line, string init_text) {
+        if (IsEmpty(line)) {
+            prev_text = init_text;
+        }
+        SetString(line, OBJPROP_TEXT, prev_text);
+    }
+
     //+------------------------------------------------------------------+
     //| 3桁おきにカンマ区切りの表記の文字列を返す                        |
     //+------------------------------------------------------------------+
@@ -291,6 +302,11 @@ public:
 		string text = GetString(line, OBJPROP_TEXT);
         SetText(line, text);
         return true;
+    }
+
+protected:
+    virtual void OnRemoved() {
+        /* 編集後のテキスト値を保持するため空実装 */
     }
 
 private:
