@@ -16,7 +16,7 @@
 int OnInit() {
     InitPanel();
 
-    EventSetMillisecondTimer(100);
+    EventSetMillisecondTimer(10);
 
     return INIT_SUCCEEDED;
 }

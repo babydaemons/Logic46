@@ -16,7 +16,7 @@
 int OnInit() {
     InitPanel();
 
-    EventSetMillisecondTimer(100);
+    EventSetMillisecondTimer(10);
 
     return INIT_SUCCEEDED;
 }
@@ -26,7 +26,7 @@ int OnInit() {
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason) {
     EventKillTimer();
-    DrawObject::RemoveAll();
+    RemovePanel();
 }
 
 //+------------------------------------------------------------------+
