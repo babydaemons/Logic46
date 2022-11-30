@@ -59,7 +59,7 @@ void InitPanel() {
 
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE);
     LabelObject::SetDefaultColor(clrCyan);
-    EditObject::SetDefaultColor(clrBlack, clrGray, clrWhite);
+    EditObject::SetDefaultColor(clrBlack, clrBlack, clrWhite);
 
     int x0 = 12;
     int y0 = 22;

@@ -266,7 +266,7 @@ class EditObject : public TextObject {
 public:
     EditObject(int line, string name) : TextObject(line, OBJ_EDIT, name) {}
 
-    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled) {
+    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
         TextObject::Initialize(line, x, y, size_x, size_y, scaled);
         SetInteger(line, OBJPROP_COLOR, COLOR);
         SetInteger(line, OBJPROP_BORDER_COLOR, BORDER_COLOR);
@@ -307,7 +307,7 @@ class ButtonObject : public TextObject {
 public:
     ButtonObject(int line, string name) : TextObject(line, OBJ_BUTTON, name) {}
 
-    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled) {
+    void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
         TextObject::Initialize(line, x, y, size_x, size_y, scaled);
     }
 
