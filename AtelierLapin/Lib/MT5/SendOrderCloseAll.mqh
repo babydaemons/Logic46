@@ -20,13 +20,13 @@ void SendOrderCloseAll() {
         }
 
         for (int count = 1; count <= 10; ++count) {
-            bool succed = trader.OrderDelete(ticket);
+            bool succed = trader.PositionClose(ticket);
             if (succed) {
                 break;
             }
-            Sleep(1000 * count);
+            Sleep(100 * count);
         }
-        Sleep(500);
+        Sleep(100);
     }
 }
 //+------------------------------------------------------------------+

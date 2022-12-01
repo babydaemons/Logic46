@@ -32,9 +32,9 @@ void SendOrderCloseAll() {
             if (succed) {
                 break;
             }
-            Sleep(1000 * count);
+            Sleep(100 * count);
         }
-        Sleep(500);
+        Sleep(100);
     }
 }
 //+------------------------------------------------------------------+
