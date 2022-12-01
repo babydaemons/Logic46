@@ -58,7 +58,7 @@ void InitPanel() {
     EditObject::SetDefaultColor(clrBlack, clrBlack, clrWhite);
 
     int x0 = 12;
-    int y0 = 22;
+    int y0 = 24;
 
     // 背景パネルの描画
     int size_x0 = (int)(29.6 * FONT_SIZE);
@@ -79,7 +79,7 @@ void InitPanel() {
 
     // パラメータ入力ラベルオブジェクトの描画
     int x1 = x0 + 8;
-    int y1 = y0 + 8;
+    int y1 = y0 + 11;
     int y2 = y1;
     LabelMagicNumber.Initialize(__LINE__, x1, y1, size_x, size_y);
 
@@ -157,8 +157,8 @@ void InitPanel() {
     // クイック決済ボタン表示チェックボックスの描画
     y4 += size_y;
     LabelEnableOrder.Initialize(__LINE__, x1, y4, size_x, size_y);
-    CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE - 4);
-    CheckboxEnableSettlement.Initialize(__LINE__, x2, y4, FONT_SIZE + 2, FONT_SIZE + 2);
+    CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE - 2);
+    CheckboxEnableSettlement.Initialize(__LINE__, x2, y4 + 1, FONT_SIZE + padding_y, FONT_SIZE + padding_y);
 
     UpdatePanel();
 }
@@ -296,7 +296,7 @@ void DispSettlementButton() {
     ButtonSettlement.Initialize(__LINE__, x, y, size_x, size_y, false);
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_COLOR, clrRed);
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,220,110');
-    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrOrange);
+    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);
     ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
 }
 
