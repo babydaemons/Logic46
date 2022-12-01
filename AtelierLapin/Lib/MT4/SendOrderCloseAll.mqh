@@ -13,7 +13,7 @@
 //+------------------------------------------------------------------+
 void SendOrderCloseAll() {
     int magic_number = GetMagicNumber();
-    for (int i = 0; i < OrdersTotal(); ++i) {
+    for (int i = OrdersTotal() - 1; i >= 0 ; --i) {
         if (!OrderSelect(i, SELECT_BY_POS)) {
             continue;
         }
@@ -34,6 +34,7 @@ void SendOrderCloseAll() {
             }
             Sleep(1000 * count);
         }
+        Sleep(500);
     }
 }
 //+------------------------------------------------------------------+

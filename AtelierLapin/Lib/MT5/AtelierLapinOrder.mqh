@@ -86,7 +86,7 @@ double GetInitMargin() {
 //| 指定マジックナンバーの全損益の取得                               |
 //+------------------------------------------------------------------+
 double GetMagicNumberProfit() {
-    int magic_number = GetMagicNumber();
+    ulong magic_number = GetMagicNumber();
     double profit = 0;
     for (int i = 0; i < PositionsTotal(); ++i) {
         ulong ticket = PositionGetTicket(i);
@@ -105,6 +105,7 @@ void SendBuyOrder() {
     int magic_number = GetMagicNumber();
     double lots = GetLots();
     string comment = StringFormat("atelier lapin %d", magic_number);
+    trader.SetExpertMagicNumber(magic_number);
     bool suceed = trader.Buy(lots, Symbol(), 0.0, 0.0, 0.0, comment);
     if (!suceed) {
         int error_code = GetLastError();
@@ -121,6 +122,7 @@ void SendSellOrder() {
     int magic_number = GetMagicNumber();
     double lots = GetLots();
     string comment = StringFormat("atelier lapin %d", magic_number);
+    trader.SetExpertMagicNumber(magic_number);
     bool suceed = trader.Sell(lots, Symbol(), 0.0, 0.0, 0.0, comment);
     if (!suceed) {
         int error_code = GetLastError();

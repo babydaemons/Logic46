@@ -13,7 +13,7 @@
 //+------------------------------------------------------------------+
 void SendOrderCloseAll() {
     int magic_number = GetMagicNumber();
-    for (int i = 0; i < PositionsTotal(); ++i) {
+    for (int i = PositionsTotal() - 1; i >= 0; --i) {
         ulong ticket = PositionGetTicket(i);
         if (PositionGetInteger(POSITION_MAGIC) != magic_number) {
             continue;
@@ -26,6 +26,7 @@ void SendOrderCloseAll() {
             }
             Sleep(1000 * count);
         }
+        Sleep(500);
     }
 }
 //+------------------------------------------------------------------+
