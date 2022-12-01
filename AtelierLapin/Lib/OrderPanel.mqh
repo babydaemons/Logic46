@@ -227,18 +227,24 @@ void OnChartEvent(const int id,
     }
 
     if (ButtonBuy.HasPressed(__LINE__, id, sparam)) {
+        ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,125,125');
         SendBuyOrder();
         ButtonBuy.Restore(__LINE__);
+        ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
     }
 
     if (ButtonSell.HasPressed(__LINE__, id, sparam)) {
+        ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'125,125,255');
         SendSellOrder();
         ButtonSell.Restore(__LINE__);
+        ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'0,0,255');
     }
 
     if (ButtonSettlement.HasPressed(__LINE__, id, sparam)) {
+        ButtonSettlement.SetText(__LINE__, "★マジックナンバー全決済中★");
         SendOrderCloseAll();
         ButtonSettlement.Restore(__LINE__);
+        ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
     }
 
     static bool prev_check_state = false;
