@@ -44,7 +44,7 @@ CheckboxObject CheckboxEnableSettlement(__LINE__, "CheckboxEnableSettlement", fa
 ButtonObject ButtonSettlement(__LINE__, "ButtonSettlement");
 
 const string FONT_NAME = "BIZ UDゴシック";
-const int FONT_SIZE = 12;
+const int FONT_SIZE = 14;
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -157,8 +157,10 @@ void InitPanel() {
     // クイック決済ボタン表示チェックボックスの描画
     y4 += size_y;
     LabelEnableOrder.Initialize(__LINE__, x1, y4, size_x, size_y);
-    CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE - 2);
+    //CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE - 2);
     CheckboxEnableSettlement.Initialize(__LINE__, x2, y4 + 1, FONT_SIZE + padding_y, FONT_SIZE + padding_y);
+
+    ChartRedraw();
 
     UpdatePanel();
 }
@@ -212,6 +214,8 @@ void RemovePanel() {
     ButtonBuy.Remove(__LINE__);
     CheckboxEnableSettlement.Remove(__LINE__);
     ButtonSettlement.Remove(__LINE__);
+
+    ChartRedraw();
 }
 
 //+------------------------------------------------------------------+
@@ -228,23 +232,29 @@ void OnChartEvent(const int id,
 
     if (ButtonBuy.HasPressed(__LINE__, id, sparam)) {
         ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,125,125');
+        ChartRedraw();
         SendBuyOrder();
         ButtonBuy.Restore(__LINE__);
         ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
+        ChartRedraw();
     }
 
     if (ButtonSell.HasPressed(__LINE__, id, sparam)) {
         ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'125,125,255');
+        ChartRedraw();
         SendSellOrder();
         ButtonSell.Restore(__LINE__);
         ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'0,0,255');
+        ChartRedraw();
     }
 
     if (ButtonSettlement.HasPressed(__LINE__, id, sparam)) {
         ButtonSettlement.SetText(__LINE__, "★マジックナンバー全決済中★");
+        ChartRedraw();
         SendOrderCloseAll();
         ButtonSettlement.Restore(__LINE__);
         ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
+        ChartRedraw();
     }
 
     static bool prev_check_state = false;
@@ -257,6 +267,7 @@ void OnChartEvent(const int id,
             HideSettlementButton();
         }
         prev_check_state = check_state;
+        ChartRedraw();
     }
 
     if (EditMagicNumber.HasEdited(__LINE__, id, sparam)) {
@@ -268,9 +279,11 @@ void OnChartEvent(const int id,
             MessageBox("マジックナンバーは1以上の値を指定してください", "エラー");
             EditMagicNumber.SetText(__LINE__, "12345678");
         }
+        ChartRedraw();
     }
 
     if (EditLots.HasEdited(__LINE__, id, sparam)) {
+        ChartRedraw();
         double lots = GetLots();
         double min_lots = GetMinLot();
         double max_lots = GetMaxLot();
@@ -282,6 +295,7 @@ void OnChartEvent(const int id,
             MessageBox(message, "エラー");
             EditLots.SetText(__LINE__, StringFormat("%.2f", min_lots));
         }
+        ChartRedraw();
     }
 }
 
@@ -304,6 +318,8 @@ void DispSettlementButton() {
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,220,110');
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);
     ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
+
+    ChartRedraw();
 }
 
 //+------------------------------------------------------------------+
@@ -311,6 +327,8 @@ void DispSettlementButton() {
 //+------------------------------------------------------------------+
 void HideSettlementButton() {
     ButtonSettlement.Remove(__LINE__);
+
+    ChartRedraw();
 }
 
 //+------------------------------------------------------------------+

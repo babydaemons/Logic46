@@ -16,7 +16,7 @@
 int OnInit() {
     InitPanel();
 
-    EventSetMillisecondTimer(250);
+    EventSetTimer(5);
 
     return INIT_SUCCEEDED;
 }
@@ -33,7 +33,6 @@ void OnDeinit(const int reason) {
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick() {
-    UpdatePanel();
 }
 
 //+------------------------------------------------------------------+

@@ -26,6 +26,8 @@ void SendOrderCloseAll() {
             }
             Sleep(100 * count);
         }
+        UpdatePanel();
+        ChartRedraw();
         Sleep(100);
     }
 }
