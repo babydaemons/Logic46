@@ -43,8 +43,9 @@ ButtonObject ButtonBuy(__LINE__, "ButtonBuy");
 CheckboxObject CheckboxEnableSettlement(__LINE__, "CheckboxEnableSettlement", false);
 ButtonObject ButtonSettlement(__LINE__, "ButtonSettlement");
 
-const string FONT_NAME = "BIZ UDゴシック";
-const int FONT_SIZE = 14;
+const string FONT_NAME = "BIZ UDPゴシック";
+const int FONT_SIZE1 = 11;
+const int FONT_SIZE2 = 10;
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -53,7 +54,7 @@ void InitPanel() {
     // オブジェクト全削除
     RemovePanel();
 
-    TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE);
+    TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
     LabelObject::SetDefaultColor(clrCyan);
     EditObject::SetDefaultColor(clrBlack, clrBlack, clrWhite);
 
@@ -61,104 +62,114 @@ void InitPanel() {
     int y0 = 24;
 
     // 背景パネルの描画
-    int size_x0 = (int)(29.6 * FONT_SIZE);
-    int size_y0 = (int)(25.2 * FONT_SIZE);
+    int size_x00 = (int)(27.2 * FONT_SIZE1);
+    int size_y00 = (int)(23.8 * FONT_SIZE1);
     int x00 = x0;
     int y00 = y0;
     int line_width = 1;
-    Border.Initialize(__LINE__, x00 - line_width, y00 - line_width, size_x0 + 2 * line_width, size_y0 + 2 * line_width);
+    Border.Initialize(__LINE__, x00 - line_width, y00 - line_width, size_x00 + 2 * line_width, size_y00 + 2 * line_width);
     Border.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,0,255');
 
-    Background.Initialize(__LINE__, x00, y00, size_x0, size_y0);
+    Background.Initialize(__LINE__, x00, y00, size_x00, size_y00);
     Background.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,0,70');
 
-    int margin_y = 3;
-    int padding_y = 3;
-    int size_y = FONT_SIZE + 2 * margin_y + 2 * padding_y;
-    int size_x = FONT_SIZE * 7;
+    int margin_y1 = 2;
+    int padding_y1 = 2;
+    int size_x10 = FONT_SIZE1 * 9;
+    int size_y10 = FONT_SIZE1 + 3 * margin_y1 + 2 * padding_y1;
 
     // パラメータ入力ラベルオブジェクトの描画
-    int x1 = x0 + 8;
-    int y1 = y0 + 11;
-    int y2 = y1;
-    LabelMagicNumber.Initialize(__LINE__, x1, y1, size_x, size_y);
+    int x10 = x00 + 8;
+    int y10 = y00 + 11;
+    int x20 = x10 + 15 * FONT_SIZE1;
+    int y20 = y10;
+    LabelMagicNumber.Initialize(__LINE__, x10, y10, size_x10, size_y10);
 
-    y1 += size_y;
-    LabelLots.Initialize(__LINE__, x1, y1, size_x, size_y);
+    y10 += size_y10;
+    LabelLots.Initialize(__LINE__, x10, y10, size_x10, size_y10);
 
-    y1 += size_y;
-    LabelSymbol.Initialize(__LINE__, x1, y1, size_x, size_y);
+    y10 += size_y10;
+    LabelSymbol.Initialize(__LINE__, x10, y10, size_x10, size_y10);
 
-    y1 += size_y;
-    LabelMargin.Initialize(__LINE__, x1, y1, size_x, size_y);
+    int margin_y2 = 1;
+    int padding_y2 = 2;
+    int size_x11 = size_x10;
+    int size_y11 = FONT_SIZE2 + 2 * margin_y2 + 1 * padding_y2;
+    int x11 = x10 + (FONT_SIZE2 / 2);
+    int y11 = y10 + size_y10;
+    TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE2);
+    LabelMargin.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
-    y1 += size_y;
-    LabelSize.Initialize(__LINE__, x1, y1, size_x, size_y);
+    y11 += size_y10;
+    LabelSize.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
-    y1 += size_y;
-    LabelSwapType.Initialize(__LINE__, x1, y1, size_x, size_y);
+    y11 += size_y10;
+    LabelSwapType.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
-    y1 += size_y;
-    LabelBuySwap.Initialize(__LINE__, x1, y1, size_x, size_y);
+    y11 += size_y10;
+    LabelBuySwap.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
-    y1 += size_y;
-    LabelSellSwap.Initialize(__LINE__, x1, y1, size_x, size_y);
+    y11 += size_y10;
+    LabelSellSwap.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
     // パラメータ入力エディットオブジェクトの描画
-    int x2 = x0 + (int)(2.4 * size_x);
-    EditMagicNumber.Initialize(__LINE__, x2, y2 - margin_y, size_x, size_y - padding_y);
+    TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
+    EditMagicNumber.Initialize(__LINE__, x20, y20 - margin_y1, size_x10, size_y10 - padding_y1);
     EditMagicNumber.InitText(__LINE__, "12345678");
 
-    y2 += size_y;
-    EditLots.Initialize(__LINE__, x2, y2 - margin_y, size_x, size_y - padding_y);
+    y20 += size_y10;
+    EditLots.Initialize(__LINE__, x20, y20 - margin_y1, size_x10, size_y10 - padding_y1);
     EditLots.InitText(__LINE__, "0.01");
 
-    y2 += size_y;
-    LabelOrderSymbol.Initialize(__LINE__, x2, y2, size_x, size_y);
+    y20 += size_y10;
+    LabelOrderSymbol.Initialize(__LINE__, x20, y20, size_x10, size_y10);
     LabelOrderSymbol.SetText(__LINE__, Symbol());
 
-    y2 += size_y;
-    LabelOrderMargin.Initialize(__LINE__, x2, y2, size_x, size_y);
+    int x21 = x20;
+    int y21 = y20 + size_y10;
+    TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE2);
+    LabelOrderMargin.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
-    y2 += size_y;
-    LabelOrderSize.Initialize(__LINE__, x2, y2, size_x, size_y);
+    y21 += size_y10;
+    LabelOrderSize.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
-    y2 += size_y;
-    LabelOrderSwapType.Initialize(__LINE__, x2, y2, size_x, size_y);
+    y21 += size_y10;
+    LabelOrderSwapType.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
-    y2 += size_y;
-    LabelOrderBuySwap.Initialize(__LINE__, x2, y2, size_x, size_y);
+    y21 += size_y10;
+    LabelOrderBuySwap.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
-    y2 += size_y;
-    LabelOrderSellSwap.Initialize(__LINE__, x2, y2, size_x, size_y);
+    y21 += size_y10;
+    LabelOrderSellSwap.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
     // 発注ボタンの描画
-    int size_x1 = (int)(1.75 * size_x);
-    int size_y1 = (int)(1.5 * size_y);
-    int x3 = x1;
-    int y3 = y2 + (int)(2.1 * FONT_SIZE);
-    ButtonBuy.Initialize(__LINE__, x3, y3, size_x1, size_y1);
+    int size_x20 = (int)(10.7 * FONT_SIZE1);
+    int size_y20 = (int)(2.9 * FONT_SIZE1);
+    int x30 = x10;
+    int y30 = y21 + (int)(1.3 * size_y11);
+    TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
+    ButtonBuy.Initialize(__LINE__, x30, y30, size_x20, size_y20);
     ButtonBuy.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'255,0,0');
     ButtonBuy.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,205,205');
     ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
     ButtonBuy.SetString(__LINE__, OBJPROP_TEXT, "Ｂｕｙ");
 
-    x3 += (int)(1.3 * size_x1);
-    ButtonSell.Initialize(__LINE__, x3, y3, size_x1, size_y1);
+    x30 = x20;
+    ButtonSell.Initialize(__LINE__, x30, y30, size_x20, size_y20);
     ButtonSell.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'0,0,255');
     ButtonSell.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'205,205,255');
     ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'0,0,255');
     ButtonSell.SetString(__LINE__, OBJPROP_TEXT, "Ｓｅｌｌ");
 
-    int y4 = y3 + size_y1 + FONT_SIZE;
-    LabelProfit.Initialize(__LINE__, x1, y4, size_x, size_y);
-    LabelOrderProfit.Initialize(__LINE__, x2, y4, size_x, size_y);
+    int y40 = y30 + (int)(1.2 * size_y20);
+    LabelProfit.Initialize(__LINE__, x10, y40, size_x10, size_y10);
+    LabelOrderProfit.Initialize(__LINE__, x20, y40, size_x10, size_y10);
 
     // クイック決済ボタン表示チェックボックスの描画
-    y4 += size_y;
-    LabelEnableOrder.Initialize(__LINE__, x1, y4, size_x, size_y);
-    //CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE - 2);
-    CheckboxEnableSettlement.Initialize(__LINE__, x2, y4 + 1, FONT_SIZE + padding_y, FONT_SIZE + padding_y);
+    y40 += size_y10;
+    LabelEnableOrder.Initialize(__LINE__, x10, y40, size_x10, size_y10);
+    //CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE1 - 2);
+    CheckboxEnableSettlement.Initialize(__LINE__, x20, y40 + 1, FONT_SIZE1 + padding_y1, FONT_SIZE1 + padding_y1);
 
     ChartRedraw();
 
@@ -310,10 +321,10 @@ void DispSettlementButton() {
     Border.GetRectangle(__LINE__, panel_x, panel_y, panel_size_x, panel_size_y);
     int x = panel_x + 1;
     int y = panel_y + panel_size_y;
-    int size_x = panel_size_x;
-    int size_y = DrawObject::ConvertDPI((int)(FONT_SIZE * 2.8));
-    ButtonSettlement.SetFont(FONT_NAME, (int)(1.2 * FONT_SIZE));
-    ButtonSettlement.Initialize(__LINE__, x, y, size_x, size_y, false);
+    int size_x10 = panel_size_x;
+    int size_y10 = DrawObject::ScaleCoordinate(4 * FONT_SIZE1);
+    ButtonSettlement.SetFont(FONT_NAME, (int)(1.2 * FONT_SIZE1));
+    ButtonSettlement.Initialize(__LINE__, x, y, size_x10, size_y10, false);
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_COLOR, clrRed);
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,220,110');
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);

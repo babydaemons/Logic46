@@ -36,7 +36,7 @@ public:
         SetInteger(line, OBJPROP_ZORDER, 0);
     }
 
-    static int ConvertDPI(int x) {
+    static int ScaleCoordinate(int x) {
         int dpi = TerminalInfoInteger(TERMINAL_SCREEN_DPI);
         double dpi_ratio = (double)dpi / (double)DPI100;
         return (int)(dpi_ratio * x);
@@ -46,10 +46,10 @@ public:
         Initialize(line);
 
         if (scaled) {
-            x = ConvertDPI(x);
-            y = ConvertDPI(y);
-            size_x = ConvertDPI(size_x);
-            size_y = ConvertDPI(size_y);
+            x = ScaleCoordinate(x);
+            y = ScaleCoordinate(y);
+            size_x = ScaleCoordinate(size_x);
+            size_y = ScaleCoordinate(size_y);
         }
 
         if (obj_type != OBJ_LABEL && obj_type != OBJ_TEXT) {
