@@ -36,10 +36,16 @@ public:
         SetInteger(line, OBJPROP_ZORDER, 0);
     }
 
-    static int ScaleCoordinate(int x) {
+    static int ScaleCoordinate(double x) {
         int dpi = TerminalInfoInteger(TERMINAL_SCREEN_DPI);
-        double dpi_ratio = (double)dpi / (double)DPI100;
-        return (int)(dpi_ratio * x);
+        x = x * (double)dpi / (double)DPI100;
+        return (int)x;
+    }
+
+    static int ScaleSize(double x) {
+        //int dpi = TerminalInfoInteger(TERMINAL_SCREEN_DPI);
+        //x = x * (double)DPI100 / (double)dpi;
+        return (int)x;
     }
 
     void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
@@ -155,7 +161,7 @@ public:
             font_size = FONT_SIZE;
         }
         SetString(line, OBJPROP_FONT, font_name);
-        SetInteger(line, OBJPROP_FONTSIZE, font_size);
+        SetInteger(line, OBJPROP_FONTSIZE, ScaleSize(font_size));
     }
 
     void SetText(int line, string text) {
