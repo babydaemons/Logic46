@@ -22,6 +22,22 @@ public:
 
     enum { DPI100 = 96 };
 
+    static int ScaleCoordinate(double x) {
+        int dpi = TerminalInfoInteger(TERMINAL_SCREEN_DPI);
+        x = x * ((double)dpi / (double)DPI100);
+        return (int)MathRound(x);
+    }
+
+    static int ScaleSize(double x, double ratio = 18.0) {
+        int dpi = TerminalInfoInteger(TERMINAL_SCREEN_DPI);
+        x = MathRound(x - (dpi - DPI100) / ratio);
+        return (int)x;
+    }
+
+    static int ScaleFontSize(double x, int min) {
+        return (int)MathMax(ScaleSize(x, 24.0), min);
+    }
+
     void Initialize(int line) {
         if (!Exist() && !ObjectCreate(0, obj_name, obj_type, 0, 0, 0)) {
             int error = GetLastError();
@@ -36,18 +52,21 @@ public:
         SetInteger(line, OBJPROP_ZORDER, 0);
     }
 
-    static int ScaleCoordinate(int x) {
-        int dpi = TerminalInfoInteger(TERMINAL_SCREEN_DPI);
-        double dpi_ratio = (double)dpi / (double)DPI100;
-        return (int)(dpi_ratio * x);
-    }
-
     void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
         Initialize(line);
 
         if (scaled) {
             x = ScaleCoordinate(x);
             y = ScaleCoordinate(y);
+        }
+
+        SetInteger(line, OBJPROP_XDISTANCE, x);
+        SetInteger(line, OBJPROP_YDISTANCE, y);
+        SetSize(line, size_x, size_y, scaled);
+    }
+
+    void SetSize(int line, int size_x, int size_y, bool scaled = true) {
+        if (scaled) {
             size_x = ScaleCoordinate(size_x);
             size_y = ScaleCoordinate(size_y);
         }
@@ -56,8 +75,6 @@ public:
             SetInteger(line, OBJPROP_XSIZE, size_x);                // ボタンサイズ幅
             SetInteger(line, OBJPROP_YSIZE, size_y);                // ボタンサイズ高さ
         }
-        SetInteger(line, OBJPROP_XDISTANCE, x);
-        SetInteger(line, OBJPROP_YDISTANCE, y);
     }
 
     void GetRectangle(int line, int& x, int& y, int& size_x, int& size_y) {

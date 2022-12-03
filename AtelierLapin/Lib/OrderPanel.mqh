@@ -10,15 +10,12 @@
 
 #include "DrawObject.mqh"
 
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
+const string FONT_NAME = "BIZ UDPゴシック";
+const int FONT_SIZE1 = DrawObject::ScaleFontSize(12.0, 9);
+const int FONT_SIZE2 = DrawObject::ScaleFontSize(11.0, 8);
+
 DrawObject Border(__LINE__, OBJ_RECTANGLE_LABEL, "Boder");
 DrawObject Background(__LINE__, OBJ_RECTANGLE_LABEL, "Background");
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
 LabelObject LabelMagicNumber(__LINE__, "マジックナンバー");
 LabelObject LabelLots(__LINE__, "発注ロット数");
 LabelObject LabelSymbol(__LINE__, "銘柄");
@@ -43,14 +40,12 @@ ButtonObject ButtonBuy(__LINE__, "Ｓｅｌｌ");
 CheckboxObject CheckboxEnableSettlement(__LINE__, "　", false);
 ButtonObject ButtonSettlement(__LINE__, "マジックナンバー全決済");
 
-const string FONT_NAME = "BIZ UDPゴシック";
-const int FONT_SIZE1 = 12;
-const int FONT_SIZE2 = 11;
-
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 void InitPanel() {
+    // printf("FONT_SIZE1:%d, FONT_SIZE2:%d", FONT_SIZE1, FONT_SIZE2);
+
     // オブジェクト全削除
     RemovePanel();
 
@@ -58,14 +53,14 @@ void InitPanel() {
     LabelObject::SetDefaultColor(clrCyan);
     EditObject::SetDefaultColor(clrBlack, clrBlack, clrWhite);
 
-    int x0 = 12;
-    int y0 = 24;
-
-    // 背景パネルの描画
-    int size_x00 = (int)(27.2 * FONT_SIZE1);
-    int size_y00 = (int)(22.6 * FONT_SIZE1);
+    int x0 = DrawObject::ScaleSize(12.0);
+    int y0 = DrawObject::ScaleSize(24.0);
     int x00 = x0;
     int y00 = y0;
+
+    // 背景パネルの描画
+    int size_x00 = DrawObject::ScaleSize(27.2 * FONT_SIZE1);
+    int size_y00 = DrawObject::ScaleSize(21.4 * FONT_SIZE1);
     int line_width = 1;
     Border.Initialize(__LINE__, x00 - line_width, y00 - line_width, size_x00 + 2 * line_width, size_y00 + 2 * line_width);
     Border.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,0,255');
@@ -75,13 +70,13 @@ void InitPanel() {
 
     int margin_y1 = 2;
     int padding_y1 = 2;
-    int size_x10 = FONT_SIZE1 * 9;
-    int size_y10 = FONT_SIZE1 + 3 * margin_y1 + 2 * padding_y1;
+    int size_x10 = DrawObject::ScaleSize(FONT_SIZE1 * 9);
+    int size_y10 = DrawObject::ScaleSize(FONT_SIZE1 + 2 * margin_y1 + 2 * padding_y1);
 
     // パラメータ入力ラベルオブジェクトの描画
-    int x10 = x00 + 8;
-    int y10 = y00 + 11;
-    int x20 = x10 + 15 * FONT_SIZE1;
+    int x10 = x00 + DrawObject::ScaleSize(8);
+    int y10 = y00 + DrawObject::ScaleSize(11);
+    int x20 = x10 + DrawObject::ScaleSize(15 * FONT_SIZE1);
     int y20 = y10;
     LabelMagicNumber.Initialize(__LINE__, x10, y10, size_x10, size_y10);
 
@@ -91,34 +86,36 @@ void InitPanel() {
     y10 += size_y10;
     LabelSymbol.Initialize(__LINE__, x10, y10, size_x10, size_y10);
 
-    int margin_y2 = 1;
+    int margin_y2 = 2;
     int padding_y2 = 2;
     int size_x11 = size_x10;
-    int size_y11 = FONT_SIZE2 + 2 * margin_y2 + 1 * padding_y2;
-    int x11 = x10 + (FONT_SIZE2 / 2);
+    int size_y11 = DrawObject::ScaleSize(FONT_SIZE2 + 2 * margin_y2 + 2 * padding_y2);
+    int x11 = x10 + DrawObject::ScaleSize(0.8 * FONT_SIZE2);
     int y11 = y10 + size_y10;
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE2);
     LabelMargin.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
-    y11 += size_y10;
+    y11 += size_y11;
     LabelSize.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
-    y11 += size_y10;
+    y11 += size_y11;
     LabelSwapType.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
-    y11 += size_y10;
+    y11 += size_y11;
     LabelBuySwap.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
-    y11 += size_y10;
+    y11 += size_y11;
     LabelSellSwap.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
     // パラメータ入力エディットオブジェクトの描画
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
-    EditMagicNumber.Initialize(__LINE__, x20, y20 - margin_y1, size_x10, size_y10 - padding_y1);
+    int y2E = y00 + DrawObject::ScaleSize(11 - padding_y1);
+    int size_y1E = DrawObject::ScaleSize(FONT_SIZE1 + 3 * margin_y1 + 2 * padding_y1 - padding_y1);
+    EditMagicNumber.Initialize(__LINE__, x20, y2E, size_x10, size_y1E);
     EditMagicNumber.InitText(__LINE__, "12345678");
 
-    y20 += size_y10;
-    EditLots.Initialize(__LINE__, x20, y20 - margin_y1, size_x10, size_y10 - padding_y1);
+    y20 += size_y10; y2E += size_y10;
+    EditLots.Initialize(__LINE__, x20, y2E, size_x10, size_y1E);
     EditLots.InitText(__LINE__, "0.01");
 
     y20 += size_y10;
@@ -130,21 +127,21 @@ void InitPanel() {
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE2);
     LabelOrderMargin.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
-    y21 += size_y10;
+    y21 += size_y11;
     LabelOrderSize.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
-    y21 += size_y10;
+    y21 += size_y11;
     LabelOrderSwapType.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
-    y21 += size_y10;
+    y21 += size_y11;
     LabelOrderBuySwap.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
-    y21 += size_y10;
+    y21 += size_y11;
     LabelOrderSellSwap.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
     // 発注ボタンの描画
-    int size_x20 = (int)(10.7 * FONT_SIZE1);
-    int size_y20 = (int)(2.9 * FONT_SIZE1);
+    int size_x20 = DrawObject::ScaleSize(10.7 * FONT_SIZE1);
+    int size_y20 = DrawObject::ScaleSize(2.5 * FONT_SIZE1);
     int x30 = x10;
     int y30 = y21 + (int)(1.3 * size_y11);
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
@@ -168,8 +165,18 @@ void InitPanel() {
     // クイック決済ボタン表示チェックボックスの描画
     y40 += size_y10;
     LabelEnableOrder.Initialize(__LINE__, x10, y40, size_x10, size_y10);
-    //CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE1 - 2);
-    CheckboxEnableSettlement.Initialize(__LINE__, x20, y40 + 1, FONT_SIZE1 + padding_y1, FONT_SIZE1 + padding_y1);
+    int size_chk = DrawObject::ScaleFontSize(FONT_SIZE1, 9) + 1;
+    CheckboxEnableSettlement.Initialize(__LINE__, x20, y40, size_chk, size_chk);
+
+    // 背景パネルのサイズ更新
+    int sell_x = 0;
+    int sell_y = 0;
+    int sell_size_x = 0;
+    int sell_size_y = 0;
+    size_x00 = x30 + size_x20 - (int)(0.25 * x00);
+    size_y00 = y40 + size_y10 - (int)(0.75 * y00);
+    Border.SetSize(__LINE__, size_x00 + 2 * line_width, size_y00 + 2 * line_width);
+    Background.SetSize(__LINE__, size_x00, size_y00);
 
     ChartRedraw();
 
@@ -321,11 +328,11 @@ void DispSettlementButton() {
     int panel_size_x = 0;
     int panel_size_y = 0;
     Border.GetRectangle(__LINE__, panel_x, panel_y, panel_size_x, panel_size_y);
-    int x = panel_x + 1;
+    int x = panel_x;
     int y = panel_y + panel_size_y;
     int size_x10 = panel_size_x;
-    int size_y10 = DrawObject::ScaleCoordinate(4 * FONT_SIZE1);
-    ButtonSettlement.SetFont(FONT_NAME, (int)(1.2 * FONT_SIZE1));
+    int size_y10 = DrawObject::ScaleCoordinate(2.5 * FONT_SIZE1);
+    ButtonSettlement.SetFont(FONT_NAME, FONT_SIZE1);
     ButtonSettlement.Initialize(__LINE__, x, y, size_x10, size_y10, false);
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_COLOR, clrRed);
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,220,110');

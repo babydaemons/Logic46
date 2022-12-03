@@ -10,7 +10,7 @@
 
 #include "Lib/MT4/AtelierLapinOrder.mqh"
 
-int Reason;
+int Reason = -1;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
