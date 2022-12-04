@@ -10,11 +10,15 @@
 
 #include "Lib/MT4/AtelierLapinOrder.mqh"
 
+int Reason;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    InitPanel();
+    if (Reason != REASON_CHARTCHANGE && Reason != REASON_PARAMETERS) {
+        InitPanel();
+    }
 
     EventSetTimer(5);
 
@@ -26,7 +30,12 @@ int OnInit() {
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason) {
     EventKillTimer();
-    RemovePanel();
+
+    if (reason != REASON_CHARTCHANGE && reason != REASON_PARAMETERS && reason != REASON_ACCOUNT) {
+        RemovePanel();
+    }
+
+    Reason = reason;
 }
 
 //+------------------------------------------------------------------+

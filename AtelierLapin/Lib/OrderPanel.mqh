@@ -29,23 +29,23 @@ LabelObject LabelBuySwap(__LINE__, "BuySwap");
 LabelObject LabelSellSwap(__LINE__, "SellSwap");
 LabelObject LabelProfit(__LINE__, "マジックナンバー全損益");
 LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
-EditObject EditMagicNumber(__LINE__, "EditMagicNumber");
-EditObject EditLots(__LINE__, "EditLots");
-LabelObject LabelOrderSymbol(__LINE__, "発注銘柄");
-LabelObject LabelOrderMargin(__LINE__, "発注必要証拠金");
-LabelObject LabelOrderSize(__LINE__, "発注契約サイズ");
-LabelObject LabelOrderSwapType(__LINE__, "OrderSwapType");
-LabelObject LabelOrderBuySwap(__LINE__, "OrderBuySwap");
-LabelObject LabelOrderSellSwap(__LINE__, "OrderSellSwap");
-LabelObject LabelOrderProfit(__LINE__, "OrderProfit");
-ButtonObject ButtonSell(__LINE__, "ButtonSell");
-ButtonObject ButtonBuy(__LINE__, "ButtonBuy");
-CheckboxObject CheckboxEnableSettlement(__LINE__, "CheckboxEnableSettlement", false);
-ButtonObject ButtonSettlement(__LINE__, "ButtonSettlement");
+EditObject EditMagicNumber(__LINE__, "　　");
+EditObject EditLots(__LINE__, "　 　");
+LabelObject LabelOrderSymbol(__LINE__, " 　");
+LabelObject LabelOrderMargin(__LINE__, "　 ");
+LabelObject LabelOrderSize(__LINE__, " 　 ");
+LabelObject LabelOrderSwapType(__LINE__, "　  ");
+LabelObject LabelOrderBuySwap(__LINE__, " 　   ");
+LabelObject LabelOrderSellSwap(__LINE__, "  　 ");
+LabelObject LabelOrderProfit(__LINE__, "   　");
+ButtonObject ButtonSell(__LINE__, "Ｂｕｙ");
+ButtonObject ButtonBuy(__LINE__, "Ｓｅｌｌ");
+CheckboxObject CheckboxEnableSettlement(__LINE__, "　", false);
+ButtonObject ButtonSettlement(__LINE__, "マジックナンバー全決済");
 
 const string FONT_NAME = "BIZ UDPゴシック";
-const int FONT_SIZE1 = 11;
-const int FONT_SIZE2 = 10;
+const int FONT_SIZE1 = 12;
+const int FONT_SIZE2 = 11;
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -63,7 +63,7 @@ void InitPanel() {
 
     // 背景パネルの描画
     int size_x00 = (int)(27.2 * FONT_SIZE1);
-    int size_y00 = (int)(23.8 * FONT_SIZE1);
+    int size_y00 = (int)(22.6 * FONT_SIZE1);
     int x00 = x0;
     int y00 = y0;
     int line_width = 1;
@@ -236,10 +236,12 @@ void OnChartEvent(const int id,
                   const long &lparam,
                   const double &dparam,
                   const string &sparam) {
+/*
     if (DrawObject::HasChartPropertyChanged(__LINE__, id)) {
         RemovePanel();
         InitPanel();
     }
+*/
 
     if (ButtonBuy.HasPressed(__LINE__, id, sparam)) {
         ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,125,125');
