@@ -21,6 +21,8 @@ void SendOrderCloseAll() {
             continue;
         }
 
+        UpdateSettlementButton();
+
         string symbol = OrderSymbol();
         int ticket = OrderTicket();
         double lots = OrderLots();
@@ -34,8 +36,7 @@ void SendOrderCloseAll() {
             }
             Sleep(100 * count);
         }
-        UpdatePanel();
-        ChartRedraw();
+
         Sleep(100);
     }
 }

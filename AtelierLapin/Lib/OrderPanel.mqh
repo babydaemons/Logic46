@@ -269,12 +269,7 @@ void OnChartEvent(const int id,
     }
 
     if (ButtonSettlement.HasPressed(__LINE__, id, sparam)) {
-        ButtonSettlement.SetText(__LINE__, "★マジックナンバー全決済中★");
-        ChartRedraw();
         SendOrderCloseAll();
-        ButtonSettlement.Restore(__LINE__);
-        ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
-        ChartRedraw();
     }
 
     static bool prev_check_state = false;
@@ -348,6 +343,25 @@ void DispSettlementButton() {
 void HideSettlementButton() {
     ButtonSettlement.Remove(__LINE__);
 
+    ChartRedraw();
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void UpdateSettlementButton() {
+    ButtonSettlement.SetText(__LINE__, "★マジックナンバー全決済中★");
+    ButtonSettlement.SetInteger(__LINE__, OBJPROP_STATE, true);
+    LabelOrderProfit.SetValue(__LINE__, GetMagicNumberProfit(), 0);
+    ChartRedraw();
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void RestoreSttlementButton() {
+    ButtonSettlement.Restore(__LINE__);
+    ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
     ChartRedraw();
 }
 

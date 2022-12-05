@@ -19,6 +19,7 @@ void SendOrderCloseAll() {
             continue;
         }
 
+        UpdateSettlementButton();
         for (int count = 1; count <= 10; ++count) {
             bool succed = trader.PositionClose(ticket);
             if (succed) {
@@ -26,8 +27,7 @@ void SendOrderCloseAll() {
             }
             Sleep(100 * count);
         }
-        UpdatePanel();
-        ChartRedraw();
+
         Sleep(100);
     }
 }
