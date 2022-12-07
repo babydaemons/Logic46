@@ -175,8 +175,8 @@ public:
         SetInteger(line, OBJPROP_FONTSIZE, font_size);
     }
 
-    void SetText(int line, string text) {
-        if (text == prev_text) {
+    void SetText(int line, string text, bool force = false) {
+        if (!force && text == prev_text) {
             return;
         }
         SetString(line, OBJPROP_TEXT, text);
@@ -256,12 +256,12 @@ public:
         COLOR = foreground_color;
     }
 
-    void SetValue(int line, double value, int digit) {
-        if (value == prev_value) {
+    void SetValue(int line, double value, int digit, bool force = false) {
+        if (!force && value == prev_value) {
             return;
         }
 
-        SetText(line, FormatComma(value, digit));
+        SetText(line, FormatComma(value, digit), force);
         if (value < 0) {
             SetInteger(line, OBJPROP_COLOR, clrRed);
         } else {

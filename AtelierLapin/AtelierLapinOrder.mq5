@@ -19,6 +19,9 @@ int OnInit() {
     if (Reason != REASON_CHARTCHANGE && Reason != REASON_PARAMETERS) {
         InitPanel();
     }
+    else {
+        UpdatePanel();
+    }
 
     EventSetTimer(5);
 

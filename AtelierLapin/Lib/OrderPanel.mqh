@@ -187,6 +187,8 @@ void InitPanel() {
 //|                                                                  |
 //+------------------------------------------------------------------+
 void UpdatePanel() {
+    LabelOrderSymbol.SetText(__LINE__, Symbol(), true);
+
     LabelOrderMargin.SetValue(__LINE__, GetInitMargin(), 0);
 
     LabelOrderSize.SetValue(__LINE__, GetLotSize(), 0);
@@ -204,6 +206,8 @@ void UpdatePanel() {
     } else {
         HideSettlementButton();
     }
+
+    ChartRedraw();
 }
 
 void RemovePanel() {
@@ -243,12 +247,9 @@ void OnChartEvent(const int id,
                   const long &lparam,
                   const double &dparam,
                   const string &sparam) {
-/*
     if (DrawObject::HasChartPropertyChanged(__LINE__, id)) {
-        RemovePanel();
-        InitPanel();
+        UpdatePanel();
     }
-*/
 
     if (ButtonBuy.HasPressed(__LINE__, id, sparam)) {
         ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,125,125');
