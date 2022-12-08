@@ -66,7 +66,11 @@ double GetSellSwap() {
 double GetInitMargin() {
     double commodity_ask = MarketInfo(Symbol(), MODE_ASK);
     string symbol = SymbolInfoString(Symbol(), SYMBOL_CURRENCY_PROFIT) + "JPY";
-    double currency_ask = symbol == "JPYJPY" ? 1 : MarketInfo(symbol, MODE_ASK);
+    double currency_ask = 1.0;
+    if (symbol != "JPYJPY") {
+        SymbolSelect(symbol, true);
+        currency_ask = MarketInfo(symbol, MODE_ASK);
+    }
     double volume = StringToDouble(EditLots.GetText(__LINE__));
     double lot_size = GetLotSize();
     long leverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
