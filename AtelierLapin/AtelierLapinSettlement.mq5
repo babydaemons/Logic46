@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                    AtelierLapinQuickOrderMT4.mq4 |
+//|                                    AtelierLapinQuickOrderMT4.mq5 |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -16,7 +16,7 @@ sinput string CLOSE_TIME = "15:00"; // 決済中断時刻(サーバー時刻)
 sinput string DUMMY2 = "【24時間稼働は00:00】"; // ●決済再開時刻設定
 sinput string OPEN_TIME = "01:00"; // 決済再開時刻(サーバー時刻)
 
-#include "Lib/MT4/AtelierLapinSettlement.mqh"
+#include "Lib/MT5/AtelierLapinSettlement.mqh"
 
 int Reason = -1;
 
