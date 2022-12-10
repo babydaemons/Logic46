@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                                   QuickOrder.mqh |
+//|                                    Lib/MT5/AtelierLapinOrder.mqh |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -8,8 +8,8 @@
 #property version   "1.00"
 #property strict
 
-#include "../OrderPanel.mqh"
-#include "SendOrderCloseAll.mqh"
+#include "../PanelOrder.mqh"
+#include "AtelierLapinCommon.mqh"
 #include "ErrorDescription.mqh"
 
 #include <Trade/Trade.mqh>
@@ -84,22 +84,6 @@ double GetInitMargin() {
     long leverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
     double margin = commodity_ask * currency_ask * volume * lot_size / leverage;
     return margin;
-}
-
-//+------------------------------------------------------------------+
-//| 指定マジックナンバーの全損益の取得                               |
-//+------------------------------------------------------------------+
-double GetMagicNumberProfit() {
-    ulong magic_number = GetMagicNumber();
-    double profit = 0;
-    for (int i = 0; i < PositionsTotal(); ++i) {
-        ulong ticket = PositionGetTicket(i);
-        if (PositionGetInteger(POSITION_MAGIC) != magic_number) {
-            continue;
-        }
-        profit += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
-    }
-    return profit;
 }
 
 //+------------------------------------------------------------------+

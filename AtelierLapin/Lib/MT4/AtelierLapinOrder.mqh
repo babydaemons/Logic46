@@ -8,8 +8,8 @@
 #property version   "1.00"
 #property strict
 
-#include "../OrderPanel.mqh"
-#include "SendOrderCloseAll.mqh"
+#include "../PanelOrder.mqh"
+#include "AtelierLapinCommon.mqh"
 #include "ErrorDescription.mqh"
 
 //+------------------------------------------------------------------+
@@ -76,24 +76,6 @@ double GetInitMargin() {
     long leverage = AccountInfoInteger(ACCOUNT_LEVERAGE);
     double margin = commodity_ask * currency_ask * volume * lot_size / leverage;
     return margin;
-}
-
-//+------------------------------------------------------------------+
-//| 指定マジックナンバーの全損益の取得                               |
-//+------------------------------------------------------------------+
-double GetMagicNumberProfit() {
-    int magic_number = GetMagicNumber();
-    double profit = 0;
-    for (int i = 0; i < OrdersTotal(); ++i) {
-        if (!OrderSelect(i, SELECT_BY_POS)) {
-            continue;
-        }
-        if (OrderMagicNumber() != magic_number) {
-            continue;
-        }
-        profit += OrderProfit() + OrderSwap();
-    }
-    return profit;
 }
 
 //+------------------------------------------------------------------+

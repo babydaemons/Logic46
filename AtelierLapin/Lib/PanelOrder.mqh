@@ -271,6 +271,7 @@ void OnChartEvent(const int id,
 
     if (ButtonSettlement.HasPressed(__LINE__, id, sparam)) {
         SendOrderCloseAll();
+        RestoreSttlementButton();
     }
 
     static bool prev_check_state = false;
