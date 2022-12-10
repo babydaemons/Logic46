@@ -181,6 +181,7 @@ void RemovePanel() {
     Border.Remove(__LINE__);
     Background.Remove(__LINE__);
     LabelMagicNumber.Remove(__LINE__);
+    LabelSymbol.Remove(__LINE__);
     LabelLots.Remove(__LINE__);
     LabelProfit.Remove(__LINE__);
     LabelTakeProfit.Remove(__LINE__);
