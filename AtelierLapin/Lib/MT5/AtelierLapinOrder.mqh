@@ -46,12 +46,13 @@ string GetSwapType() {
         "決済通貨",
         "証拠金通貨",
         "口座通貨",
-        "金利(商品価格)",
-        "金利(ポジション始値)",
-        "ポイントを終値に反映後再オープン",
-        "ポイントを現在値に反映後再オープン",
+        "金利(現在値)",
+        "金利(ポジ始値)",
+        "ポジ再オープン",
+        "ポジ再オープン",
     };
-    return swap_types[(int)SymbolInfoInteger(Symbol(), SYMBOL_SWAP_MODE)];
+    int swap_type = __DEBUGGING ? 8 : (int)SymbolInfoInteger(Symbol(), SYMBOL_SWAP_MODE);
+    return swap_types[swap_type];
 }
 
 //+------------------------------------------------------------------+

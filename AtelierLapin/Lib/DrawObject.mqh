@@ -153,7 +153,7 @@ private:
 
 class TextObject : public DrawObject {
 public:
-    TextObject(int line, ENUM_OBJECT type, string name) : DrawObject(line, type, name), prev_text("") {}
+    TextObject(int line, ENUM_OBJECT type, string name) : DrawObject(line, type, name), prev_text(""), text_color(clrNONE), border_color(clrNONE), background_color(clrNONE) {}
 
     static void SetDefaultFont(string name, int size) {
         FONT_NAME = name;
@@ -165,6 +165,18 @@ public:
         font_size = size;
     }
 
+    static void SetDefaultColor(color text_color, color border_color, color background_color) {
+        TEXT_COLOR = text_color;
+        BORDER_COLOR = border_color;
+        BACKGROUND_COLOR = background_color;
+    }
+
+    void SetColor(color text, color border, color background) {
+        text_color = text;
+        border_color = border;
+        background_color = background;
+    }
+
     void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
         DrawObject::Initialize(line, x, y, size_x, size_y, scaled);
         if (font_name == "" || font_size == 0) {
@@ -173,14 +185,37 @@ public:
         }
         SetString(line, OBJPROP_FONT, font_name);
         SetInteger(line, OBJPROP_FONTSIZE, font_size);
+
+        if (text_color == clrNONE) {
+            text_color = TEXT_COLOR;
+        }
+        if (border_color == clrNONE) {
+            border_color = BORDER_COLOR;
+        }
+        if (background_color == clrNONE) {
+            background_color = BACKGROUND_COLOR;
+        }
     }
 
-    void SetText(int line, string text, bool force = false) {
-        if (!force && text == prev_text) {
+    void SetTextValue(int line, string text, bool force = false) {
+        if (!SetText(line, text, force)) {
             return;
+        }
+        if (text == NONE_TEXT) {
+            SetInteger(line, OBJPROP_COLOR, NONE_COLOR);
+        }
+        else {
+            SetInteger(line, OBJPROP_COLOR, TEXT_COLOR);
+        }
+    }
+
+    bool SetText(int line, string text, bool force = false) {
+        if (!force && text == prev_text) {
+            return false;
         }
         SetString(line, OBJPROP_TEXT, text);
         prev_text = text;
+        return true;
     }
 
     string GetText(int line) {
@@ -203,6 +238,10 @@ public:
     //| 3桁おきにカンマ区切りの表記の文字列を返す                        |
     //+------------------------------------------------------------------+
     static string FormatComma(double number, int precision, string pcomma = ",", string ppoint = ".") {
+        if (number == FLT_MAX) {
+            return NONE_TEXT;
+        }
+
         string sign   = number >= 0 ? "" : "-";
         string snum   = DoubleToString(MathAbs(number), precision);
         int    decp   = StringFind(snum, ".", 0);
@@ -229,18 +268,49 @@ protected:
         prev_text = "";
     }
 
+    void ApplyTextColor(int line) {
+        SetInteger(line, OBJPROP_COLOR, text_color);
+    }
+
+    void ApplyBorderColor(int line) {
+        SetInteger(line, OBJPROP_BORDER_COLOR, border_color);
+    }
+
+    void ApplyBackgroundColor(int line) {
+        SetInteger(line, OBJPROP_BGCOLOR, background_color);
+    }
+
+private:
+    static string FONT_NAME;
+    static int FONT_SIZE;
+
 private:
     string font_name;
     int font_size;
     string prev_text;
 
+protected:
+    static color TEXT_COLOR;
+    static color BORDER_COLOR;
+    static color BACKGROUND_COLOR;
+
 private:
-    static string FONT_NAME;
-    static int FONT_SIZE;
+    color text_color;
+    color border_color;
+    color background_color;
+
+public:
+    static const string NONE_TEXT;
+    static const color NONE_COLOR;
 };
 
 string TextObject::FONT_NAME;
 int TextObject::FONT_SIZE;
+color TextObject::TEXT_COLOR;
+color TextObject::BORDER_COLOR;
+color TextObject::BACKGROUND_COLOR;
+const string TextObject::NONE_TEXT = "━━━";
+const color TextObject::NONE_COLOR = C'0,140,210';
 
 class LabelObject : public TextObject {
 public:
@@ -249,23 +319,23 @@ public:
     void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
         TextObject::Initialize(line, x, y, size_x, size_y, scaled);
         SetText(line, Name());
-        SetInteger(line, OBJPROP_COLOR, COLOR);
+        ApplyTextColor(line);
     }
 
-    static void SetDefaultColor(color foreground_color) {
-        COLOR = foreground_color;
-    }
-
-    void SetValue(int line, double value, int digit, bool force = false) {
+    void SetNumberValue(int line, double value, int digit, bool force = false) {
         if (!force && value == prev_value) {
             return;
         }
 
         SetText(line, FormatComma(value, digit), force);
-        if (value < 0) {
+        if (value == FLT_MAX) {
+            SetInteger(line, OBJPROP_COLOR, NONE_COLOR);
+        }
+        else if (value < 0) {
             SetInteger(line, OBJPROP_COLOR, clrRed);
-        } else {
-            SetInteger(line, OBJPROP_COLOR, COLOR);
+        }
+        else {
+            ApplyTextColor(line);
         }
 
         prev_value = value;
@@ -283,12 +353,7 @@ protected:
 
 private:
     double prev_value;
-
-private:
-    static color COLOR;
 };
-
-color LabelObject::COLOR;
 
 class EditObject : public TextObject {
 public:
@@ -296,15 +361,9 @@ public:
 
     void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
         TextObject::Initialize(line, x, y, size_x, size_y, scaled);
-        SetInteger(line, OBJPROP_COLOR, COLOR);
-        SetInteger(line, OBJPROP_BORDER_COLOR, BORDER_COLOR);
-        SetInteger(line, OBJPROP_BGCOLOR, BACKGROUND_COLOR);
-    }
-
-    static void SetDefaultColor(color foreground_color, color border_color, color background_color) {
-        COLOR = foreground_color;
-        BORDER_COLOR = border_color;
-        BACKGROUND_COLOR = background_color;
+        ApplyTextColor(line);
+        ApplyBorderColor(line);
+        ApplyBackgroundColor(line);
     }
 
     bool HasEdited(int line, int id, string sparam) {
@@ -325,16 +384,7 @@ protected:
     virtual void OnRemoved() {
         /* 編集後のテキスト値を保持するため空実装 */
     }
-
-private:
-    static color COLOR;
-    static color BORDER_COLOR;
-    static color BACKGROUND_COLOR;
 };
-
-color EditObject::COLOR;
-color EditObject::BORDER_COLOR;
-color EditObject::BACKGROUND_COLOR;
 
 class ButtonObject : public TextObject {
 public:
@@ -342,6 +392,9 @@ public:
 
     void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
         TextObject::Initialize(line, x, y, size_x, size_y, scaled);
+        ApplyTextColor(line);
+        ApplyBorderColor(line);
+        ApplyBackgroundColor(line);
     }
 
     bool HasPressed(int line, int id, string sparam) {

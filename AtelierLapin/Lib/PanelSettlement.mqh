@@ -9,6 +9,7 @@
 #property strict
 
 #include "DrawObject.mqh"
+#include "PositionUtil.mqh"
 
 const string FONT_NAME = "BIZ UDPゴシック";
 const int FONT_SIZE1 = DrawObject::ScaleFontSize(12.0, 9);
@@ -24,14 +25,14 @@ LabelObject LabelTakeProfit(__LINE__, "利確金額");
 LabelObject LabelStopLoss(__LINE__, "損切金額");
 LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
 LabelObject LabelDispMagicNumber(__LINE__, " ");
-LabelObject LabelDispSymbol1(__LINE__, "XAUUSD"/*"　   "*/);
-LabelObject LabelDispSymbol2(__LINE__, "XAUGBP"/*" 　  "*/);
-LabelObject LabelDispSymbol3(__LINE__, "XAUEUR"/*"  　 "*/);
-LabelObject LabelDispSymbol4(__LINE__, "XAUCHF"/*"   　"*/);
-LabelObject LabelDispLots1(__LINE__, "0.04"/*" 　   "*/);
-LabelObject LabelDispLots2(__LINE__, "-0.04"/*"  　  "*/);
-LabelObject LabelDispLots3(__LINE__, "0.03"/*"   　 "*/);
-LabelObject LabelDispLots4(__LINE__, "-0.03"/*"    　"*/);
+LabelObject LabelDispSymbol1(__LINE__, "　   ");
+LabelObject LabelDispSymbol2(__LINE__, " 　  ");
+LabelObject LabelDispSymbol3(__LINE__, "  　 ");
+LabelObject LabelDispSymbol4(__LINE__, "   　");
+LabelObject LabelDispLots1(__LINE__, " 　   ");
+LabelObject LabelDispLots2(__LINE__, "  　  ");
+LabelObject LabelDispLots3(__LINE__, "   　 ");
+LabelObject LabelDispLots4(__LINE__, "    　");
 LabelObject LabelDispProfit(__LINE__, "　　");
 LabelObject LabelDispTakeProfit(__LINE__, " 　　");
 LabelObject LabelDispStopLoss(__LINE__, "　　 ");
@@ -47,9 +48,11 @@ void InitPanel() {
     // オブジェクト全削除
     RemovePanel();
 
+    const color BORDER_COLOR = C'0,0,255';
+    const color BACKGROUND_COLOR = C'0,0,70';
+
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
-    LabelObject::SetDefaultColor(clrCyan);
-    EditObject::SetDefaultColor(clrBlack, clrBlack, clrWhite);
+    TextObject::SetDefaultColor(clrCyan, BACKGROUND_COLOR, BACKGROUND_COLOR);
 
     int x0 = DrawObject::ScaleSize(12.0);
     int y0 = DrawObject::ScaleSize(24.0);
@@ -103,7 +106,7 @@ void InitPanel() {
     int size_y20 = size_y10;
     LabelDispMagicNumber.Initialize(__LINE__, x20, y20, size_x20, size_y20);
 
-    int size_x30 = DrawObject::ScaleSize(FONT_SIZE1 * 9);
+    int size_x30 = DrawObject::ScaleSize(FONT_SIZE1 * 11.25);
     int size_y30 = size_y20;
     LabelDispSymbol1.Initialize(__LINE__, x30, y30, size_x30, size_y30);
 
@@ -143,6 +146,8 @@ void InitPanel() {
     y10 += size_y10;
     LabelEnableOrder.Initialize(__LINE__, x10, y10, size_x10, size_y10);
     int size_chk = DrawObject::ScaleFontSize(FONT_SIZE1, 9) + 1;
+    CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE2 - 2);
+    CheckboxEnableSettlement.SetColor(clrBlack, clrBlack, clrWhite);
     CheckboxEnableSettlement.Initialize(__LINE__, x20, y10, size_chk, size_chk);
 
     // 背景パネルのサイズ更新
@@ -162,11 +167,23 @@ void InitPanel() {
 void UpdatePanel() {
     LabelDispMagicNumber.SetText(__LINE__, IntegerToString(MAGIC_NUMBER));
 
-    LabelDispProfit.SetValue(__LINE__, GetMagicNumberProfit(), 0);
+    LabelDispProfit.SetNumberValue(__LINE__, GetMagicNumberProfit(), 0);
 
-    LabelDispTakeProfit.SetValue(__LINE__, TAKE_PROFIT, 0);
+    LabelDispTakeProfit.SetNumberValue(__LINE__, TAKE_PROFIT, 0);
 
-    LabelDispStopLoss.SetValue(__LINE__, STOP_LOSS, 0);
+    LabelDispStopLoss.SetNumberValue(__LINE__, STOP_LOSS, 0);
+
+    if (__DEBUGGING) {
+        SortPositions();
+    }
+    else {
+        ScanPositions(MAGIC_NUMBER);
+    }
+
+    UpdateSymbolInfo(0, LabelDispSymbol1, LabelDispLots1);
+    UpdateSymbolInfo(1, LabelDispSymbol2, LabelDispLots2);
+    UpdateSymbolInfo(2, LabelDispSymbol3, LabelDispLots3);
+    UpdateSymbolInfo(3, LabelDispSymbol4, LabelDispLots4);
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
         DispSettlementButton();
@@ -175,6 +192,15 @@ void UpdatePanel() {
     }
 
     ChartRedraw();
+}
+
+void UpdateSymbolInfo(int i, LabelObject& symbol_object, LabelObject& lots_object) {
+    string symbol = "";
+    double lots = 0.0;
+    double profit = 0.0;
+    GetPosition(i, symbol, lots, profit);
+    symbol_object.SetTextValue(__LINE__, symbol, true);
+    lots_object.SetNumberValue(__LINE__, lots, 2, true);
 }
 
 void RemovePanel() {
@@ -273,7 +299,7 @@ void HideSettlementButton() {
 void UpdateSettlementButton() {
     ButtonSettlement.SetText(__LINE__, "★マジックナンバー全決済中★");
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_STATE, true);
-    LabelDispProfit.SetValue(__LINE__, GetMagicNumberProfit(), 0);
+    LabelDispProfit.SetNumberValue(__LINE__, GetMagicNumberProfit(), 0);
     ChartRedraw();
 }
 

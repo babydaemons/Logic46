@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                            AtelierLapinOrder.mq5 |
+//|                                       AtelierLapinSettlement.mq5 |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+

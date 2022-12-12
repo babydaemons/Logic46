@@ -43,15 +43,24 @@ ButtonObject ButtonSettlement(__LINE__, "マジックナンバー全決済");
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
+string GetSymbol() {
+    return __DEBUGGING ? __SYMBOL : Symbol();
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 void InitPanel() {
     // printf("FONT_SIZE1:%d, FONT_SIZE2:%d", FONT_SIZE1, FONT_SIZE2);
 
     // オブジェクト全削除
     RemovePanel();
 
+    const color BORDER_COLOR = C'0,0,255';
+    const color BACKGROUND_COLOR = C'0,0,70';
+
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
-    LabelObject::SetDefaultColor(clrCyan);
-    EditObject::SetDefaultColor(clrBlack, clrBlack, clrWhite);
+    TextObject::SetDefaultColor(clrCyan, BACKGROUND_COLOR, BACKGROUND_COLOR);
 
     int x0 = DrawObject::ScaleSize(12.0);
     int y0 = DrawObject::ScaleSize(24.0);
@@ -63,10 +72,10 @@ void InitPanel() {
     int size_y00 = DrawObject::ScaleSize(21.4 * FONT_SIZE1);
     int line_width = 1;
     Border.Initialize(__LINE__, x00 - line_width, y00 - line_width, size_x00 + 2 * line_width, size_y00 + 2 * line_width);
-    Border.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,0,255');
+    Border.SetInteger(__LINE__, OBJPROP_BGCOLOR, BORDER_COLOR);
 
     Background.Initialize(__LINE__, x00, y00, size_x00, size_y00);
-    Background.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'0,0,70');
+    Background.SetInteger(__LINE__, OBJPROP_BGCOLOR, BACKGROUND_COLOR);
 
     int margin_y1 = 2;
     int padding_y1 = 2;
@@ -111,16 +120,18 @@ void InitPanel() {
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
     int y2E = y00 + DrawObject::ScaleSize(11 - padding_y1);
     int size_y1E = DrawObject::ScaleSize(FONT_SIZE1 + 3 * margin_y1 + 2 * padding_y1 - padding_y1);
+    EditMagicNumber.SetColor(clrBlack, clrBlack, clrWhite);
     EditMagicNumber.Initialize(__LINE__, x20, y2E, size_x10, size_y1E);
     EditMagicNumber.InitText(__LINE__, "12345678");
 
     y20 += size_y10; y2E += size_y10;
+    EditLots.SetColor(clrBlack, clrBlack, clrWhite);
     EditLots.Initialize(__LINE__, x20, y2E, size_x10, size_y1E);
     EditLots.InitText(__LINE__, "0.01");
 
     y20 += size_y10;
     LabelOrderSymbol.Initialize(__LINE__, x20, y20, size_x10, size_y10);
-    LabelOrderSymbol.SetText(__LINE__, Symbol());
+    LabelOrderSymbol.SetText(__LINE__, GetSymbol());
 
     int x21 = x20;
     int y21 = y20 + size_y10;
@@ -145,18 +156,14 @@ void InitPanel() {
     int x30 = x10;
     int y30 = y21 + (int)(1.3 * size_y11);
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
+    ButtonBuy.SetColor(C'255,0,0', C'255,0,0', C'255,205,205');
     ButtonBuy.Initialize(__LINE__, x30, y30, size_x20, size_y20);
-    ButtonBuy.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'255,0,0');
-    ButtonBuy.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,205,205');
-    ButtonBuy.SetInteger(__LINE__, OBJPROP_COLOR, C'255,0,0');
-    ButtonBuy.SetString(__LINE__, OBJPROP_TEXT, "Ｂｕｙ");
+    ButtonBuy.SetText(__LINE__, "Ｂｕｙ");
 
     x30 = x20;
+    ButtonSell.SetColor(C'0,0,255', C'0,0,255', C'205,205,255');
     ButtonSell.Initialize(__LINE__, x30, y30, size_x20, size_y20);
-    ButtonSell.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, C'0,0,255');
-    ButtonSell.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'205,205,255');
-    ButtonSell.SetInteger(__LINE__, OBJPROP_COLOR, C'0,0,255');
-    ButtonSell.SetString(__LINE__, OBJPROP_TEXT, "Ｓｅｌｌ");
+    ButtonSell.SetText(__LINE__, "Ｓｅｌｌ");
 
     int y40 = y30 + (int)(1.2 * size_y20);
     LabelProfit.Initialize(__LINE__, x10, y40, size_x10, size_y10);
@@ -166,13 +173,11 @@ void InitPanel() {
     y40 += size_y10;
     LabelEnableOrder.Initialize(__LINE__, x10, y40, size_x10, size_y10);
     int size_chk = DrawObject::ScaleFontSize(FONT_SIZE1, 9) + 1;
+    CheckboxEnableSettlement.SetFont(FONT_NAME, FONT_SIZE2 - 2);
+    CheckboxEnableSettlement.SetColor(clrBlack, clrBlack, clrWhite);
     CheckboxEnableSettlement.Initialize(__LINE__, x20, y40, size_chk, size_chk);
 
     // 背景パネルのサイズ更新
-    int sell_x = 0;
-    int sell_y = 0;
-    int sell_size_x = 0;
-    int sell_size_y = 0;
     size_x00 = x30 + size_x20 - (int)(0.25 * x00);
     size_y00 = y40 + size_y10 - (int)(0.75 * y00);
     Border.SetSize(__LINE__, size_x00 + 2 * line_width, size_y00 + 2 * line_width);
@@ -187,19 +192,19 @@ void InitPanel() {
 //|                                                                  |
 //+------------------------------------------------------------------+
 void UpdatePanel() {
-    LabelOrderSymbol.SetText(__LINE__, Symbol(), true);
+    LabelOrderSymbol.SetText(__LINE__, GetSymbol(), true);
 
-    LabelOrderMargin.SetValue(__LINE__, GetInitMargin(), 0);
+    LabelOrderMargin.SetNumberValue(__LINE__, GetInitMargin(), 0);
 
-    LabelOrderSize.SetValue(__LINE__, GetLotSize(), 0);
+    LabelOrderSize.SetNumberValue(__LINE__, GetLotSize(), 0);
 
     LabelOrderSwapType.SetText(__LINE__, GetSwapType());
 
-    LabelOrderBuySwap.SetValue(__LINE__, GetBuySwap(), 2);
+    LabelOrderBuySwap.SetNumberValue(__LINE__, GetBuySwap(), 2);
 
-    LabelOrderSellSwap.SetValue(__LINE__, GetSellSwap(), 2);
+    LabelOrderSellSwap.SetNumberValue(__LINE__, GetSellSwap(), 2);
 
-    LabelOrderProfit.SetValue(__LINE__, GetMagicNumberProfit(), 0);
+    LabelOrderProfit.SetNumberValue(__LINE__, GetMagicNumberProfit(), 0);
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
         DispSettlementButton();
@@ -325,15 +330,14 @@ void DispSettlementButton() {
     int panel_size_x = 0;
     int panel_size_y = 0;
     Border.GetRectangle(__LINE__, panel_x, panel_y, panel_size_x, panel_size_y);
+
     int x = panel_x;
     int y = panel_y + panel_size_y;
     int size_x10 = panel_size_x;
     int size_y10 = DrawObject::ScaleCoordinate(2.5 * FONT_SIZE1);
     ButtonSettlement.SetFont(FONT_NAME, FONT_SIZE1);
+    ButtonSettlement.SetColor(clrRed, clrBlack, C'255,220,110');
     ButtonSettlement.Initialize(__LINE__, x, y, size_x10, size_y10, false);
-    ButtonSettlement.SetInteger(__LINE__, OBJPROP_COLOR, clrRed);
-    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BGCOLOR, C'255,220,110');
-    ButtonSettlement.SetInteger(__LINE__, OBJPROP_BORDER_COLOR, clrBlack);
     ButtonSettlement.SetText(__LINE__, "マジックナンバー全決済");
 
     ChartRedraw();
@@ -354,7 +358,7 @@ void HideSettlementButton() {
 void UpdateSettlementButton() {
     ButtonSettlement.SetText(__LINE__, "★マジックナンバー全決済中★");
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_STATE, true);
-    LabelOrderProfit.SetValue(__LINE__, GetMagicNumberProfit(), 0);
+    LabelOrderProfit.SetNumberValue(__LINE__, GetMagicNumberProfit(), 0);
     ChartRedraw();
 }
 

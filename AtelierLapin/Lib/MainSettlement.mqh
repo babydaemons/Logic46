@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                    AtelierLapinQuickOrderMT4.mq5 |
+//|                                           Lib/MainSettlement.mqh |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -7,6 +7,8 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 #property strict
+
+const bool __DEBUGGING = false;
 
 int Reason = -1;
 long CloseTime;
@@ -79,6 +81,28 @@ int OnInit() {
     }
     else {
         UpdatePanel();
+    }
+
+    if (__DEBUGGING) {
+        const string SUFFIX = ".ps01";
+        //const string SUFFIX = "micro";
+        //const string SUFFIX = "";
+
+        AddPosition("XAUJPY" + SUFFIX, -0.01, 123);
+        AddPosition("XAUJPY" + SUFFIX, -0.01, 2000);
+        AddPosition("XAUJPY" + SUFFIX, -0.01, 3000);
+    
+        AddPosition("XAUAUD" + SUFFIX, 0.01, 123);
+        AddPosition("XAUAUD" + SUFFIX, 0.01, 1000);
+        AddPosition("XAUAUD" + SUFFIX, 0.01, 2000);
+
+        AddPosition("XAUEUR" + SUFFIX, -0.1, 1234);
+        AddPosition("XAUEUR" + SUFFIX, -0.1, 20000);
+        AddPosition("XAUEUR" + SUFFIX, -0.1, 30000);
+
+        AddPosition("XAUUSD" + SUFFIX, 0.1, 1234);
+        AddPosition("XAUUSD" + SUFFIX, 0.1, 10000);
+        AddPosition("XAUUSD" + SUFFIX, 0.1, 20000);
     }
 
     EventSetTimer(5);

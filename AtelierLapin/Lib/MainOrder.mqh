@@ -8,6 +8,9 @@
 #property version   "1.00"
 #property strict
 
+const bool __DEBUGGING = false;
+const string __SYMBOL = "XAUUSD.ps01";
+
 int Reason = -1;
 
 //+------------------------------------------------------------------+
