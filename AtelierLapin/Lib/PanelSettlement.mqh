@@ -11,6 +11,23 @@
 #include "DrawObject.mqh"
 #include "PositionUtil.mqh"
 
+enum ENUM_WATCHSTATUS {
+    WATCHSTATUS_WAITING,
+    WATCHSTATUS_WATCHING,
+    WATCHSTATUS_TAKEPROFIT,
+    WATCHSTATUS_STOPLOSS,
+};
+const string WatchStatusMessages[] = {
+    "ポジションエントリー待機中です",
+    "ポジション監視中です",
+    "サーバー時刻%sに利確決済しました",
+    "サーバー時刻%sに損切決済しました",
+};
+ENUM_WATCHSTATUS WatchStatus;
+string WatchStatusMessage;
+datetime SettlementTime;
+int PositionCount;
+
 const string FONT_NAME = "BIZ UDPゴシック";
 const int FONT_SIZE1 = DrawObject::ScaleFontSize(12.0, 9);
 const int FONT_SIZE2 = DrawObject::ScaleFontSize(11.0, 8);
@@ -204,12 +221,26 @@ void UpdatePanel() {
 
     LabelDispStopLoss.SetNumberValue(__LINE__, STOP_LOSS, 0);
 
+    int position_count = 0;
     if (__DEBUGGING) {
-        SortPositions();
+        position_count = SortPositions();
     }
     else {
-        ScanPositions(MAGIC_NUMBER);
+        position_count = ScanPositions(MAGIC_NUMBER);
     }
+    if (PositionCount == 0 && position_count > 0) {
+        WatchStatus = WATCHSTATUS_WATCHING;
+    }
+    switch (WatchStatus) {
+       case WATCHSTATUS_WAITING:
+       case WATCHSTATUS_WATCHING:
+            WatchStatusMessage = WatchStatusMessages[WatchStatus];
+            break;
+        default:
+            WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], TimeToString(SettlementTime));
+            break;
+    }
+    LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
 
     UpdateSymbolInfo(0, LabelDispSymbol1, LabelDispLots1, LabelDispProfit1);
     UpdateSymbolInfo(1, LabelDispSymbol2, LabelDispLots2, LabelDispProfit2);
@@ -283,6 +314,9 @@ void OnChartEvent(const int id,
 
     if (ButtonSettlement.HasPressed(__LINE__, id, sparam)) {
         SendOrderCloseAll();
+        WatchStatus = WATCHSTATUS_WAITING;
+        WatchStatusMessage = WatchStatusMessages[WatchStatus];
+        LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
         RestoreSttlementButton();
     }
 
@@ -364,7 +398,18 @@ int GetMagicNumber() {
 void CheckMagicNumberPositions() {
     ulong magic_number = GetMagicNumber();
     double profit = GetMagicNumberProfit();
-    if (profit <= -STOP_LOSS || +TAKE_PROFIT <= profit) {
+    if (profit <= -STOP_LOSS) {
         SendOrderCloseAll();
+        WatchStatus = WATCHSTATUS_STOPLOSS;
+        SettlementTime = TimeCurrent();
+        WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], TimeToString(SettlementTime));
+        ChartRedraw();
     }
+    else if (+TAKE_PROFIT <= profit) {
+        SendOrderCloseAll();
+        WatchStatus = WATCHSTATUS_TAKEPROFIT;
+        SettlementTime = TimeCurrent();
+        WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], TimeToString(SettlementTime));
+        ChartRedraw();
+   }
 }
