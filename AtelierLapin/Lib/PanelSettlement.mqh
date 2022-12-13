@@ -20,9 +20,11 @@ DrawObject Background(__LINE__, OBJ_RECTANGLE_LABEL, "Background");
 LabelObject LabelMagicNumber(__LINE__, "マジックナンバー");
 LabelObject LabelSymbol(__LINE__, "銘柄");
 LabelObject LabelLots(__LINE__, "発注ロット数");
+LabelObject LabelProfit(__LINE__, "銘柄別損益");
 LabelObject LabelTotalProfit(__LINE__, "マジックナンバー全損益");
 LabelObject LabelTakeProfit(__LINE__, "利確金額");
 LabelObject LabelStopLoss(__LINE__, "損切金額");
+LabelObject LabelWatchStatus(__LINE__, "ポジション監視状態");
 LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
 LabelObject LabelDispMagicNumber(__LINE__, " ");
 LabelObject LabelDispSymbol1(__LINE__, "　   ");
@@ -33,9 +35,14 @@ LabelObject LabelDispLots1(__LINE__, " 　   ");
 LabelObject LabelDispLots2(__LINE__, "  　  ");
 LabelObject LabelDispLots3(__LINE__, "   　 ");
 LabelObject LabelDispLots4(__LINE__, "    　");
+LabelObject LabelDispProfit1(__LINE__, "　　   ");
+LabelObject LabelDispProfit2(__LINE__, " 　　  ");
+LabelObject LabelDispProfit3(__LINE__, "  　　 ");
+LabelObject LabelDispProfit4(__LINE__, "   　　");
 LabelObject LabelDispTotalProfit(__LINE__, "　　");
 LabelObject LabelDispTakeProfit(__LINE__, " 　　");
 LabelObject LabelDispStopLoss(__LINE__, "　　 ");
+LabelObject LabelDispWatchStatus(__LINE__, " 　　 ");
 CheckboxObject CheckboxEnableSettlement(__LINE__, "　", false);
 ButtonObject ButtonSettlement(__LINE__, "マジックナンバー全決済");
 
@@ -92,6 +99,11 @@ void InitPanel() {
     LabelLots.Initialize(__LINE__, x10, y10, size_x10, size_y10);
 
     y10 += size_y10;
+    int x41 = x20;
+    int y41 = y10;
+    LabelProfit.Initialize(__LINE__, x10, y10, size_x10, size_y10);
+
+    y10 += size_y10;
     int x50 = x20;
     int y50 = y10;
     LabelTotalProfit.Initialize(__LINE__, x10, y10, size_x10, size_y10);
@@ -102,7 +114,10 @@ void InitPanel() {
     y10 += size_y10;
     LabelStopLoss.Initialize(__LINE__, x10, y10, size_x10, size_y10);
 
-    int size_x20 = DrawObject::ScaleSize(FONT_SIZE1 * 9);
+    y10 += size_y10;
+    LabelWatchStatus.Initialize(__LINE__, x10, y10, size_x10, size_y10);
+
+   int size_x20 = DrawObject::ScaleSize(FONT_SIZE1 * 9);
     int size_y20 = size_y10;
     LabelDispMagicNumber.Initialize(__LINE__, x20, y20, size_x20, size_y20);
 
@@ -132,8 +147,21 @@ void InitPanel() {
     x40 += size_x40;
     LabelDispLots4.Initialize(__LINE__, x40, y40, size_x40, size_y40);
 
-    int size_x50 = size_x40;
-    int size_y50 = size_y40;
+    int size_x41 = size_x30;
+    int size_y41 = size_y30;
+    LabelDispProfit1.Initialize(__LINE__, x41, y41, size_x41, size_y41);
+
+    x41 += size_x41;
+    LabelDispProfit2.Initialize(__LINE__, x41, y41, size_x41, size_y41);
+
+    x41 += size_x41;
+    LabelDispProfit3.Initialize(__LINE__, x41, y41, size_x41, size_y41);
+
+    x41 += size_x41;
+    LabelDispProfit4.Initialize(__LINE__, x41, y41, size_x41, size_y41);
+
+    int size_x50 = size_x41;
+    int size_y50 = size_y41;
     LabelDispTotalProfit.Initialize(__LINE__, x50, y50, size_x50, size_y50);
 
     y50 += size_y50;
@@ -141,6 +169,9 @@ void InitPanel() {
 
     y50 += size_y50;
     LabelDispStopLoss.Initialize(__LINE__, x50, y50, size_x50, size_y50);
+
+    y50 += size_y50;
+    LabelDispWatchStatus.Initialize(__LINE__, x50, y50, size_x50, size_y50);
 
     // クイック決済ボタン表示チェックボックスの描画
     y10 += size_y10;
@@ -180,10 +211,10 @@ void UpdatePanel() {
         ScanPositions(MAGIC_NUMBER);
     }
 
-    UpdateSymbolInfo(0, LabelDispSymbol1, LabelDispLots1);
-    UpdateSymbolInfo(1, LabelDispSymbol2, LabelDispLots2);
-    UpdateSymbolInfo(2, LabelDispSymbol3, LabelDispLots3);
-    UpdateSymbolInfo(3, LabelDispSymbol4, LabelDispLots4);
+    UpdateSymbolInfo(0, LabelDispSymbol1, LabelDispLots1, LabelDispProfit1);
+    UpdateSymbolInfo(1, LabelDispSymbol2, LabelDispLots2, LabelDispProfit2);
+    UpdateSymbolInfo(2, LabelDispSymbol3, LabelDispLots3, LabelDispProfit3);
+    UpdateSymbolInfo(3, LabelDispSymbol4, LabelDispLots4, LabelDispProfit4);
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
         DispSettlementButton();
@@ -194,13 +225,14 @@ void UpdatePanel() {
     ChartRedraw();
 }
 
-void UpdateSymbolInfo(int i, LabelObject& symbol_object, LabelObject& lots_object) {
+void UpdateSymbolInfo(int i, LabelObject& symbol_object, LabelObject& lots_object, LabelObject& profit_object) {
     string symbol = "";
     double lots = 0.0;
     double profit = 0.0;
     GetPosition(i, symbol, lots, profit);
     symbol_object.SetTextValue(__LINE__, symbol, true);
     lots_object.SetNumberValue(__LINE__, lots, 2, true);
+    profit_object.SetNumberValue(__LINE__, profit, 0, true);
 }
 
 void RemovePanel() {
@@ -209,15 +241,21 @@ void RemovePanel() {
     LabelMagicNumber.Remove(__LINE__);
     LabelSymbol.Remove(__LINE__);
     LabelLots.Remove(__LINE__);
+    LabelProfit.Remove(__LINE__);
     LabelTotalProfit.Remove(__LINE__);
     LabelTakeProfit.Remove(__LINE__);
     LabelStopLoss.Remove(__LINE__);
+    LabelWatchStatus.Remove(__LINE__);
     LabelEnableOrder.Remove(__LINE__);
     LabelDispMagicNumber.Remove(__LINE__);
     LabelDispSymbol1.Remove(__LINE__);
     LabelDispSymbol2.Remove(__LINE__);
     LabelDispSymbol3.Remove(__LINE__);
     LabelDispSymbol4.Remove(__LINE__);
+    LabelDispProfit1.Remove(__LINE__);
+    LabelDispProfit2.Remove(__LINE__);
+    LabelDispProfit3.Remove(__LINE__);
+    LabelDispProfit4.Remove(__LINE__);
     LabelDispLots1.Remove(__LINE__);
     LabelDispLots2.Remove(__LINE__);
     LabelDispLots3.Remove(__LINE__);
@@ -225,6 +263,7 @@ void RemovePanel() {
     LabelDispTotalProfit.Remove(__LINE__);
     LabelDispTakeProfit.Remove(__LINE__);
     LabelDispStopLoss.Remove(__LINE__);
+    LabelDispWatchStatus.Remove(__LINE__);
     CheckboxEnableSettlement.Remove(__LINE__);
     ButtonSettlement.Remove(__LINE__);
 
