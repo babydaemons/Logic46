@@ -16,6 +16,8 @@ long OpenTime;
 
 const long TIME_ROUND = 24 * 60 * 60;
 
+string GlobalVariableKey;
+
 //+------------------------------------------------------------------+
 //| 時刻の書式チェック                                               |
 //+------------------------------------------------------------------+
@@ -66,6 +68,19 @@ bool CheckTimeFormat(string time, long& T)
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
+    GlobalVariableKey = StringFormat("AtelierLapinSettlement[%010d]", MAGIC_NUMBER);
+    if (GlobalVariableCheck(GlobalVariableKey)) {
+        datetime prev_session = (datetime)(long)GlobalVariableGet(GlobalVariableKey);
+        MessageBox("指定されたマジックナンバーの決済機能EAは下記の時刻に起動済みです。\n" +
+                   "→マジックナンバー：" + IntegerToString(MAGIC_NUMBER) + "\n" +
+                   "→起動時刻：" + TimeToString(prev_session));
+        return INIT_PARAMETERS_INCORRECT;
+    }
+    else {
+        GlobalVariableSet(GlobalVariableKey, (long)TimeCurrent());
+        GlobalVariablesFlush();
+    }
+
     if (!CheckTimeFormat(CLOSE_TIME, CloseTime)) {
         MessageBox("「決済中断時刻(サーバー時刻)」の書式が不正です。\n\"00:00\"～\"23:59\"の間の時刻を入力してください。\n→パラメータ入力：" + CLOSE_TIME);
         return INIT_PARAMETERS_INCORRECT;
@@ -120,6 +135,9 @@ void OnDeinit(const int reason) {
         RemovePanel();
     }
 
+    GlobalVariableDel(GlobalVariableKey);
+    GlobalVariablesFlush();
+
     Reason = reason;
 }
 
@@ -149,5 +167,7 @@ void OnTick() {
 //+------------------------------------------------------------------+
 void OnTimer() {
     UpdatePanel();
+    GlobalVariableSet(GlobalVariableKey, GlobalVariableGet(GlobalVariableKey));
+    GlobalVariablesFlush();
 }
 //+------------------------------------------------------------------+
