@@ -403,13 +403,13 @@ void CheckMagicNumberPositions() {
         WatchStatus = WATCHSTATUS_STOPLOSS;
         SettlementTime = TimeCurrent();
         WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], TimeToString(SettlementTime));
-        ChartRedraw();
+        UpdatePanel();
     }
     else if (+TAKE_PROFIT <= profit) {
         SendOrderCloseAll();
         WatchStatus = WATCHSTATUS_TAKEPROFIT;
         SettlementTime = TimeCurrent();
         WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], TimeToString(SettlementTime));
-        ChartRedraw();
+        UpdatePanel();
    }
 }
