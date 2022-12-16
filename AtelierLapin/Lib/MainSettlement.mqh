@@ -145,20 +145,8 @@ void OnDeinit(const int reason) {
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick() {
-    long t = (long)TimeCurrent() % TIME_ROUND;
-
-    if (OpenTime == CloseTime) {
+    if (IsWatching()) {
         CheckMagicNumberPositions();
-    }
-    else if (OpenTime < CloseTime) {
-        if (OpenTime <= t && t < CloseTime) {
-            CheckMagicNumberPositions();
-        }
-    }
-    else {
-        if (t < CloseTime || OpenTime <= t) {
-            CheckMagicNumberPositions();
-        }
     }
 }
 
@@ -170,4 +158,26 @@ void OnTimer() {
     GlobalVariableSet(GlobalVariableKey, GlobalVariableGet(GlobalVariableKey));
     GlobalVariablesFlush();
 }
+
 //+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool IsWatching() {
+    long t = (long)TimeCurrent() % TIME_ROUND;
+
+    if (OpenTime == CloseTime) {
+        return true;
+    }
+    else if (OpenTime < CloseTime) {
+        if (OpenTime <= t && t < CloseTime) {
+            return true;
+        }
+    }
+    else {
+        if (t < CloseTime || OpenTime <= t) {
+            return true;
+        }
+    }
+
+    return false;
+}

@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                                   OrderPanel.mqh |
+//|                                          Lib/PanelSettlement.mqh |
 //|                        Copyright 2022, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -31,6 +31,9 @@ int PositionCount;
 const string FONT_NAME = "BIZ UDPゴシック";
 const int FONT_SIZE1 = DrawObject::ScaleFontSize(12.0, 9);
 const int FONT_SIZE2 = DrawObject::ScaleFontSize(11.0, 8);
+const color BORDER_COLOR = C'0,0,255';
+const color BACKGROUND_COLOR = C'0,0,70';
+
 
 DrawObject Border(__LINE__, OBJ_RECTANGLE_LABEL, "Boder");
 DrawObject Background(__LINE__, OBJ_RECTANGLE_LABEL, "Background");
@@ -42,6 +45,7 @@ LabelObject LabelTotalProfit(__LINE__, "マジックナンバー全損益");
 LabelObject LabelTakeProfit(__LINE__, "利確金額");
 LabelObject LabelStopLoss(__LINE__, "損切金額");
 LabelObject LabelWatchStatus(__LINE__, "ポジション監視状態");
+LabelObject LabelSettlementStatus(__LINE__, "決済実行状態");
 LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
 LabelObject LabelDispMagicNumber(__LINE__, " ");
 LabelObject LabelDispSymbol1(__LINE__, "　   ");
@@ -60,6 +64,7 @@ LabelObject LabelDispTotalProfit(__LINE__, "　　");
 LabelObject LabelDispTakeProfit(__LINE__, " 　　");
 LabelObject LabelDispStopLoss(__LINE__, "　　 ");
 LabelObject LabelDispWatchStatus(__LINE__, " 　　 ");
+LabelObject LabelDispSettlementStatus(__LINE__, " 　 　 ");
 CheckboxObject CheckboxEnableSettlement(__LINE__, "　", false);
 ButtonObject ButtonSettlement(__LINE__, "マジックナンバー全決済");
 
@@ -71,9 +76,6 @@ void InitPanel() {
 
     // オブジェクト全削除
     RemovePanel();
-
-    const color BORDER_COLOR = C'0,0,255';
-    const color BACKGROUND_COLOR = C'0,0,70';
 
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
     TextObject::SetDefaultColor(clrCyan, BACKGROUND_COLOR, BACKGROUND_COLOR);
@@ -134,7 +136,10 @@ void InitPanel() {
     y10 += size_y10;
     LabelWatchStatus.Initialize(__LINE__, x10, y10, size_x10, size_y10);
 
-   int size_x20 = DrawObject::ScaleSize(FONT_SIZE1 * 9);
+    y10 += size_y10;
+    LabelSettlementStatus.Initialize(__LINE__, x10, y10, size_x10, size_y10);
+
+    int size_x20 = DrawObject::ScaleSize(FONT_SIZE1 * 9);
     int size_y20 = size_y10;
     LabelDispMagicNumber.Initialize(__LINE__, x20, y20, size_x20, size_y20);
 
@@ -190,6 +195,9 @@ void InitPanel() {
     y50 += size_y50;
     LabelDispWatchStatus.Initialize(__LINE__, x50, y50, size_x50, size_y50);
 
+    y50 += size_y50;
+    LabelDispSettlementStatus.Initialize(__LINE__, x50, y50, size_x50, size_y50);
+
     // クイック決済ボタン表示チェックボックスの描画
     y10 += size_y10;
     LabelEnableOrder.Initialize(__LINE__, x10, y10, size_x10, size_y10);
@@ -242,6 +250,20 @@ void UpdatePanel() {
     }
     LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
 
+    string now = TimeToString(TimeCurrent(), TIME_MINUTES);
+    if (IsWatching()) {
+        string message = OPEN_TIME == CLOSE_TIME ? 
+            StringFormat("決済待機中です(24時間)⇒%s", now) :
+            StringFormat("決済待機中です(待機時間…%s～%s)⇒%s", OPEN_TIME, CLOSE_TIME, now);
+        LabelDispSettlementStatus.SetText(__LINE__, message);
+        LabelDispSettlementStatus.SetTextColor(__LINE__, clrCyan);
+    }
+    else {
+        string message = StringFormat("決済中断中です(中断時間…%s～%s)⇒%s", CLOSE_TIME, OPEN_TIME, now);
+        LabelDispSettlementStatus.SetText(__LINE__, message);
+        LabelDispSettlementStatus.SetTextColor(__LINE__, clrRed);
+    }
+
     UpdateSymbolInfo(0, LabelDispSymbol1, LabelDispLots1, LabelDispProfit1);
     UpdateSymbolInfo(1, LabelDispSymbol2, LabelDispLots2, LabelDispProfit2);
     UpdateSymbolInfo(2, LabelDispSymbol3, LabelDispLots3, LabelDispProfit3);
@@ -277,6 +299,7 @@ void RemovePanel() {
     LabelTakeProfit.Remove(__LINE__);
     LabelStopLoss.Remove(__LINE__);
     LabelWatchStatus.Remove(__LINE__);
+    LabelSettlementStatus.Remove(__LINE__);
     LabelEnableOrder.Remove(__LINE__);
     LabelDispMagicNumber.Remove(__LINE__);
     LabelDispSymbol1.Remove(__LINE__);
@@ -295,6 +318,7 @@ void RemovePanel() {
     LabelDispTakeProfit.Remove(__LINE__);
     LabelDispStopLoss.Remove(__LINE__);
     LabelDispWatchStatus.Remove(__LINE__);
+    LabelDispSettlementStatus.Remove(__LINE__);
     CheckboxEnableSettlement.Remove(__LINE__);
     ButtonSettlement.Remove(__LINE__);
 

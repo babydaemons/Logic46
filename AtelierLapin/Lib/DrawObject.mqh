@@ -294,7 +294,7 @@ protected:
     static color BORDER_COLOR;
     static color BACKGROUND_COLOR;
 
-private:
+protected:
     color text_color;
     color border_color;
     color background_color;
@@ -343,6 +343,11 @@ public:
 
     double GetValue(int line) {
         return prev_value;
+    }
+
+    void SetTextColor(int line, color new_color) {
+        text_color = new_color;
+        ApplyTextColor(line);
     }
 
 protected:
