@@ -253,13 +253,13 @@ void UpdatePanel() {
     string now = TimeToString(TimeCurrent(), TIME_MINUTES);
     if (IsWatching()) {
         string message = OPEN_TIME == CLOSE_TIME ? 
-            StringFormat("決済待機中です(待機時間…24時間)⇒%s", now) :
-            StringFormat("決済待機中です(待機時間…%s～%s)⇒%s", OPEN_TIME, CLOSE_TIME, now);
+            StringFormat("決済待機中です(待機時間 24時間) ⇒ 現在時刻 %s", now) :
+            StringFormat("決済待機中です(待機時間 %s～%s) ⇒ 現在時刻 %s", OPEN_TIME, CLOSE_TIME, now);
         LabelDispSettlementStatus.SetText(__LINE__, message);
         LabelDispSettlementStatus.SetTextColor(__LINE__, clrCyan);
     }
     else {
-        string message = StringFormat("決済中断中です(中断時間…%s～%s)⇒%s", CLOSE_TIME, OPEN_TIME, now);
+        string message = StringFormat("決済中断中です(中断時間 %s～%s) ⇒ 現在時刻 %s", CLOSE_TIME, OPEN_TIME, now);
         LabelDispSettlementStatus.SetText(__LINE__, message);
         LabelDispSettlementStatus.SetTextColor(__LINE__, clrRed);
     }
