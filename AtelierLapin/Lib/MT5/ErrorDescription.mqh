@@ -1,10 +1,8 @@
 ﻿//+------------------------------------------------------------------+
-//|                                             ErrorDescription.mqh |
-//|                        Copyright 2022, MetaQuotes Software Corp. |
-//|                                             https://www.mql5.com |
+//|                                     Lib/MT5/ErrorDescription.mqh |
+//|                                    Copyright 2022, atelierlapin. |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2022, MetaQuotes Software Corp."
-#property link      "https://www.mql5.com"
+#property copyright "Copyright 2022, atelierlapin."
 #property strict
 
 //+------------------------------------------------------------------+

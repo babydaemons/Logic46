@@ -1,10 +1,8 @@
 ﻿//+------------------------------------------------------------------+
 //|                                           Lib/MainSettlement.mqh |
-//|                        Copyright 2022, MetaQuotes Software Corp. |
-//|                                             https://www.mql5.com |
+//|                                    Copyright 2022, atelierlapin. |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2022, MetaQuotes Software Corp."
-#property link      "https://www.mql5.com"
+#property copyright "Copyright 2022, atelierlapin."
 #property version   "1.00"
 #property strict
 
@@ -68,7 +66,7 @@ bool CheckTimeFormat(string time, long& T)
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    GlobalVariableKey = StringFormat("AtelierLapinSettlement[%010d]", MAGIC_NUMBER);
+    GlobalVariableKey = StringFormat("LOCK[atelierlapin(%d)]", MAGIC_NUMBER);
     if (GlobalVariableCheck(GlobalVariableKey)) {
         datetime prev_session = (datetime)(long)GlobalVariableGet(GlobalVariableKey);
         MessageBox("指定されたマジックナンバーの決済機能EAは下記の時刻に起動済みです。\n" +
