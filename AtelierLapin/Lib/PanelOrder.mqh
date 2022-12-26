@@ -22,17 +22,19 @@ LabelObject LabelSize(__LINE__, "契約サイズ");
 LabelObject LabelSwapType(__LINE__, "SwapType");
 LabelObject LabelBuySwap(__LINE__, "BuySwap");
 LabelObject LabelSellSwap(__LINE__, "SellSwap");
+LabelObject LabelSpreadLoss(__LINE__, "初期スプレッド損失額");
 LabelObject LabelProfit(__LINE__, "マジックナンバー全損益");
 LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
 EditObject EditMagicNumber(__LINE__, "　　");
 EditObject EditLots(__LINE__, "　 　");
-LabelObject LabelOrderSymbol(__LINE__, " 　");
-LabelObject LabelOrderMargin(__LINE__, "　 ");
-LabelObject LabelOrderSize(__LINE__, " 　 ");
-LabelObject LabelOrderSwapType(__LINE__, "　  ");
-LabelObject LabelOrderBuySwap(__LINE__, " 　   ");
-LabelObject LabelOrderSellSwap(__LINE__, "  　 ");
-LabelObject LabelOrderProfit(__LINE__, "   　");
+LabelObject LabelDispSymbol(__LINE__, " 　");
+LabelObject LabelDispMargin(__LINE__, "　 ");
+LabelObject LabelDispSize(__LINE__, " 　 ");
+LabelObject LabelDispSwapType(__LINE__, "　  ");
+LabelObject LabelDispBuySwap(__LINE__, " 　   ");
+LabelObject LabelDispSellSwap(__LINE__, "  　 ");
+LabelObject LabelDispSpreadLoss(__LINE__, "　　 ");
+LabelObject LabelDispProfit(__LINE__, "   　");
 ButtonObject ButtonSell(__LINE__, "Ｂｕｙ");
 ButtonObject ButtonBuy(__LINE__, "Ｓｅｌｌ");
 CheckboxObject CheckboxEnableSettlement(__LINE__, "　", false);
@@ -114,6 +116,9 @@ void InitPanel() {
     y11 += size_y11;
     LabelSellSwap.Initialize(__LINE__, x11, y11, size_x11, size_y11);
 
+    y11 += size_y11;
+    LabelSpreadLoss.Initialize(__LINE__, x11, y11, size_x11, size_y11);
+
     // パラメータ入力エディットオブジェクトの描画
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE1);
     int y2E = y00 + DrawObject::ScaleSize(11 - padding_y1);
@@ -128,25 +133,28 @@ void InitPanel() {
     EditLots.InitText(__LINE__, "0.01");
 
     y20 += size_y10;
-    LabelOrderSymbol.Initialize(__LINE__, x20, y20, size_x10, size_y10);
-    LabelOrderSymbol.SetText(__LINE__, GetSymbol());
+    LabelDispSymbol.Initialize(__LINE__, x20, y20, size_x10, size_y10);
+    LabelDispSymbol.SetText(__LINE__, GetSymbol());
 
     int x21 = x20;
     int y21 = y20 + size_y10;
     TextObject::SetDefaultFont(FONT_NAME, FONT_SIZE2);
-    LabelOrderMargin.Initialize(__LINE__, x21, y21, size_x11, size_y11);
+    LabelDispMargin.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
     y21 += size_y11;
-    LabelOrderSize.Initialize(__LINE__, x21, y21, size_x11, size_y11);
+    LabelDispSize.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
     y21 += size_y11;
-    LabelOrderSwapType.Initialize(__LINE__, x21, y21, size_x11, size_y11);
+    LabelDispSwapType.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
     y21 += size_y11;
-    LabelOrderBuySwap.Initialize(__LINE__, x21, y21, size_x11, size_y11);
+    LabelDispBuySwap.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
     y21 += size_y11;
-    LabelOrderSellSwap.Initialize(__LINE__, x21, y21, size_x11, size_y11);
+    LabelDispSellSwap.Initialize(__LINE__, x21, y21, size_x11, size_y11);
+
+    y21 += size_y11;
+    LabelDispSpreadLoss.Initialize(__LINE__, x21, y21, size_x11, size_y11);
 
     // 発注ボタンの描画
     int size_x20 = DrawObject::ScaleSize(10.7 * FONT_SIZE1);
@@ -165,7 +173,7 @@ void InitPanel() {
 
     int y40 = y30 + (int)(1.2 * size_y20);
     LabelProfit.Initialize(__LINE__, x10, y40, size_x10, size_y10);
-    LabelOrderProfit.Initialize(__LINE__, x20, y40, size_x10, size_y10);
+    LabelDispProfit.Initialize(__LINE__, x20, y40, size_x10, size_y10);
 
     // クイック決済ボタン表示チェックボックスの描画
     y40 += size_y10;
@@ -190,19 +198,21 @@ void InitPanel() {
 //|                                                                  |
 //+------------------------------------------------------------------+
 void UpdatePanel() {
-    LabelOrderSymbol.SetText(__LINE__, GetSymbol(), true);
+    LabelDispSymbol.SetText(__LINE__, GetSymbol(), true);
 
-    LabelOrderMargin.SetNumberValue(__LINE__, GetInitMargin(), 0);
+    LabelDispMargin.SetNumberValue(__LINE__, GetInitMargin(), 0);
 
-    LabelOrderSize.SetNumberValue(__LINE__, GetLotSize(), 0);
+    LabelDispSize.SetNumberValue(__LINE__, GetLotSize(), 0);
 
-    LabelOrderSwapType.SetText(__LINE__, GetSwapType());
+    LabelDispSwapType.SetText(__LINE__, GetSwapType());
 
-    LabelOrderBuySwap.SetNumberValue(__LINE__, GetBuySwap(), 2);
+    LabelDispBuySwap.SetNumberValue(__LINE__, GetBuySwap(), 2);
 
-    LabelOrderSellSwap.SetNumberValue(__LINE__, GetSellSwap(), 2);
+    LabelDispSellSwap.SetNumberValue(__LINE__, GetSellSwap(), 2);
 
-    LabelOrderProfit.SetNumberValue(__LINE__, GetMagicNumberProfit(), 0);
+    LabelDispProfit.SetNumberValue(__LINE__, GetMagicNumberProfit(), 0);
+
+    LabelDispSpreadLoss.SetNumberValue(__LINE__, GetInitSpreadLoss(), 0);
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
         DispSettlementButton();
@@ -224,17 +234,19 @@ void RemovePanel() {
     LabelSwapType.Remove(__LINE__);
     LabelBuySwap.Remove(__LINE__);
     LabelSellSwap.Remove(__LINE__);
+    LabelSpreadLoss.Remove(__LINE__);
     LabelProfit.Remove(__LINE__);
     LabelEnableOrder.Remove(__LINE__);
     EditMagicNumber.Remove(__LINE__);
     EditLots.Remove(__LINE__);
-    LabelOrderSymbol.Remove(__LINE__);
-    LabelOrderMargin.Remove(__LINE__);
-    LabelOrderSize.Remove(__LINE__);
-    LabelOrderSwapType.Remove(__LINE__);
-    LabelOrderBuySwap.Remove(__LINE__);
-    LabelOrderSellSwap.Remove(__LINE__);
-    LabelOrderProfit.Remove(__LINE__);
+    LabelDispSymbol.Remove(__LINE__);
+    LabelDispMargin.Remove(__LINE__);
+    LabelDispSize.Remove(__LINE__);
+    LabelDispSwapType.Remove(__LINE__);
+    LabelDispBuySwap.Remove(__LINE__);
+    LabelDispSellSwap.Remove(__LINE__);
+    LabelDispSpreadLoss.Remove(__LINE__);
+    LabelDispProfit.Remove(__LINE__);
     ButtonSell.Remove(__LINE__);
     ButtonBuy.Remove(__LINE__);
     CheckboxEnableSettlement.Remove(__LINE__);
@@ -356,7 +368,7 @@ void HideSettlementButton() {
 void UpdateSettlementButton() {
     ButtonSettlement.SetText(__LINE__, "★マジックナンバー全決済中★");
     ButtonSettlement.SetInteger(__LINE__, OBJPROP_STATE, true);
-    LabelOrderProfit.SetNumberValue(__LINE__, GetMagicNumberProfit(), 0);
+    LabelDispProfit.SetNumberValue(__LINE__, GetMagicNumberProfit(), 0);
     ChartRedraw();
 }
 

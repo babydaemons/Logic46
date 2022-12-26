@@ -77,6 +77,23 @@ double GetInitMargin() {
 }
 
 //+------------------------------------------------------------------+
+//| 発注ロット数における初期スプレッド損失の取得                     |
+//+------------------------------------------------------------------+
+double GetInitSpreadLoss() {
+    double commodity_spread = MarketInfo(Symbol(), MODE_BID) - MarketInfo(Symbol(), MODE_ASK);
+    string symbol = SymbolInfoString(Symbol(), SYMBOL_CURRENCY_PROFIT) + "JPY";
+    double currency_ask = 1.0;
+    if (symbol != "JPYJPY") {
+        SymbolSelect(symbol, true);
+        currency_ask = MarketInfo(symbol, MODE_ASK);
+    }
+    double volume = StringToDouble(EditLots.GetText(__LINE__));
+    double lot_size = GetLotSize();
+    double loss = commodity_spread * currency_ask * volume * lot_size;
+    return loss;
+}
+
+//+------------------------------------------------------------------+
 //| 買い注文の送信                                                   |
 //+------------------------------------------------------------------+
 void SendBuyOrder() {
