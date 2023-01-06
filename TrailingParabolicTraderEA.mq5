@@ -46,9 +46,6 @@ public:
             m_lots = 10 * LOTS;
         }
 
-        m_hADX = iADX(m_symbol, Period(), ADX_BARS);
-        m_hADXMA = iMA(m_symbol, Period(), SD_BARS, 0, MODE_SMA, m_hADX);
-        m_hADXSD = iStdDev(m_symbol, Period(), SD_BARS, 0, MODE_SMA, m_hADX);
         m_hSAR = iSAR(m_symbol, Period(), PSAR_STEP, PSAR_MAX);
     }
 
@@ -118,41 +115,26 @@ public:
     }
 
     ENUM_TREND_TYPE CheckTrend() {
-        double PLUSDI[2];
-        CopyBuffer(m_hADX, PLUSDI_LINE, 0, 2, PLUSDI);
-
-        double MINUSDI[2];
-        CopyBuffer(m_hADX, MINUSDI_LINE, 0, 2, MINUSDI);
-
-        double ADX[2];
-        CopyBuffer(m_hADX, MAIN_LINE, 0, 2, ADX);
-
-        double ADXMA[2];
-        CopyBuffer(m_hADXMA, MAIN_LINE, 0, 2, ADXMA);
-
-        double ADXSD[2];
-        CopyBuffer(m_hADXSD, MAIN_LINE, 0, 2, ADXSD);
-
         double SAR[2];
         CopyBuffer(m_hSAR, MAIN_LINE, 0, 2, SAR);
 
         double price[2];
         CopyClose(m_symbol, Period(), 0, 2, price);
 
-        if (SAR[1] == 0.0 || PLUSDI[1] == 0.0 || MINUSDI[1] == 0.0) {
+        if (SAR[1] == 0.0) {
             return TREND_NONE;
         } else if (SAR[1] < price[1]) {
-            if (SAR[0] < price[0] && ADX[0] > ADXMA[0] + ADXSD[0] && PLUSDI[0] > MINUSDI[0]) {
+            if (SAR[0] < price[0]) {
                 return BUY_CONTINUING;
-            } else if (SAR[0] > price[0] && PLUSDI[1] < MINUSDI[1] && PLUSDI[0] > MINUSDI[0]) {
+            } else if (SAR[0] > price[0]) {
                 return SELL_CHANGED;
             } else {
                 return TREND_NONE;
             }
         } else {
-            if (SAR[0] > price[0] && ADX[0] > ADXMA[0] + ADXSD[0] && PLUSDI[0] < MINUSDI[0]) {
+            if (SAR[0] > price[0]) {
                 return SELL_CONTINUING;
-            } else if (SAR[0] < price[0] && PLUSDI[1] > MINUSDI[1] && PLUSDI[0] < MINUSDI[0]) {
+            } else if (SAR[0] < price[0]) {
                 return BUY_CHANGED;
             } else {
                 return TREND_NONE;
@@ -207,9 +189,6 @@ public:
 private:
     string m_symbol;
     double m_lots;
-    int m_hADX;
-    int m_hADXMA;
-    int m_hADXSD;
     int m_hSAR;
     ulong m_ticket;
     int m_position;
