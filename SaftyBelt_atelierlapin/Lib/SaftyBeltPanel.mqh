@@ -48,7 +48,7 @@ LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
 LabelObject LabelDispSymbol(__LINE__, " ");
 LabelObject LabelDispPositionType(__LINE__, "　 ");
 LabelObject LabelDispProfit(__LINE__, " 　");
-LabelObject LabelDispLots(__LINE__, "　  ");
+LabelObject LabelDispLots(__LINE__, "　　　");
 LabelObject LabelDispLongEntryPrice(__LINE__, " 　 ");
 LabelObject LabelDispLongEntryWidth(__LINE__, "　  ");
 LabelObject LabelDispAskPrice(__LINE__, "   　");
@@ -188,7 +188,7 @@ void InitPanel() {
 void UpdatePanel() {
     LabelDispSymbol.SetText(__LINE__, Symbol());
     LabelDispPositionType.SetText(__LINE__, "Buy");
-    LabelDispProfit.SetNumberValue(__LINE__, 123456, 0);
+    LabelDispProfit.SetNumberValue(__LINE__, GetPositionProfit(), 0);
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
     LabelDispLongEntryPrice.SetText(__LINE__, "125.456");
     LabelDispLongEntryWidth.SetText(__LINE__, "(+2000ポイント)");

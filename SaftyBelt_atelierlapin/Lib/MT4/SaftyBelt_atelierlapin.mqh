@@ -10,6 +10,28 @@
 #include "ErrorDescription.mqh"
 
 //+------------------------------------------------------------------+
+//| 指定マジックナンバーのポジション損益を返す                       |
+//+------------------------------------------------------------------+
+double GetPositionProfit() {
+    int magic_number = GetMagicNumber();
+    int position_count = OrdersTotal();
+    double profit = 0;
+    for (int i = 0; i < position_count ; ++i) {
+        if (!OrderSelect(i, SELECT_BY_POS)) {
+            continue;
+        }
+        if (OrderMagicNumber() != magic_number) {
+            continue;
+        }
+        if (OrderSymbol() != Symbol()) {
+            continue;
+        }
+        profit += OrderProfit() + OrderSwap();
+    }
+    return profit;
+}
+
+//+------------------------------------------------------------------+
 //| 売り気配を返す                                                   |
 //+------------------------------------------------------------------+
 string GetAskPrice() {
