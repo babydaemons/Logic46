@@ -20,14 +20,11 @@ const string WatchStatusMessages[] = {
 };
 ENUM_WATCHSTATUS WatchStatus;
 string WatchStatusMessage;
-datetime SettlementTime;
-int PositionCount;
 
 const string FONT_NAME = "BIZ UDPゴシック";
 const int FONT_SIZE = DrawObject::ScaleFontSize(12.0, 9);
 const color BORDER_COLOR = C'0,0,255';
 const color BACKGROUND_COLOR = C'0,0,70';
-
 
 DrawObject Border(__LINE__, OBJ_RECTANGLE_LABEL, "Boder");
 DrawObject Background(__LINE__, OBJ_RECTANGLE_LABEL, "Background");
