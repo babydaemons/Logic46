@@ -192,8 +192,8 @@ void UpdatePanel() {
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
     LabelDispLongEntryPrice.SetText(__LINE__, "125.456");
     LabelDispLongEntryWidth.SetText(__LINE__, "(+2000ポイント)");
-    LabelDispAskPrice.SetText(__LINE__, "123.456");
-    LabelDispBidPrice.SetText(__LINE__, "123.452");
+    LabelDispAskPrice.SetText(__LINE__, GetAskPrice());
+    LabelDispBidPrice.SetText(__LINE__, GetBidPrice());
     LabelDispShortEntryPrice.SetText(__LINE__, "121.452");
     LabelDispShortEntryWidth.SetText(__LINE__, "(-2000ポイント)");
     LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);

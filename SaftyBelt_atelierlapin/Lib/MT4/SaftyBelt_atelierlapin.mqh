@@ -10,21 +10,17 @@
 #include "ErrorDescription.mqh"
 
 //+------------------------------------------------------------------+
-//| 指定マジックナンバーの全損益の取得                               |
+//| 売り気配を返す                                                   |
 //+------------------------------------------------------------------+
-double GetMagicNumberProfit() {
-    int magic_number = GetMagicNumber();
-    double profit = 0;
-    for (int i = 0; i < OrdersTotal(); ++i) {
-        if (!OrderSelect(i, SELECT_BY_POS)) {
-            continue;
-        }
-        if (OrderMagicNumber() != magic_number) {
-            continue;
-        }
-        profit += OrderProfit() + OrderSwap();
-    }
-    return profit;
+string GetAskPrice() {
+    return DoubleToString(Ask, Digits);
+}
+
+//+------------------------------------------------------------------+
+//| 買い気配を返す                                                   |
+//+------------------------------------------------------------------+
+string GetBidPrice() {
+    return DoubleToString(Bid, Digits);
 }
 
 //+------------------------------------------------------------------+
