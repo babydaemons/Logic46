@@ -141,8 +141,8 @@ bool IsWatching() {
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-string GetUpdateInterval() {
-    return StringFormat("%d:%02d", TIME_INTERVAL / 60, TIME_INTERVAL % 60);
+string GetInterval(datetime t) {
+    return StringFormat("%d:%02d", (long)t / 60, (long)t % 60);
 }
 
 //+------------------------------------------------------------------+

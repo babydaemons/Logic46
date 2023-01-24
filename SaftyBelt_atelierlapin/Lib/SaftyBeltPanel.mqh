@@ -8,6 +8,10 @@
 
 #include "DrawObject.mqh"
 
+double BuyEntry;
+double SellEntry;
+datetime LastOrderModified;
+
 enum ENUM_WATCHSTATUS {
     WATCHSTATUS_ENTRY_WAITING,
     WATCHSTATUS_ENTRY_WATCHING,
@@ -189,43 +193,52 @@ void UpdatePanel() {
     int digit = 0;
     GetPriceInfo(ask, bid, point, digit);
 
-    double buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
-    double sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
-
     int buy_ticket = 0;
     double buy_profit = 0;
     int sell_ticket = 0;
     double sell_profit = 0;
     double total_profit = GetPositionProfit(buy_ticket, buy_profit, sell_ticket, sell_profit);
 
+    bool order_modified = false;
+    datetime now = TimeCurrent();
     if (buy_ticket == 0) {
-        buy_ticket = OrderBuyEntry(buy_entry);
+        BuyEntry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+        buy_ticket = OrderBuyEntry(BuyEntry);
     }
-    else {
-        ModifyBuyOrder(buy_ticket, buy_entry);
+    else if (now > LastOrderModified + TIME_INTERVAL) {
+        BuyEntry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+        if (ModifyBuyOrder(buy_ticket, BuyEntry)) {
+            order_modified = true;
+        }
     }
-
     if (sell_ticket == 0) {
-        sell_ticket = OrderSellEntry(sell_entry);
+        SellEntry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+        sell_ticket = OrderSellEntry(SellEntry);
     }
-    else {
-        ModifySellOrder(sell_ticket, sell_entry);
+    else if (now > LastOrderModified + TIME_INTERVAL) {
+        SellEntry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+        if (ModifySellOrder(sell_ticket, SellEntry)) {
+            order_modified = true;
+        }
+    }
+    if (order_modified) {
+        LastOrderModified = now;
     }
 
     LabelDispSymbol.SetText(__LINE__, Symbol());
     LabelDispPositionType.SetText(__LINE__, "Buy");
     LabelDispProfit.SetNumberValue(__LINE__, total_profit, 0);
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
-    LabelDispLongEntryPrice.SetText(__LINE__, DoubleToString(buy_entry, digit));
-    LabelDispLongEntryWidth.SetText(__LINE__, "(+" + DoubleToString(ENTRY_WIDTH, 0) + "ポイント)");
+    LabelDispLongEntryPrice.SetText(__LINE__, DoubleToString(BuyEntry, digit));
+    LabelDispLongEntryWidth.SetText(__LINE__, "(+" + DoubleToString((BuyEntry - ask) / point, 0) + "ポイント)");
     LabelDispAskPrice.SetText(__LINE__, DoubleToString(ask, digit));
     LabelDispBidPrice.SetText(__LINE__, DoubleToString(bid, digit));
-    LabelDispShortEntryPrice.SetText(__LINE__, DoubleToString(sell_entry, digit));
-    LabelDispShortEntryWidth.SetText(__LINE__, "(-" + DoubleToString(ENTRY_WIDTH, 0) + "ポイント)");
+    LabelDispShortEntryPrice.SetText(__LINE__, DoubleToString(SellEntry, digit));
+    LabelDispShortEntryWidth.SetText(__LINE__, "(-" + DoubleToString((bid - SellEntry) / point, 0) + "ポイント)");
     LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
-    LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(TimeCurrent() - 30));
-    LabelDispUpdateInterval.SetText(__LINE__, GetUpdateInterval());
-    LabelDispNextUpdateTime.SetText(__LINE__, GetTimestamp(TimeCurrent() + 30));
+    LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(LastOrderModified));
+    LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)TIME_INTERVAL));
+    LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((LastOrderModified + TIME_INTERVAL) - now));
     LabelDispMailAdress.SetText(__LINE__, MAIL_TO_ADDRESS);
     LabelDispWatchStatus.SetText(__LINE__, "エントリー監視中です(中断時間 01:00～15:00)");
 
