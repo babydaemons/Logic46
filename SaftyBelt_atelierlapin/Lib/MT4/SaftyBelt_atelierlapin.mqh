@@ -12,7 +12,7 @@
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション損益を返す                       |
 //+------------------------------------------------------------------+
-double GetPositionProfit() {
+double GetPositionProfit(int& buy_ticket, double& buy_profit, int& sell_ticket, double& sell_profit) {
     int magic_number = GetMagicNumber();
     int position_count = OrdersTotal();
     double profit = 0;
@@ -26,23 +26,66 @@ double GetPositionProfit() {
         if (OrderSymbol() != Symbol()) {
             continue;
         }
-        profit += OrderProfit() + OrderSwap();
+        switch (OrderType()) {
+        case OP_BUY:
+        case OP_BUYLIMIT:
+        case OP_BUYSTOP:
+            buy_ticket = OrderTicket();
+            buy_profit = OrderProfit() + OrderSwap();
+            profit += buy_profit;
+            break;
+        case OP_SELL:
+        case OP_SELLLIMIT:
+        case OP_SELLSTOP:
+            sell_ticket = OrderTicket();
+            sell_profit = OrderProfit() + OrderSwap();
+            profit += sell_profit;
+            break;
+        }
     }
     return profit;
 }
 
 //+------------------------------------------------------------------+
-//| 売り気配を返す                                                   |
+//| 売り気配/買い気配を返す                                          |
 //+------------------------------------------------------------------+
-string GetAskPrice() {
-    return DoubleToString(Ask, Digits);
+void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
+    ask = Ask;
+    bid = Bid;
+    point = Point;
+    digit = Digits;
 }
 
 //+------------------------------------------------------------------+
-//| 買い気配を返す                                                   |
+//| 買いストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
-string GetBidPrice() {
-    return DoubleToString(Bid, Digits);
+int OrderBuyEntry(double buy_entry) {
+    double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits);
+    double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits);
+    for (int i = 1; i <= 10; ++i) {
+        int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0, clrBlue);
+        if (ticket != -1) {
+            return ticket;
+        }
+        Sleep(i * 100);
+    }
+    return -1;
+}
+
+//+------------------------------------------------------------------+
+//| 売りストップ待機注文を出す                                       |
+//+------------------------------------------------------------------+
+int OrderSellEntry(double sell_entry) {
+    double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits);
+    double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits);
+    for (int i = 1; i <= 10; ++i) {
+        int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0, clrRed);
+        if (ticket != -1) {
+            return ticket;
+        }
+        Sleep(i * 100);
+    }
+    return -1;
 }
 
 //+------------------------------------------------------------------+

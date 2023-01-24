@@ -15,10 +15,40 @@ CTrade trader;
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション損益を返す                       |
 //+------------------------------------------------------------------+
-double GetPositionProfit() {
+double GetPositionProfit(int& buy_ticket, double& buy_profit, int& sell_ticket, double& sell_profit) {
     int magic_number = GetMagicNumber();
-    int position_count = PositionsTotal();
+    int position_count = OrdersTotal();
     double profit = 0;
+    for (int i = 0; i < position_count ; ++i) {
+        ulong ticket = OrderGetTicket(i);
+        if (!OrderSelect(ticket)) {
+            continue;
+        }
+        if (OrderGetInteger(ORDER_MAGIC) != magic_number) {
+            continue;
+        }
+        if (OrderGetString(ORDER_SYMBOL) != Symbol()) {
+            continue;
+        }
+        switch ((int)OrderGetInteger(ORDER_TYPE)) {
+        case ORDER_TYPE_BUY:
+        case ORDER_TYPE_BUY_LIMIT:
+        case ORDER_TYPE_BUY_STOP:
+        case ORDER_TYPE_BUY_STOP_LIMIT:
+            buy_ticket = (int)ticket;
+            buy_profit = 0;
+            break;
+        case ORDER_TYPE_SELL:
+        case ORDER_TYPE_SELL_LIMIT:
+        case ORDER_TYPE_SELL_STOP:
+        case ORDER_TYPE_SELL_STOP_LIMIT:
+            sell_ticket = (int)ticket;
+            sell_profit = 0;
+            break;
+        }
+    }
+
+    position_count = PositionsTotal();
     for (int i = 0; i < position_count ; ++i) {
         ulong ticket = PositionGetTicket(i);
         if (!PositionSelectByTicket(ticket)) {
@@ -30,25 +60,61 @@ double GetPositionProfit() {
         if (PositionGetString(POSITION_SYMBOL) != Symbol()) {
             continue;
         }
-        profit += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+        switch ((int)PositionGetInteger(POSITION_TYPE)) {
+        case POSITION_TYPE_BUY:
+            buy_ticket = (int)ticket;
+            buy_profit = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+            break;
+        case POSITION_TYPE_SELL:
+            sell_ticket = (int)ticket;
+            sell_profit = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+            break;
+        }
     }
     return profit;
 }
 
 //+------------------------------------------------------------------+
-//| 売り気配を返す                                                   |
+//| 売り気配/買い気配を返す                                          |
 //+------------------------------------------------------------------+
-string GetAskPrice() {
-    return DoubleToString(SymbolInfoDouble(Symbol(), SYMBOL_ASK), Digits());
+void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
+    ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
+    bid = SymbolInfoDouble(Symbol(), SYMBOL_BID);
+    point = Point();
+    digit = Digits();
 }
 
 //+------------------------------------------------------------------+
-//| 買い気配を返す                                                   |
+//| 買いストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
-string GetBidPrice() {
-    return DoubleToString(SymbolInfoDouble(Symbol(), SYMBOL_BID), Digits());
+int OrderBuyEntry(double buy_entry) {
+    double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits());
+    double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits());
+    trader.SetExpertMagicNumber(MAGIC_NUMBER);
+    for (int i = 1; i <= 10; ++i) {
+        if (trader.BuyStop(LOTS, buy_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
+            return (int)trader.ResultOrder();
+        }
+        Sleep(i * 100);
+    }
+    return -1;
 }
 
+//+------------------------------------------------------------------+
+//| 売りストップ待機注文を出す                                       |
+//+------------------------------------------------------------------+
+int OrderSellEntry(double sell_entry) {
+    double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits());
+    double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits());
+    trader.SetExpertMagicNumber(MAGIC_NUMBER);
+    for (int i = 1; i <= 10; ++i) {
+        if (trader.SellStop(LOTS, sell_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
+            return (int)trader.ResultOrder();
+        }
+        Sleep(i * 100);
+    }
+    return -1;
+}
 
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション全決済                           |

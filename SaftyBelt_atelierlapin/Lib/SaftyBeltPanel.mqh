@@ -183,20 +183,42 @@ void InitPanel() {
 //|                                                                  |
 //+------------------------------------------------------------------+
 void UpdatePanel() {
+    double ask = 0;
+    double bid = 0;
+    double point = 0;
+    int digit = 0;
+    GetPriceInfo(ask, bid, point, digit);
+
+    double buy_entry = ask + ENTRY_WIDTH * point;
+    double sell_entry = bid - ENTRY_WIDTH * point;
+
+    int buy_ticket = 0;
+    double buy_profit = 0;
+    int sell_ticket = 0;
+    double sell_profit = 0;
+    double total_profit = GetPositionProfit(buy_ticket, buy_profit, sell_ticket, sell_profit);
+
+    if (buy_ticket == 0) {
+        buy_ticket = OrderBuyEntry(buy_entry);
+    }
+    if (sell_ticket == 0) {
+        sell_ticket = OrderSellEntry(sell_entry);
+    }
+
     LabelDispSymbol.SetText(__LINE__, Symbol());
     LabelDispPositionType.SetText(__LINE__, "Buy");
-    LabelDispProfit.SetNumberValue(__LINE__, GetPositionProfit(), 0);
+    LabelDispProfit.SetNumberValue(__LINE__, total_profit, 0);
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
-    LabelDispLongEntryPrice.SetText(__LINE__, "125.456");
-    LabelDispLongEntryWidth.SetText(__LINE__, "(+2000ポイント)");
-    LabelDispAskPrice.SetText(__LINE__, GetAskPrice());
-    LabelDispBidPrice.SetText(__LINE__, GetBidPrice());
-    LabelDispShortEntryPrice.SetText(__LINE__, "121.452");
-    LabelDispShortEntryWidth.SetText(__LINE__, "(-2000ポイント)");
+    LabelDispLongEntryPrice.SetText(__LINE__, DoubleToString(buy_entry, digit));
+    LabelDispLongEntryWidth.SetText(__LINE__, "(+" + DoubleToString(ENTRY_WIDTH, 0) + "ポイント)");
+    LabelDispAskPrice.SetText(__LINE__, DoubleToString(ask, digit));
+    LabelDispBidPrice.SetText(__LINE__, DoubleToString(bid, digit));
+    LabelDispShortEntryPrice.SetText(__LINE__, DoubleToString(sell_entry, digit));
+    LabelDispShortEntryWidth.SetText(__LINE__, "(-" + DoubleToString(ENTRY_WIDTH, 0) + "ポイント)");
     LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
-    LabelDispPrevUpdateTime.SetText(__LINE__, TimeToString(TimeCurrent() - 30, TIME_MINUTES));
+    LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(TimeCurrent() - 30));
     LabelDispUpdateInterval.SetText(__LINE__, GetUpdateInterval());
-    LabelDispNextUpdateTime.SetText(__LINE__, TimeToString(TimeCurrent() + 30, TIME_MINUTES));
+    LabelDispNextUpdateTime.SetText(__LINE__, GetTimestamp(TimeCurrent() + 30));
     LabelDispMailAdress.SetText(__LINE__, MAIL_TO_ADDRESS);
     LabelDispWatchStatus.SetText(__LINE__, "エントリー監視中です(中断時間 01:00～15:00)");
 

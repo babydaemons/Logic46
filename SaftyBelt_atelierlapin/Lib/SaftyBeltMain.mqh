@@ -14,7 +14,7 @@ long OpenTime;
 
 const long TIME_ROUND = 24 * 60 * 60;
 
-long LastChecked;
+datetime LastChecked;
 
 //+------------------------------------------------------------------+
 //| 時刻の書式チェック                                               |
@@ -83,7 +83,7 @@ int OnInit() {
         UpdatePanel();
     }
 
-    EventSetTimer(5);
+    EventSetTimer(1);
 
     return INIT_SUCCEEDED;
 }
@@ -138,10 +138,16 @@ bool IsWatching() {
     return false;
 }
 
-
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 string GetUpdateInterval() {
     return StringFormat("%d:%02d", TIME_INTERVAL / 60, TIME_INTERVAL % 60);
+}
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+string GetTimestamp(datetime t) {
+    return StringFormat("%s:%02d", TimeToString(t, TIME_DATE | TIME_MINUTES), t % 60);
 }

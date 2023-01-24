@@ -16,7 +16,7 @@ sinput string DUMMY00 = "";                             // 発注設定
 sinput int MAGIC_NUMBER = 12345678;                     // ├マジックナンバー
 sinput int TIME_INTERVAL = 60;                          // ├更新時間間隔(秒)
 sinput ENUM_PRICE_TYPE PRICE_TYPE = PRICE_TYPE_POINT;   // ├価格種別(利確/損切/トレーリングストップ)
-sinput double ENTRY_WIDTH = 1000;                       // ├エントリー待機価格幅
+sinput double ENTRY_WIDTH = 2000;                       // ├エントリー待機価格幅
 sinput double TAKE_PROFIT = 3000;                       // ├利確価格幅
 sinput double STOP_LOSS = 1000;                         // ├損切価格幅
 sinput double TRAILING_STOP = 1000;                     // ├トレーリングストップ価格幅
@@ -32,6 +32,8 @@ sinput string MAIL_TO_ADDRESS = "example@example.com";  // ├送信先メール
 sinput string MAIL_FROM_ADDRESS = "example@gmail.com";  // ├送信元Gmailアドレス
 sinput string MAIL_APP_NAME = "MT4";                    // ├Gmail指定アプリ名
 sinput string MAIL_APP_PASSWORD = "password";           // └Gmailアプリパスワード
+
+const int SLIPPAGE = 10;                                // スリッページ(ポイント)
 
 #include "Lib/SaftyBeltMain.mqh"
 #include "Lib/MT4/SaftyBelt_atelierlapin.mqh"
