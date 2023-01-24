@@ -189,8 +189,8 @@ void UpdatePanel() {
     int digit = 0;
     GetPriceInfo(ask, bid, point, digit);
 
-    double buy_entry = ask + ENTRY_WIDTH * point;
-    double sell_entry = bid - ENTRY_WIDTH * point;
+    double buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+    double sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
 
     int buy_ticket = 0;
     double buy_profit = 0;
@@ -201,8 +201,15 @@ void UpdatePanel() {
     if (buy_ticket == 0) {
         buy_ticket = OrderBuyEntry(buy_entry);
     }
+    else {
+        ModifyBuyOrder(buy_ticket, buy_entry);
+    }
+
     if (sell_ticket == 0) {
         sell_ticket = OrderSellEntry(sell_entry);
+    }
+    else {
+        ModifySellOrder(sell_ticket, sell_entry);
     }
 
     LabelDispSymbol.SetText(__LINE__, Symbol());

@@ -117,6 +117,38 @@ int OrderSellEntry(double sell_entry) {
 }
 
 //+------------------------------------------------------------------+
+//| 買いストップ待機注文を修正する                                   |
+//+------------------------------------------------------------------+
+bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
+    double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits());
+    double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits());
+    for (int i = 1; i <= 10; ++i) {
+        bool suceed = trader.OrderModify(buy_ticket, buy_entry, sl, tp, ORDER_TIME_GTC, 0);
+        if (suceed) {
+            return true;
+        }
+        Sleep(i * 100);
+    }
+    return false;
+}
+
+//+------------------------------------------------------------------+
+//| 売りストップ待機注文を修正する                                   |
+//+------------------------------------------------------------------+
+bool ModifySellOrder(int sell_ticket, double sell_entry) {
+    double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits());
+    double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits());
+    for (int i = 1; i <= 10; ++i) {
+        bool suceed = trader.OrderModify(sell_ticket, sell_entry, sl, tp, ORDER_TIME_GTC, 0);
+        if (suceed) {
+            return true;
+        }
+        Sleep(i * 100);
+    }
+    return false;
+}
+
+//+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション全決済                           |
 //+------------------------------------------------------------------+
 void SendOrderCloseAll() {
