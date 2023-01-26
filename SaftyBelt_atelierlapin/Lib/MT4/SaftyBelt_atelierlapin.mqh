@@ -71,8 +71,14 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
 int OrderBuyEntry(double buy_entry) {
     double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits);
     double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits);
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
+    }
     for (int i = 1; i <= 10; ++i) {
-        int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0, clrBlue);
+        int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0);
         if (ticket != -1) {
             return ticket;
         }
@@ -88,8 +94,14 @@ int OrderBuyEntry(double buy_entry) {
 int OrderSellEntry(double sell_entry) {
     double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits);
     double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits);
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
+    }
     for (int i = 1; i <= 10; ++i) {
-        int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0, clrRed);
+        int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0);
         if (ticket != -1) {
             return ticket;
         }
@@ -102,24 +114,25 @@ int OrderSellEntry(double sell_entry) {
 //+------------------------------------------------------------------+
 //| 買いストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifyBuyOrder(int buy_ticket) {
+bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
     static int prev_buy_ticket = 0;
-    if (!OrderSelect(buy_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
-        printf("ERROR: %s", ErrorDescription());
-        return false;
-    }
-    static double prev_price = 0;
-    double current_price = OrderClosePrice();
-    if (prev_buy_ticket == buy_ticket && prev_price == current_price) {
+    static double prev_buy_entry = 0;
+    if (prev_buy_ticket == buy_ticket && prev_buy_entry == buy_entry) {
         return true;
     }
-    double sl = NormalizeDouble(current_price - STOP_LOSS * Point(), Digits);
-    double tp = NormalizeDouble(current_price + TAKE_PROFIT * Point(), Digits);
+    double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits);
+    double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits);
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
+    }
     for (int i = 1; i <= 10; ++i) {
-        bool suceed = OrderModify(buy_ticket, current_price, sl, tp, 0);
+        bool suceed = OrderModify(buy_ticket, buy_entry, sl, tp, 0);
         if (suceed) {
             prev_buy_ticket = buy_ticket;
-            prev_price = current_price;
+            prev_buy_entry = buy_entry;
             return true;
         }
         printf("ERROR: %s", ErrorDescription());
@@ -131,24 +144,25 @@ bool ModifyBuyOrder(int buy_ticket) {
 //+------------------------------------------------------------------+
 //| 売りストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifySellOrder(int sell_ticket) {
+bool ModifySellOrder(int sell_ticket, double sell_entry) {
     static int prev_sell_ticket = 0;
-    if (!OrderSelect(sell_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
-        printf("ERROR: %s", ErrorDescription());
-        return false;
-    }
-    static double prev_price = 0;
-    double current_price = OrderClosePrice();
-    if (prev_sell_ticket == sell_ticket && prev_price == current_price) {
+    static double prev_sell_entry = 0;
+    if (prev_sell_ticket == sell_ticket && prev_sell_entry == sell_entry) {
         return true;
     }
-    double sl = NormalizeDouble(current_price + STOP_LOSS * Point(), Digits);
-    double tp = NormalizeDouble(current_price - TAKE_PROFIT * Point(), Digits);
+    double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits);
+    double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits);
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
+    }
     for (int i = 1; i <= 10; ++i) {
-        bool suceed = OrderModify(sell_ticket, current_price, sl, tp, 0);
+        bool suceed = OrderModify(sell_ticket, sell_entry, sl, tp, 0);
         if (suceed) {
             prev_sell_ticket = sell_ticket;
-            prev_price = current_price;
+            prev_sell_entry = sell_entry;
             return true;
         }
         printf("ERROR: %s", ErrorDescription());
@@ -165,8 +179,11 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
         return false;
     }
     double profit_price = OrderClosePrice() - OrderOpenPrice();
-    double profit_point = profit_price / Point;
-    double sl = OrderClosePrice() - TRAILING_STOP;
+    double profit_point = profit_price / Point();
+    if (profit_point < TRAILING_STOP) {
+        return true;
+    }
+    double sl = NormalizeDouble(OrderClosePrice() - TRAILING_STOP * Point, Digits);
     if (OrderStopLoss() < sl) {
         position_stop_loss = sl;
         return OrderModify(buy_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0);
@@ -183,8 +200,11 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
         return false;
     }
     double profit_price = OrderOpenPrice() - OrderClosePrice();
-    double profit_point = profit_price / Point;
-    double sl = OrderClosePrice() + TRAILING_STOP;
+    double profit_point = profit_price / Point();
+    if (profit_point < TRAILING_STOP) {
+        return true;
+    }
+    double sl = NormalizeDouble(OrderClosePrice() + TRAILING_STOP * Point, Digits);
     if (OrderStopLoss() > sl) {
         position_stop_loss = sl;
         return OrderModify(sell_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0);

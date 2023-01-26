@@ -95,6 +95,12 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
 int OrderBuyEntry(double buy_entry) {
     double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits());
     double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits());
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
+    }
     trader.LogLevel(LOG_LEVEL_NO);
     trader.SetExpertMagicNumber(MAGIC_NUMBER);
     for (int i = 1; i <= 10; ++i) {
@@ -112,6 +118,12 @@ int OrderBuyEntry(double buy_entry) {
 int OrderSellEntry(double sell_entry) {
     double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits());
     double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits());
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
+    }
     trader.LogLevel(LOG_LEVEL_NO);
     trader.SetExpertMagicNumber(MAGIC_NUMBER);
     for (int i = 1; i <= 10; ++i) {
@@ -126,23 +138,25 @@ int OrderSellEntry(double sell_entry) {
 //+------------------------------------------------------------------+
 //| 買いストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifyBuyOrder(int buy_ticket) {
+bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
     static int prev_buy_ticket = 0;
-    if (!PositionSelectByTicket(buy_ticket)) {
-        return false;
-    }
-    static double prev_price = 0;
-    double current_price = PositionGetDouble(POSITION_PRICE_OPEN);
-    if (prev_buy_ticket == buy_ticket && prev_price == current_price) {
+    static double prev_buy_entry = 0;
+    if (prev_buy_ticket == buy_ticket && prev_buy_entry == buy_entry) {
         return true;
     }
-    double sl = NormalizeDouble(current_price - STOP_LOSS * Point(), Digits());
-    double tp = NormalizeDouble(current_price + TAKE_PROFIT * Point(), Digits());
+    double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits());
+    double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits());
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
+    }
     for (int i = 1; i <= 10; ++i) {
-        bool suceed = trader.OrderModify(buy_ticket, current_price, sl, tp, ORDER_TIME_GTC, 0);
+        bool suceed = trader.OrderModify(buy_ticket, buy_entry, sl, tp, ORDER_TIME_GTC, 0);
         if (suceed) {
             prev_buy_ticket = buy_ticket;
-            prev_price = current_price;
+            prev_buy_entry = buy_entry;
             return true;
         }
         Sleep(i * 100);
@@ -153,23 +167,25 @@ bool ModifyBuyOrder(int buy_ticket) {
 //+------------------------------------------------------------------+
 //| 売りストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifySellOrder(int sell_ticket) {
+bool ModifySellOrder(int sell_ticket, double sell_entry) {
     static int prev_sell_ticket = 0;
-    if (!PositionSelectByTicket(sell_ticket)) {
-        return false;
-    }
-    static double prev_price = 0;
-    double current_price = PositionGetDouble(POSITION_PRICE_OPEN);
-    if (prev_sell_ticket == sell_ticket && prev_price == current_price) {
+    static double prev_sell_entry = 0;
+    if (prev_sell_ticket == sell_ticket && prev_sell_entry == sell_entry) {
         return true;
     }
-    double sl = NormalizeDouble(current_price + STOP_LOSS * Point(), Digits());
-    double tp = NormalizeDouble(current_price - TAKE_PROFIT * Point(), Digits());
+    double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits());
+    double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits());
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
+    }
     for (int i = 1; i <= 10; ++i) {
-        bool suceed = trader.OrderModify(sell_ticket, current_price, sl, tp, ORDER_TIME_GTC, 0);
+        bool suceed = trader.OrderModify(sell_ticket, sell_entry, sl, tp, ORDER_TIME_GTC, 0);
         if (suceed) {
             prev_sell_ticket = sell_ticket;
-            prev_price = current_price;
+            prev_sell_entry = sell_entry;
             return true;
         }
         Sleep(i * 100);
@@ -187,7 +203,10 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
     double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
     double profit_price = current_price - PositionGetDouble(POSITION_PRICE_OPEN);
     double profit_point = profit_price / Point();
-    double sl = current_price - TRAILING_STOP;
+    if (profit_point < TRAILING_STOP) {
+        return true;
+    }
+    double sl = NormalizeDouble(current_price - STOP_LOSS * Point(), Digits());
     if (PositionGetDouble(POSITION_SL) < sl) {
         position_stop_loss = sl;
         return trader.PositionModify(buy_ticket, sl, PositionGetDouble(POSITION_TP));
@@ -206,7 +225,10 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
     double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
     double profit_price = PositionGetDouble(POSITION_PRICE_OPEN) - current_price;
     double profit_point = profit_price / Point();
-    double sl = current_price + TRAILING_STOP;
+    if (profit_point < TRAILING_STOP) {
+        return true;
+    }
+    double sl = NormalizeDouble(current_price + STOP_LOSS * Point(), Digits());
     if (PositionGetDouble(POSITION_SL) > sl) {
         position_stop_loss = sl;
         return trader.PositionModify(sell_ticket, sl, PositionGetDouble(POSITION_TP));
