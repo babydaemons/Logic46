@@ -15,10 +15,13 @@ CTrade trader;
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション損益を返す                       |
 //+------------------------------------------------------------------+
-double GetPositionProfit(int& buy_ticket, double& buy_profit, int& sell_ticket, double& sell_profit) {
+double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_count, int& sell_ticket, double& sell_profit, int& sell_position_count) {
     int magic_number = GetMagicNumber();
     int position_count = OrdersTotal();
-    double profit = 0;
+    double total_profit = 0;
+    buy_ticket = sell_ticket = 0;
+    buy_profit = sell_profit = 0;
+    buy_position_count = sell_position_count = 0;
     for (int i = 0; i < position_count ; ++i) {
         ulong ticket = OrderGetTicket(i);
         if (!OrderSelect(ticket)) {
@@ -36,14 +39,12 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& sell_ticket, 
         case ORDER_TYPE_BUY_STOP:
         case ORDER_TYPE_BUY_STOP_LIMIT:
             buy_ticket = (int)ticket;
-            buy_profit = 0;
             break;
         case ORDER_TYPE_SELL:
         case ORDER_TYPE_SELL_LIMIT:
         case ORDER_TYPE_SELL_STOP:
         case ORDER_TYPE_SELL_STOP_LIMIT:
             sell_ticket = (int)ticket;
-            sell_profit = 0;
             break;
         }
     }
@@ -64,14 +65,18 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& sell_ticket, 
         case POSITION_TYPE_BUY:
             buy_ticket = (int)ticket;
             buy_profit = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+            total_profit += buy_profit;
+            ++buy_position_count;
             break;
         case POSITION_TYPE_SELL:
             sell_ticket = (int)ticket;
             sell_profit = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+            total_profit += sell_profit;
+            ++sell_position_count;
             break;
         }
     }
-    return profit;
+    return total_profit;
 }
 
 //+------------------------------------------------------------------+
@@ -90,6 +95,7 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
 int OrderBuyEntry(double buy_entry) {
     double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits());
     double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits());
+    trader.LogLevel(LOG_LEVEL_NO);
     trader.SetExpertMagicNumber(MAGIC_NUMBER);
     for (int i = 1; i <= 10; ++i) {
         if (trader.BuyStop(LOTS, buy_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
@@ -106,6 +112,7 @@ int OrderBuyEntry(double buy_entry) {
 int OrderSellEntry(double sell_entry) {
     double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits());
     double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits());
+    trader.LogLevel(LOG_LEVEL_NO);
     trader.SetExpertMagicNumber(MAGIC_NUMBER);
     for (int i = 1; i <= 10; ++i) {
         if (trader.SellStop(LOTS, sell_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
@@ -146,6 +153,58 @@ bool ModifySellOrder(int sell_ticket, double sell_entry) {
         Sleep(i * 100);
     }
     return false;
+}
+
+//+------------------------------------------------------------------+
+//| 買いポジションのトレーリングストップを実行する                   |
+//+------------------------------------------------------------------+
+bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
+    if (!PositionSelectByTicket(buy_ticket)) {
+        return false;
+    }
+    double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
+    double profit_price = current_price - PositionGetDouble(POSITION_PRICE_OPEN);
+    double profit_point = profit_price / Point();
+    double sl = current_price - TRAILING_STOP;
+    if (PositionGetDouble(POSITION_SL) < sl) {
+        position_stop_loss = sl;
+        return trader.PositionModify(buy_ticket, sl, PositionGetDouble(POSITION_TP));
+    }
+    position_stop_loss = PositionGetDouble(POSITION_SL);
+    return true;
+}
+
+//+------------------------------------------------------------------+
+//| 売りポジションのトレーリングストップを実行する                   |
+//+------------------------------------------------------------------+
+bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
+    if (!PositionSelectByTicket(sell_ticket)) {
+        return false;
+    }
+    double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
+    double profit_price = PositionGetDouble(POSITION_PRICE_OPEN) - current_price;
+    double profit_point = profit_price / Point();
+    double sl = current_price + TRAILING_STOP;
+    if (PositionGetDouble(POSITION_SL) > sl) {
+        position_stop_loss = sl;
+        return trader.PositionModify(sell_ticket, sl, PositionGetDouble(POSITION_TP));
+    }
+    position_stop_loss = PositionGetDouble(POSITION_SL);
+    return true;
+}
+
+//+------------------------------------------------------------------+
+//| 買いストップ待機注文を取り消す                                   |
+//+------------------------------------------------------------------+
+bool DeleteBuyOrder(int buy_ticket) {
+    return trader.OrderDelete(buy_ticket);
+}
+
+//+------------------------------------------------------------------+
+//| 売りストップ待機注文を取り消す                                   |
+//+------------------------------------------------------------------+
+bool DeleteSellOrder(int sell_ticket) {
+    return trader.OrderDelete(sell_ticket);
 }
 
 //+------------------------------------------------------------------+

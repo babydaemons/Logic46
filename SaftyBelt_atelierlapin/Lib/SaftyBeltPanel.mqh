@@ -195,47 +195,93 @@ void UpdatePanel() {
 
     int buy_ticket = 0;
     double buy_profit = 0;
+    int buy_position_count = 0;
     int sell_ticket = 0;
     double sell_profit = 0;
-    double total_profit = GetPositionProfit(buy_ticket, buy_profit, sell_ticket, sell_profit);
+    int sell_position_count = 0;
+    double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count);
 
     bool order_modified = false;
     datetime now = TimeCurrent();
-    if (buy_ticket == 0) {
+    datetime next_update = LastOrderModified + TIME_INTERVAL;
+    static double position_stop_loss = 0;
+    if (buy_ticket == 0 && sell_position_count == 0) {
         BuyEntry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
         buy_ticket = OrderBuyEntry(BuyEntry);
+        order_modified = true;
     }
-    else if (now > LastOrderModified + TIME_INTERVAL) {
+    else if (now > next_update && buy_ticket != 0) {
         BuyEntry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
-        if (ModifyBuyOrder(buy_ticket, BuyEntry)) {
+        if (buy_position_count == 0) {
+            if (ModifyBuyOrder(buy_ticket, BuyEntry)) {
+                order_modified = true;
+            }
+        } else {
+            if (TrailingStopBuyPosition(buy_ticket, position_stop_loss)) {
+                order_modified = true;
+            }
+        }
+    }
+    if (buy_position_count > 0 && sell_position_count == 0) {
+        if (sell_ticket != 0 && DeleteSellOrder(sell_ticket)) {
             order_modified = true;
         }
     }
-    if (sell_ticket == 0) {
+
+    if (sell_ticket == 0 && buy_position_count == 0) {
         SellEntry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
         sell_ticket = OrderSellEntry(SellEntry);
+        order_modified = true;
     }
-    else if (now > LastOrderModified + TIME_INTERVAL) {
+    else if (now > next_update && sell_ticket != 0) {
         SellEntry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
-        if (ModifySellOrder(sell_ticket, SellEntry)) {
+        if (sell_position_count == 0) {
+            if (ModifySellOrder(sell_ticket, SellEntry)) {
+                order_modified = true;
+            }
+        } else {
+            if (TrailingStopSellPosition(sell_ticket, position_stop_loss)) {
+                order_modified = true;
+            }
+        }
+    }
+    if (sell_position_count > 0 && buy_position_count == 0) {
+        if (buy_ticket != 0 && DeleteBuyOrder(buy_ticket)) {
             order_modified = true;
         }
     }
+
     if (order_modified) {
         LastOrderModified = now;
     }
 
     LabelDispSymbol.SetText(__LINE__, Symbol());
-    LabelDispPositionType.SetText(__LINE__, "Buy");
+    string position_status_message = TextObject::NONE_TEXT;
+    if (sell_position_count > 0) {
+        position_status_message = "Sell";
+    }
+    else if (buy_position_count > 0) {
+        position_status_message = "Buy";
+    }
+    LabelDispPositionType.SetText(__LINE__, position_status_message);
     LabelDispProfit.SetNumberValue(__LINE__, total_profit, 0);
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
-    LabelDispLongEntryPrice.SetText(__LINE__, DoubleToString(BuyEntry, digit));
-    LabelDispLongEntryWidth.SetText(__LINE__, "(+" + DoubleToString((BuyEntry - ask) / point, 0) + "ポイント)");
     LabelDispAskPrice.SetText(__LINE__, DoubleToString(ask, digit));
     LabelDispBidPrice.SetText(__LINE__, DoubleToString(bid, digit));
-    LabelDispShortEntryPrice.SetText(__LINE__, DoubleToString(SellEntry, digit));
-    LabelDispShortEntryWidth.SetText(__LINE__, "(-" + DoubleToString((bid - SellEntry) / point, 0) + "ポイント)");
-    LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+    if (buy_position_count == 0 && sell_position_count == 0) {
+        LabelDispLongEntryPrice.SetText(__LINE__, DoubleToString(BuyEntry, digit));
+        LabelDispLongEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((BuyEntry - ask) / point, 0)));
+        LabelDispShortEntryPrice.SetText(__LINE__, DoubleToString(SellEntry, digit));
+        LabelDispShortEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((SellEntry - bid) / point, 0)));
+        LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+    }
+    else {
+        LabelDispLongEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispLongEntryWidth.SetText(__LINE__, " ");
+        LabelDispShortEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispShortEntryWidth.SetText(__LINE__, " ");
+        LabelDispPositionStopLossPrice.SetText(__LINE__, DoubleToString(position_stop_loss, digit));
+    }
     LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(LastOrderModified));
     LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)TIME_INTERVAL));
     LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((LastOrderModified + TIME_INTERVAL) - now));

@@ -715,6 +715,6 @@ string ErrorDescription(int error_code) {
         error_string = "未知のエラー";
         break;
     }
-    return error_string;
+    return StringFormat("%s(%d)", error_string, error_code);
 }
 //+------------------------------------------------------------------+

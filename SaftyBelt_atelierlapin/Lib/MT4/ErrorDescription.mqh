@@ -488,6 +488,6 @@ string ErrorDescription(int error_code) {
     default:
         error_string = "unknown error";
     }
-    return error_string;
+    return StringFormat("%s(%d)", error_string, error_code);
 }
 //+------------------------------------------------------------------+
