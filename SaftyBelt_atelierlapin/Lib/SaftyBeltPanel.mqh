@@ -213,7 +213,7 @@ void UpdatePanel() {
     else if (now > next_update && buy_ticket != 0) {
         BuyEntry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
         if (buy_position_count == 0) {
-            if (ModifyBuyOrder(buy_ticket, BuyEntry)) {
+            if (ModifyBuyOrder(buy_ticket)) {
                 order_modified = true;
             }
         } else {
@@ -236,7 +236,7 @@ void UpdatePanel() {
     else if (now > next_update && sell_ticket != 0) {
         SellEntry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
         if (sell_position_count == 0) {
-            if (ModifySellOrder(sell_ticket, SellEntry)) {
+            if (ModifySellOrder(sell_ticket)) {
                 order_modified = true;
             }
         } else {

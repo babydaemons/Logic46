@@ -102,17 +102,24 @@ int OrderSellEntry(double sell_entry) {
 //+------------------------------------------------------------------+
 //| 買いストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
+bool ModifyBuyOrder(int buy_ticket) {
+    static int prev_buy_ticket = 0;
     if (!OrderSelect(buy_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         printf("ERROR: %s", ErrorDescription());
         return false;
     }
+    static double prev_price = 0;
     double current_price = OrderClosePrice();
+    if (prev_buy_ticket == buy_ticket && prev_price == current_price) {
+        return true;
+    }
     double sl = NormalizeDouble(current_price - STOP_LOSS * Point(), Digits);
     double tp = NormalizeDouble(current_price + TAKE_PROFIT * Point(), Digits);
     for (int i = 1; i <= 10; ++i) {
         bool suceed = OrderModify(buy_ticket, current_price, sl, tp, 0);
         if (suceed) {
+            prev_buy_ticket = buy_ticket;
+            prev_price = current_price;
             return true;
         }
         printf("ERROR: %s", ErrorDescription());
@@ -124,17 +131,24 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
 //+------------------------------------------------------------------+
 //| 売りストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifySellOrder(int sell_ticket, double sell_entry) {
+bool ModifySellOrder(int sell_ticket) {
+    static int prev_sell_ticket = 0;
     if (!OrderSelect(sell_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         printf("ERROR: %s", ErrorDescription());
         return false;
     }
+    static double prev_price = 0;
     double current_price = OrderClosePrice();
+    if (prev_sell_ticket == sell_ticket && prev_price == current_price) {
+        return true;
+    }
     double sl = NormalizeDouble(current_price + STOP_LOSS * Point(), Digits);
     double tp = NormalizeDouble(current_price - TAKE_PROFIT * Point(), Digits);
     for (int i = 1; i <= 10; ++i) {
         bool suceed = OrderModify(sell_ticket, current_price, sl, tp, 0);
         if (suceed) {
+            prev_sell_ticket = sell_ticket;
+            prev_price = current_price;
             return true;
         }
         printf("ERROR: %s", ErrorDescription());
