@@ -270,23 +270,35 @@ void UpdatePanel() {
     LabelDispBidPrice.SetText(__LINE__, DoubleToString(bid, digit));
     if (buy_position_count == 0 && sell_position_count == 0) {
         LabelDispLongEntryPrice.SetText(__LINE__, DoubleToString(buy_entry, digit));
+        LabelDispLongEntryPrice.SetTextColor(__LINE__, clrCyan);
         LabelDispLongEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((buy_entry - ask) / point, 0)));
         LabelDispShortEntryPrice.SetText(__LINE__, DoubleToString(sell_entry, digit));
+        LabelDispShortEntryPrice.SetTextColor(__LINE__, clrCyan);
         LabelDispShortEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((sell_entry - bid) / point, 0)));
         LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispPositionStopLossPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+        bool watching = IsWatching();
+        ENUM_WATCHSTATUS status = watching ? WATCHSTATUS_ENTRY_WATCHING : WATCHSTATUS_ENTRY_WAITING;
+        string watch_status_message = StringFormat(WatchStatusMessages[status], OPEN_TIME, CLOSE_TIME);
+        LabelDispWatchStatus.SetText(__LINE__, watch_status_message);
+        LabelDispWatchStatus.SetTextColor(__LINE__, watching ? clrCyan : clrRed);
     }
     else {
         LabelDispLongEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispLongEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
         LabelDispLongEntryWidth.SetText(__LINE__, " ");
         LabelDispShortEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispShortEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
         LabelDispShortEntryWidth.SetText(__LINE__, " ");
         LabelDispPositionStopLossPrice.SetText(__LINE__, DoubleToString(position_stop_loss, digit));
+        LabelDispPositionStopLossPrice.SetTextColor(__LINE__, clrCyan);
+        LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessages[WATCHSTATUS_EXIT_WATCHING]);
+        LabelDispWatchStatus.SetTextColor(__LINE__, clrMagenta);
     }
     LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(LastOrderModified));
     LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)TIME_INTERVAL));
     LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((LastOrderModified + TIME_INTERVAL) - now));
     LabelDispMailAdress.SetText(__LINE__, MAIL_TO_ADDRESS);
-    LabelDispWatchStatus.SetText(__LINE__, "エントリー監視中です(中断時間 01:00～15:00)");
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
         DispSettlementButton();

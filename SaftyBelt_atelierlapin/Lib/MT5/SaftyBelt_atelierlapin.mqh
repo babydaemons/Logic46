@@ -203,6 +203,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
     double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
     double profit_price = current_price - PositionGetDouble(POSITION_PRICE_OPEN);
     double profit_point = profit_price / Point();
+    position_stop_loss = PositionGetDouble(POSITION_SL);
     if (profit_point < TRAILING_STOP) {
         return true;
     }
@@ -211,7 +212,6 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
         position_stop_loss = sl;
         return trader.PositionModify(buy_ticket, sl, PositionGetDouble(POSITION_TP));
     }
-    position_stop_loss = PositionGetDouble(POSITION_SL);
     return true;
 }
 
@@ -225,6 +225,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
     double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
     double profit_price = PositionGetDouble(POSITION_PRICE_OPEN) - current_price;
     double profit_point = profit_price / Point();
+    position_stop_loss = PositionGetDouble(POSITION_SL);
     if (profit_point < TRAILING_STOP) {
         return true;
     }
@@ -233,7 +234,6 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
         position_stop_loss = sl;
         return trader.PositionModify(sell_ticket, sl, PositionGetDouble(POSITION_TP));
     }
-    position_stop_loss = PositionGetDouble(POSITION_SL);
     return true;
 }
 

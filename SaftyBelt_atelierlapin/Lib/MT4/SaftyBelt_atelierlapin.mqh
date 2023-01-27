@@ -44,7 +44,7 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
             sell_ticket = OrderTicket();
             sell_profit = OrderProfit() + OrderSwap();
             profit += sell_profit;
-            --sell_position_count;
+            ++sell_position_count;
             break;
         case OP_SELLLIMIT:
         case OP_SELLSTOP:
@@ -180,6 +180,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
     }
     double profit_price = OrderClosePrice() - OrderOpenPrice();
     double profit_point = profit_price / Point();
+    position_stop_loss = OrderStopLoss();
     if (profit_point < TRAILING_STOP) {
         return true;
     }
@@ -188,7 +189,6 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
         position_stop_loss = sl;
         return OrderModify(buy_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0);
     }
-    position_stop_loss = OrderStopLoss();
     return true;
 }
 
@@ -201,6 +201,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
     }
     double profit_price = OrderOpenPrice() - OrderClosePrice();
     double profit_point = profit_price / Point();
+    position_stop_loss = OrderStopLoss();
     if (profit_point < TRAILING_STOP) {
         return true;
     }
@@ -209,7 +210,6 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
         position_stop_loss = sl;
         return OrderModify(sell_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0);
     }
-    position_stop_loss = OrderStopLoss();
     return true;
 }
 
