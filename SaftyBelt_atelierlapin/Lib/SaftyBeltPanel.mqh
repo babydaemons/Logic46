@@ -17,12 +17,14 @@ uint SleepEx(uint milliseconds, int flag);
 enum ENUM_WATCHSTATUS {
     WATCHSTATUS_ENTRY_WAITING,
     WATCHSTATUS_ENTRY_WATCHING,
-    WATCHSTATUS_EXIT_WATCHING,
+    WATCHSTATUS_TRAILING_LONG,
+    WATCHSTATUS_TRAILING_SHORT,
 };
 const string WatchStatusMessages[] = {
     "エントリー中断中です(中断時間 %s～%s)",
     "エントリー監視中です(中断時間 %s～%s)",
-    "決済監視中です",
+    "ロングポジション決済監視中です",
+    "ショートポジション決済監視中です",
 };
 ENUM_WATCHSTATUS WatchStatus;
 string WatchStatusMessage;
@@ -186,7 +188,9 @@ void InitPanel() {
 }
 
 datetime last_order_modified;
-datetime last_position_modified;
+datetime last_position_checked;
+double last_position_profit;
+int last_position_type;
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -204,7 +208,22 @@ void UpdatePanel() {
     int sell_ticket = 0;
     double sell_profit = 0;
     int sell_position_count = 0;
+    datetime now = TimeCurrent();
     double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count);
+    if (buy_position_count > 0) {
+        WatchStatus = WATCHSTATUS_TRAILING_LONG;
+        WatchStatusMessage = WatchStatusMessages[WatchStatus];
+        last_position_checked = now;
+        last_position_profit = total_profit;
+        last_position_type = +1;
+    }
+    if (sell_position_count > 0) {
+        WatchStatus = WATCHSTATUS_TRAILING_SHORT;
+        WatchStatusMessage = WatchStatusMessages[WatchStatus];
+        last_position_checked = now;
+        last_position_profit = total_profit;
+        last_position_type = -1;
+    }
 
 #ifdef __DEBUG_INTERVAL
 #ifdef __MQL4__
@@ -218,69 +237,62 @@ void UpdatePanel() {
 #endif
 
     bool watching = IsWatching();
-    bool order_modified = false;
-    datetime now = TimeCurrent();
-    datetime next_update = last_order_modified + ORDER_MODIFY_INTERVAL_SECONDS;
-    datetime next_entry = last_order_modified + 60 * RE_ORDER_DISABLE_MINUTES;
+    datetime next_entry = last_position_checked + 60 * RE_ORDER_DISABLE_MINUTES;
+    datetime next_modify = last_order_modified + ORDER_MODIFY_INTERVAL_SECONDS;
+    datetime next_trailing = last_order_modified + TRAILING_STOP_INTERVAL_SECONDS;
     static double buy_entry = 0;
     static double sell_entry = 0;
     static double position_stop_loss = 0;
-    if (watching && now > next_entry && buy_ticket == 0 && sell_position_count == 0) {
+    bool enable_buy_order = (last_position_type > 0 && last_position_profit > 0) || now > next_entry;
+    bool enable_sell_order = (last_position_type < 0 && last_position_profit > 0) || now > next_entry;
+    if (watching && enable_buy_order && buy_ticket == 0 && sell_position_count == 0) {
         buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
         buy_ticket = OrderBuyEntry(buy_entry);
-        order_modified = true;
+        last_order_modified = now;
     } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
         DeleteOrderAll();
         buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
-        order_modified = true;
-    } else if (now > next_update && buy_ticket != 0) {
+        last_order_modified = now;
+    } else if (now > next_modify && buy_ticket != 0 && buy_position_count == 0) {
         buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
-        if (buy_position_count == 0) {
-            if (ModifyBuyOrder(buy_ticket, buy_entry)) {
-                order_modified = true;
-            }
-        } else {
-            if (TrailingStopBuyPosition(buy_ticket, position_stop_loss)) {
-                last_position_modified = now;
-                order_modified = true;
-            }
+        if (ModifyBuyOrder(buy_ticket, buy_entry)) {
+            last_order_modified = now;
+        }
+    } else if (now > next_trailing && buy_ticket != 0 && buy_position_count > 0) {
+        buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+        if (TrailingStopBuyPosition(buy_ticket, position_stop_loss)) {
+            last_order_modified = now;
         }
     }
     if (buy_position_count > 0 && sell_position_count == 0) {
         if (sell_ticket != 0 && DeleteSellOrder(sell_ticket)) {
-            order_modified = true;
+            last_order_modified = now;
         }
     }
 
-    if (watching && now > next_entry && sell_ticket == 0 && buy_position_count == 0) {
+    if (watching && enable_sell_order && sell_ticket == 0 && buy_position_count == 0) {
         sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
         sell_ticket = OrderSellEntry(sell_entry);
-        order_modified = true;
+        last_order_modified = now;
     } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
         DeleteOrderAll();
         sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
-        order_modified = true;
-    } else if (now > next_update && sell_ticket != 0) {
+        last_order_modified = now;
+    } else if (now > next_modify && sell_ticket != 0 && sell_position_count == 0) {
         sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
-        if (sell_position_count == 0) {
-            if (ModifySellOrder(sell_ticket, sell_entry)) {
-                order_modified = true;
-            }
-        } else {
-            if (TrailingStopSellPosition(sell_ticket, position_stop_loss)) {
-                last_position_modified = now;
-                order_modified = true;
-            }
+        if (ModifySellOrder(sell_ticket, sell_entry)) {
+            last_order_modified = now;
+        }
+    } else if (now > next_trailing && sell_ticket != 0 && sell_position_count > 0) {
+        sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+        if (TrailingStopSellPosition(sell_ticket, position_stop_loss)) {
+            last_order_modified = now;
         }
     }
     if (sell_position_count > 0 && buy_position_count == 0) {
         if (buy_ticket != 0 && DeleteBuyOrder(buy_ticket)) {
-            order_modified = true;
+            last_order_modified = now;
         }
-    }
-
-    if (order_modified) {
-        last_order_modified = now;
     }
 
     LabelDispSymbol.SetText(__LINE__, Symbol());
@@ -309,9 +321,9 @@ void UpdatePanel() {
         LabelDispShortEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((sell_entry - bid) / point, 0)));
         LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        ENUM_WATCHSTATUS status = watching ? WATCHSTATUS_ENTRY_WATCHING : WATCHSTATUS_ENTRY_WAITING;
-        string watch_status_message = StringFormat(WatchStatusMessages[status], CLOSE_TIME, OPEN_TIME);
-        LabelDispWatchStatus.SetText(__LINE__, watch_status_message);
+        WatchStatus = watching ? WATCHSTATUS_ENTRY_WATCHING : WATCHSTATUS_ENTRY_WAITING;
+        WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], CLOSE_TIME, OPEN_TIME);
+        LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
         LabelDispWatchStatus.SetTextColor(__LINE__, watching ? clrCyan : clrRed);
     }
     else {
@@ -323,12 +335,20 @@ void UpdatePanel() {
         LabelDispShortEntryWidth.SetText(__LINE__, " ");
         LabelDispPositionStopLossPrice.SetText(__LINE__, DoubleToString(position_stop_loss, digit));
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, clrCyan);
-        LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessages[WATCHSTATUS_EXIT_WATCHING]);
+        LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
         LabelDispWatchStatus.SetTextColor(__LINE__, clrMagenta);
     }
     LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(last_order_modified));
-    LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)ORDER_MODIFY_INTERVAL_SECONDS));
-    LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((last_order_modified + ORDER_MODIFY_INTERVAL_SECONDS) - now));
+    int interval = buy_position_count == 0 && sell_position_count == 0 ? ORDER_MODIFY_INTERVAL_SECONDS : TRAILING_STOP_INTERVAL_SECONDS;
+    LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)interval));
+    if (enable_buy_order || enable_sell_order) {
+        LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((last_order_modified + interval) - now));
+        LabelDispNextUpdateTime.SetTextColor(__LINE__, clrCyan);
+    } else {
+        LabelDispNextUpdateTime.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispNextUpdateTime.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+    }
+
     LabelDispMailAdress.SetText(__LINE__, MAIL_TO_ADDRESS);
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
