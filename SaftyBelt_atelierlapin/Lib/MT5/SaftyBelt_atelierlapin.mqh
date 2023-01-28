@@ -254,7 +254,7 @@ bool DeleteSellOrder(int sell_ticket) {
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション全決済                           |
 //+------------------------------------------------------------------+
-void SendOrderCloseAll() {
+void ClosePositionAll() {
     int magic_number = GetMagicNumber();
     for (int i = PositionsTotal() - 1; i >= 0; --i) {
         ulong ticket = PositionGetTicket(i);
@@ -265,6 +265,29 @@ void SendOrderCloseAll() {
         UpdateSettlementButton();
         for (int count = 1; count <= 10; ++count) {
             bool succed = trader.PositionClose(ticket);
+            if (succed) {
+                break;
+            }
+            Sleep(100 * count);
+        }
+
+        Sleep(100);
+    }
+}
+
+//+------------------------------------------------------------------+
+//| 指定マジックナンバーの全待機注文の取り消し                       |
+//+------------------------------------------------------------------+
+void DeleteOrderAll() {
+    int magic_number = GetMagicNumber();
+    for (int i = OrdersTotal() - 1; i >= 0; --i) {
+        ulong ticket = OrderGetTicket(i);
+        if (OrderGetInteger(ORDER_MAGIC) != magic_number) {
+            continue;
+        }
+
+        for (int count = 1; count <= 10; ++count) {
+            bool succed = trader.OrderDelete(ticket);
             if (succed) {
                 break;
             }

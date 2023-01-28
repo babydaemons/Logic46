@@ -1,12 +1,10 @@
 ﻿//+------------------------------------------------------------------+
-//|                                           Lib/MainSettlement.mqh |
+//|                                            Lib/SaftyBeltMain.mqh |
 //|                                    Copyright 2022, atelierlapin. |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2022, atelierlapin."
 #property version   "1.00"
 #property strict
-
-const bool __DEBUGGING = false;
 
 int Reason = -1;
 long CloseTime;

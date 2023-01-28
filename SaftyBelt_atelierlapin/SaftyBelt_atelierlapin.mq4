@@ -6,6 +6,8 @@
 #property version   "1.00"
 #property strict
 
+#define __DEBUGGING
+
 enum ENUM_PRICE_TYPE {
     PRICE_TYPE_POINT, // ポイント(最小価格単位)
     PRICE_TYPE_PERCENT, // パーセント(%)

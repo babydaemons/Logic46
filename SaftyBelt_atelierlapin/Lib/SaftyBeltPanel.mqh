@@ -1,10 +1,16 @@
 //+------------------------------------------------------------------+
-//|                                          Lib/PanelSettlement.mqh |
+//|                                           Lib/SaftyBeltPanel.mqh |
 //|                                    Copyright 2022, atelierlapin. |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2022, atelierlapin."
 #property version   "1.00"
 #property strict
+
+#ifdef __DEBUGGING
+#import "kernel32.dll"
+uint SleepEx(uint milliseconds, int flag);
+#import
+#endif
 
 #include "DrawObject.mqh"
 
@@ -199,18 +205,29 @@ void UpdatePanel() {
     int sell_position_count = 0;
     double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count);
 
+#ifdef __DEBUGGING
+    if (buy_position_count > 0 || sell_position_count > 0) {
+        ChartRedraw();
+        SleepEx(100, 0);
+    }
+#endif
+
+    bool watching = IsWatching();
     bool order_modified = false;
     datetime now = TimeCurrent();
     datetime next_update = LastOrderModified + TIME_INTERVAL;
     static double buy_entry = 0;
     static double sell_entry = 0;
     static double position_stop_loss = 0;
-    if (buy_ticket == 0 && sell_position_count == 0) {
+    if (watching && buy_ticket == 0 && sell_position_count == 0) {
         buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
         buy_ticket = OrderBuyEntry(buy_entry);
         order_modified = true;
-    }
-    else if (now > next_update && buy_ticket != 0) {
+    } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
+        DeleteOrderAll();
+        buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+        order_modified = true;
+    } else if (now > next_update && buy_ticket != 0) {
         buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
         if (buy_position_count == 0) {
             if (ModifyBuyOrder(buy_ticket, buy_entry)) {
@@ -228,12 +245,15 @@ void UpdatePanel() {
         }
     }
 
-    if (sell_ticket == 0 && buy_position_count == 0) {
+    if (watching && sell_ticket == 0 && buy_position_count == 0) {
         sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
         sell_ticket = OrderSellEntry(sell_entry);
         order_modified = true;
-    }
-    else if (now > next_update && sell_ticket != 0) {
+    } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
+        DeleteOrderAll();
+        sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+        order_modified = true;
+    } else if (now > next_update && sell_ticket != 0) {
         sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
         if (sell_position_count == 0) {
             if (ModifySellOrder(sell_ticket, sell_entry)) {
@@ -257,13 +277,17 @@ void UpdatePanel() {
 
     LabelDispSymbol.SetText(__LINE__, Symbol());
     string position_status_message = TextObject::NONE_TEXT;
+    color position_status_color = TextObject::NONE_COLOR;
     if (sell_position_count > 0) {
         position_status_message = "Sell";
+        position_status_color = clrCyan;
     }
     else if (buy_position_count > 0) {
         position_status_message = "Buy";
+        position_status_color = clrCyan;
     }
     LabelDispPositionType.SetText(__LINE__, position_status_message);
+    LabelDispPositionType.SetTextColor(__LINE__, position_status_color);
     LabelDispProfit.SetNumberValue(__LINE__, total_profit, 0);
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
     LabelDispAskPrice.SetText(__LINE__, DoubleToString(ask, digit));
@@ -277,9 +301,8 @@ void UpdatePanel() {
         LabelDispShortEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((sell_entry - bid) / point, 0)));
         LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        bool watching = IsWatching();
         ENUM_WATCHSTATUS status = watching ? WATCHSTATUS_ENTRY_WATCHING : WATCHSTATUS_ENTRY_WAITING;
-        string watch_status_message = StringFormat(WatchStatusMessages[status], OPEN_TIME, CLOSE_TIME);
+        string watch_status_message = StringFormat(WatchStatusMessages[status], CLOSE_TIME, OPEN_TIME);
         LabelDispWatchStatus.SetText(__LINE__, watch_status_message);
         LabelDispWatchStatus.SetTextColor(__LINE__, watching ? clrCyan : clrRed);
     }
@@ -363,7 +386,7 @@ void OnChartEvent(const int id,
     }
 
     if (ButtonSettlement.HasPressed(__LINE__, id, sparam)) {
-        SendOrderCloseAll();
+        ClosePositionAll();
         WatchStatus = IsWatching() ? WATCHSTATUS_ENTRY_WATCHING : WATCHSTATUS_ENTRY_WAITING;
         WatchStatusMessage = WatchStatusMessages[WatchStatus];
         LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);

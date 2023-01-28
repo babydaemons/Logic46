@@ -230,7 +230,7 @@ bool DeleteSellOrder(int sell_ticket) {
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション全決済                           |
 //+------------------------------------------------------------------+
-void SendOrderCloseAll() {
+void ClosePositionAll() {
     int magic_number = GetMagicNumber();
     for (int i = OrdersTotal() - 1; i >= 0 ; --i) {
         if (!OrderSelect(i, SELECT_BY_POS)) {
@@ -239,10 +239,12 @@ void SendOrderCloseAll() {
         if (OrderMagicNumber() != magic_number) {
             continue;
         }
-
+        string symbol = OrderSymbol();
+        if (Symbol() != symbol) {
+            continue;
+        }
         UpdateSettlementButton();
 
-        string symbol = OrderSymbol();
         int ticket = OrderTicket();
         double lots = OrderLots();
         int type = OrderType();
@@ -259,4 +261,40 @@ void SendOrderCloseAll() {
         Sleep(100);
     }
 }
+
 //+------------------------------------------------------------------+
+//| 指定マジックナンバーの全待機注文の取り消し                       |
+//+------------------------------------------------------------------+
+void DeleteOrderAll() {
+    int magic_number = GetMagicNumber();
+    for (int i = OrdersTotal() - 1; i >= 0; --i) {
+        if (!OrderSelect(i, SELECT_BY_POS)) {
+            continue;
+        }
+        if (OrderMagicNumber() != magic_number) {
+            continue;
+        }
+        string symbol = OrderSymbol();
+        if (Symbol() != symbol) {
+            continue;
+        }
+        if (OrderType() == OP_BUY || OrderType() == OP_SELL) {
+            continue;
+        }
+
+        int ticket = OrderTicket();
+        double lots = OrderLots();
+        int type = OrderType();
+        double price = MarketInfo(symbol, type == OP_BUY ? MODE_BID : MODE_ASK);
+        color arrow = type == OP_BUY ? clrRed : clrBlue;
+        for (int count = 1; count <= 10; ++count) {
+            bool succed = OrderClose(ticket, lots, 10, arrow);
+            if (succed) {
+                break;
+            }
+            Sleep(100 * count);
+        }
+
+        Sleep(100);
+    }
+}
