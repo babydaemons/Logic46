@@ -6,7 +6,7 @@
 #property version   "1.00"
 #property strict
 
-#define __DEBUGGING
+#define __DEBUG_INTERVAL 100
 
 enum ENUM_PRICE_TYPE {
     PRICE_TYPE_POINT, // ポイント(最小価格単位)
@@ -16,7 +16,7 @@ enum ENUM_PRICE_TYPE {
 
 sinput string DUMMY00 = "";                             // 発注設定
 sinput int MAGIC_NUMBER = 12345678;                     // ├マジックナンバー
-sinput int TIME_INTERVAL = 60;                          // ├更新時間間隔(秒)
+sinput int ORDER_MODIFY_INTERVAL_SECONDS = 60;          // ├更新時間間隔(秒)
 sinput ENUM_PRICE_TYPE PRICE_TYPE = PRICE_TYPE_POINT;   // ├価格種別(利確/損切/トレーリングストップ)
 input double ENTRY_WIDTH = 2000;                        // ├エントリー待機価格幅
 input double TAKE_PROFIT = 3000;                        // ├利確価格幅

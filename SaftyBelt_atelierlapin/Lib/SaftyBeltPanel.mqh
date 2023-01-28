@@ -6,7 +6,7 @@
 #property version   "1.00"
 #property strict
 
-#ifdef __DEBUGGING
+#ifdef __DEBUG_INTERVAL
 #import "kernel32.dll"
 uint SleepEx(uint milliseconds, int flag);
 #import
@@ -205,17 +205,17 @@ void UpdatePanel() {
     int sell_position_count = 0;
     double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count);
 
-#ifdef __DEBUGGING
+#ifdef __DEBUG_INTERVAL
     if (buy_position_count > 0 || sell_position_count > 0) {
         ChartRedraw();
-        SleepEx(100, 0);
+        SleepEx(__DEBUG_INTERVAL, 0);
     }
 #endif
 
     bool watching = IsWatching();
     bool order_modified = false;
     datetime now = TimeCurrent();
-    datetime next_update = LastOrderModified + TIME_INTERVAL;
+    datetime next_update = LastOrderModified + ORDER_MODIFY_INTERVAL_SECONDS;
     static double buy_entry = 0;
     static double sell_entry = 0;
     static double position_stop_loss = 0;
@@ -319,8 +319,8 @@ void UpdatePanel() {
         LabelDispWatchStatus.SetTextColor(__LINE__, clrMagenta);
     }
     LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(LastOrderModified));
-    LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)TIME_INTERVAL));
-    LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((LastOrderModified + TIME_INTERVAL) - now));
+    LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)ORDER_MODIFY_INTERVAL_SECONDS));
+    LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((LastOrderModified + ORDER_MODIFY_INTERVAL_SECONDS) - now));
     LabelDispMailAdress.SetText(__LINE__, MAIL_TO_ADDRESS);
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
