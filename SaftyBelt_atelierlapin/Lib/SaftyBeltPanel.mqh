@@ -14,8 +14,6 @@ uint SleepEx(uint milliseconds, int flag);
 
 #include "DrawObject.mqh"
 
-datetime LastOrderModified;
-
 enum ENUM_WATCHSTATUS {
     WATCHSTATUS_ENTRY_WAITING,
     WATCHSTATUS_ENTRY_WATCHING,
@@ -187,6 +185,9 @@ void InitPanel() {
     UpdatePanel();
 }
 
+datetime last_order_modified;
+datetime last_position_modified;
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -206,7 +207,11 @@ void UpdatePanel() {
     double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count);
 
 #ifdef __DEBUG_INTERVAL
-    if (buy_position_count > 0 || sell_position_count > 0) {
+#ifdef __MQL4__
+    bool visual_mode = IsVisualMode();
+#else
+    bool visual_mode = MQLInfoInteger(MQL_VISUAL_MODE) != 0;
+    if (visual_mode && (buy_position_count > 0 || sell_position_count > 0)) {
         ChartRedraw();
         SleepEx(__DEBUG_INTERVAL, 0);
     }
@@ -215,11 +220,12 @@ void UpdatePanel() {
     bool watching = IsWatching();
     bool order_modified = false;
     datetime now = TimeCurrent();
-    datetime next_update = LastOrderModified + ORDER_MODIFY_INTERVAL_SECONDS;
+    datetime next_update = last_order_modified + ORDER_MODIFY_INTERVAL_SECONDS;
+    datetime next_entry = last_order_modified + 60 * RE_ORDER_DISABLE_MINUTES;
     static double buy_entry = 0;
     static double sell_entry = 0;
     static double position_stop_loss = 0;
-    if (watching && buy_ticket == 0 && sell_position_count == 0) {
+    if (watching && now > next_entry && buy_ticket == 0 && sell_position_count == 0) {
         buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
         buy_ticket = OrderBuyEntry(buy_entry);
         order_modified = true;
@@ -235,6 +241,7 @@ void UpdatePanel() {
             }
         } else {
             if (TrailingStopBuyPosition(buy_ticket, position_stop_loss)) {
+                last_position_modified = now;
                 order_modified = true;
             }
         }
@@ -245,7 +252,7 @@ void UpdatePanel() {
         }
     }
 
-    if (watching && sell_ticket == 0 && buy_position_count == 0) {
+    if (watching && now > next_entry && sell_ticket == 0 && buy_position_count == 0) {
         sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
         sell_ticket = OrderSellEntry(sell_entry);
         order_modified = true;
@@ -261,6 +268,7 @@ void UpdatePanel() {
             }
         } else {
             if (TrailingStopSellPosition(sell_ticket, position_stop_loss)) {
+                last_position_modified = now;
                 order_modified = true;
             }
         }
@@ -272,7 +280,7 @@ void UpdatePanel() {
     }
 
     if (order_modified) {
-        LastOrderModified = now;
+        last_order_modified = now;
     }
 
     LabelDispSymbol.SetText(__LINE__, Symbol());
@@ -318,9 +326,9 @@ void UpdatePanel() {
         LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessages[WATCHSTATUS_EXIT_WATCHING]);
         LabelDispWatchStatus.SetTextColor(__LINE__, clrMagenta);
     }
-    LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(LastOrderModified));
+    LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(last_order_modified));
     LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)ORDER_MODIFY_INTERVAL_SECONDS));
-    LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((LastOrderModified + ORDER_MODIFY_INTERVAL_SECONDS) - now));
+    LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((last_order_modified + ORDER_MODIFY_INTERVAL_SECONDS) - now));
     LabelDispMailAdress.SetText(__LINE__, MAIL_TO_ADDRESS);
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {

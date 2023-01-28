@@ -17,6 +17,7 @@ enum ENUM_PRICE_TYPE {
 sinput string DUMMY00 = "";                             // 発注設定
 sinput int MAGIC_NUMBER = 12345678;                     // ├マジックナンバー
 sinput int ORDER_MODIFY_INTERVAL_SECONDS = 60;          // ├更新時間間隔(秒)
+sinput int RE_ORDER_DISABLE_MINUTES = 60;               // ├再エントリー禁止時間(分)
 sinput ENUM_PRICE_TYPE PRICE_TYPE = PRICE_TYPE_POINT;   // ├価格種別(利確/損切/トレーリングストップ)
 input double ENTRY_WIDTH = 1000;                        // ├エントリー待機価格幅
 input double TAKE_PROFIT = 3000;                        // ├利確価格幅
