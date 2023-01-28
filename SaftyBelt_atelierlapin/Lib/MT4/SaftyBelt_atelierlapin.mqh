@@ -78,7 +78,7 @@ int OrderBuyEntry(double buy_entry) {
         tp = 0;
     }
     for (int i = 1; i <= 10; ++i) {
-        int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0);
+        int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
             return ticket;
         }
@@ -101,7 +101,7 @@ int OrderSellEntry(double sell_entry) {
         tp = 0;
     }
     for (int i = 1; i <= 10; ++i) {
-        int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0);
+        int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
             return ticket;
         }
@@ -129,7 +129,7 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
         tp = 0;
     }
     for (int i = 1; i <= 10; ++i) {
-        bool suceed = OrderModify(buy_ticket, buy_entry, sl, tp, 0);
+        bool suceed = OrderModify(buy_ticket, buy_entry, sl, tp, 0, clrNONE);
         if (suceed) {
             prev_buy_ticket = buy_ticket;
             prev_buy_entry = buy_entry;
@@ -159,7 +159,7 @@ bool ModifySellOrder(int sell_ticket, double sell_entry) {
         tp = 0;
     }
     for (int i = 1; i <= 10; ++i) {
-        bool suceed = OrderModify(sell_ticket, sell_entry, sl, tp, 0);
+        bool suceed = OrderModify(sell_ticket, sell_entry, sl, tp, 0, clrNONE);
         if (suceed) {
             prev_sell_ticket = sell_ticket;
             prev_sell_entry = sell_entry;
@@ -187,7 +187,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
     double sl = NormalizeDouble(OrderClosePrice() - TRAILING_STOP * Point, Digits);
     if (OrderStopLoss() < sl) {
         position_stop_loss = sl;
-        return OrderModify(buy_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0);
+        return OrderModify(buy_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE);
     }
     return true;
 }
@@ -208,7 +208,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
     double sl = NormalizeDouble(OrderClosePrice() + TRAILING_STOP * Point, Digits);
     if (OrderStopLoss() > sl) {
         position_stop_loss = sl;
-        return OrderModify(sell_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0);
+        return OrderModify(sell_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE);
     }
     return true;
 }
@@ -217,14 +217,14 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
 //| 買いストップ待機注文を取り消す                                   |
 //+------------------------------------------------------------------+
 bool DeleteBuyOrder(int buy_ticket) {
-    return OrderDelete(buy_ticket, clrRed);
+    return OrderDelete(buy_ticket, clrNONE);
 }
 
 //+------------------------------------------------------------------+
 //| 売りストップ待機注文を取り消す                                   |
 //+------------------------------------------------------------------+
 bool DeleteSellOrder(int sell_ticket) {
-    return OrderDelete(sell_ticket, clrBlue);
+    return OrderDelete(sell_ticket, clrNONE);
 }
 
 //+------------------------------------------------------------------+
@@ -249,9 +249,8 @@ void ClosePositionAll() {
         double lots = OrderLots();
         int type = OrderType();
         double price = MarketInfo(symbol, type == OP_BUY ? MODE_BID : MODE_ASK);
-        color arrow = type == OP_BUY ? clrRed : clrBlue;
         for (int count = 1; count <= 10; ++count) {
-            bool succed = OrderClose(ticket, lots, 10, arrow);
+            bool succed = OrderClose(ticket, lots, 10, clrNONE);
             if (succed) {
                 break;
             }
@@ -286,9 +285,8 @@ void DeleteOrderAll() {
         double lots = OrderLots();
         int type = OrderType();
         double price = MarketInfo(symbol, type == OP_BUY ? MODE_BID : MODE_ASK);
-        color arrow = type == OP_BUY ? clrRed : clrBlue;
         for (int count = 1; count <= 10; ++count) {
-            bool succed = OrderClose(ticket, lots, 10, arrow);
+            bool succed = OrderClose(ticket, lots, 10, clrNONE);
             if (succed) {
                 break;
             }
