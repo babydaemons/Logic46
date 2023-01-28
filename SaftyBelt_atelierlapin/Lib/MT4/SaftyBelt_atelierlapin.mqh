@@ -85,7 +85,7 @@ int OrderBuyEntry(double buy_entry) {
         printf("ERROR: %s", ErrorDescription());
         Sleep(i * 100);
     }
-    return -1;
+    return 0;
 }
 
 //+------------------------------------------------------------------+
@@ -108,7 +108,7 @@ int OrderSellEntry(double sell_entry) {
         printf("ERROR: %s", ErrorDescription());
         Sleep(i * 100);
     }
-    return -1;
+    return 0;
 }
 
 //+------------------------------------------------------------------+

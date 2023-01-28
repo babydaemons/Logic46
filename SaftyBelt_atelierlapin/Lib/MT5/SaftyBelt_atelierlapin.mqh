@@ -109,7 +109,7 @@ int OrderBuyEntry(double buy_entry) {
         }
         Sleep(i * 100);
     }
-    return -1;
+    return 0;
 }
 
 //+------------------------------------------------------------------+
@@ -132,7 +132,7 @@ int OrderSellEntry(double sell_entry) {
         }
         Sleep(i * 100);
     }
-    return -1;
+    return 0;
 }
 
 //+------------------------------------------------------------------+
