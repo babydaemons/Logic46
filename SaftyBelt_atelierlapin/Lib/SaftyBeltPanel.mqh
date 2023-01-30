@@ -196,6 +196,10 @@ int last_position_type;
 //|                                                                  |
 //+------------------------------------------------------------------+
 void UpdatePanel() {
+    if (AccountInfoDouble(ACCOUNT_BALANCE) < 10000) {
+        ExpertRemove();
+    }
+
     double ask = 0;
     double bid = 0;
     double point = 0;
@@ -245,6 +249,10 @@ void UpdatePanel() {
     static double position_stop_loss = 0;
     bool enable_buy_order = (last_position_type > 0 && last_position_profit > 0) || now > next_entry;
     bool enable_sell_order = (last_position_type < 0 && last_position_profit > 0) || now > next_entry;
+    if (ENABLE_LOSE_RE_ENTRY) {
+        enable_buy_order = last_position_type > 0 || now > next_entry;
+        enable_sell_order = last_position_type < 0 || now > next_entry;
+    }
     if (watching && enable_buy_order && buy_ticket == 0 && sell_position_count == 0) {
         buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
         buy_ticket = OrderBuyEntry(buy_entry);
