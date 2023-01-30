@@ -234,11 +234,11 @@ void UpdatePanel() {
     bool visual_mode = IsVisualMode();
 #else
     bool visual_mode = MQLInfoInteger(MQL_VISUAL_MODE) != 0;
+#endif
     if (visual_mode && (buy_position_count > 0 || sell_position_count > 0)) {
         ChartRedraw();
         SleepEx(__DEBUG_INTERVAL, 0);
     }
-#endif
 
     bool watching = IsWatching();
     datetime next_entry = last_position_checked + 60 * RE_ORDER_DISABLE_MINUTES;
