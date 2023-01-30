@@ -8,6 +8,8 @@
 
 #define __DEBUG_INTERVAL 500
 
+const string EXPERT_NAME = "SaftyBelt_atelierlapin";
+
 enum ENUM_PRICE_TYPE {
     PRICE_TYPE_POINT, // ポイント(最小価格単位)
     PRICE_TYPE_PERCENT, // パーセント(%)

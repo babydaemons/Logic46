@@ -252,6 +252,28 @@ bool DeleteSellOrder(int sell_ticket) {
 }
 
 //+------------------------------------------------------------------+
+//| エントリー約定時の通知メールを送信する                           |
+//+------------------------------------------------------------------+
+bool SendMailEntry(int ticket) {
+    if (!PositionSelectByTicket(ticket)) {
+        return false;
+    }
+
+    string type = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? "ロング" : "ショート";
+
+    string subject = StringFormat("[%s]%s %sエントリーしました", EXPERT_NAME, Symbol(), type);
+    string message = "";
+    message += StringFormat("エントリー価格 %s\n", DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN), Digits()));
+    message += StringFormat("エントリー時刻 %s\n", GetTimestamp((datetime)PositionGetInteger(POSITION_TIME)));
+    message += StringFormat("ロット数 %.2f\n", PositionGetDouble(POSITION_VOLUME));
+    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), 0));
+    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
+    message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
+
+    return SendMail(subject, message);
+}
+
+//+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション全決済                           |
 //+------------------------------------------------------------------+
 void ClosePositionAll() {

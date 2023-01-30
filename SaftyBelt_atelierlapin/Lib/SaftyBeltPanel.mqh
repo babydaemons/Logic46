@@ -215,6 +215,9 @@ void UpdatePanel() {
     datetime now = TimeCurrent();
     double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count);
     if (buy_position_count > 0) {
+        if (MAIL_ENABLED && WatchStatus != WATCHSTATUS_TRAILING_LONG) {
+            SendMailEntry(buy_ticket);
+        }
         WatchStatus = WATCHSTATUS_TRAILING_LONG;
         WatchStatusMessage = WatchStatusMessages[WatchStatus];
         last_position_checked = now;
@@ -222,6 +225,9 @@ void UpdatePanel() {
         last_position_type = +1;
     }
     if (sell_position_count > 0) {
+        if (MAIL_ENABLED && WatchStatus != WATCHSTATUS_TRAILING_SHORT) {
+            SendMailEntry(sell_ticket);
+        }
         WatchStatus = WATCHSTATUS_TRAILING_SHORT;
         WatchStatusMessage = WatchStatusMessages[WatchStatus];
         last_position_checked = now;

@@ -78,7 +78,7 @@ int OrderBuyEntry(double buy_entry) {
         tp = 0;
     }
     for (int i = 1; i <= 10; ++i) {
-        int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0, clrNONE);
+        int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, EXPERT_NAME, MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
             return ticket;
         }
@@ -101,7 +101,7 @@ int OrderSellEntry(double sell_entry) {
         tp = 0;
     }
     for (int i = 1; i <= 10; ++i) {
-        int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, "SaftyBelt_atelierlapin", MAGIC_NUMBER, 0, clrNONE);
+        int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, EXPERT_NAME, MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
             return ticket;
         }
@@ -225,6 +225,40 @@ bool DeleteBuyOrder(int buy_ticket) {
 //+------------------------------------------------------------------+
 bool DeleteSellOrder(int sell_ticket) {
     return OrderDelete(sell_ticket, clrNONE);
+}
+
+//+------------------------------------------------------------------+
+//| エントリー約定時の通知メールを送信する                           |
+//+------------------------------------------------------------------+
+bool SendMailEntry(int ticket) {
+    if (!OrderSelect(ticket, SELECT_BY_TICKET, MODE_TRADES)) {
+        return false;
+    }
+
+    string type;
+    switch (OrderType()) {
+    case OP_BUY:
+    case OP_BUYLIMIT:
+    case OP_BUYSTOP:
+        type = "ロング";
+        break;
+    case OP_SELL:
+    case OP_SELLLIMIT:
+    case OP_SELLSTOP:
+        type = "ショート";
+        break;
+    }
+
+    string subject = StringFormat("[%s]%s %sエントリーしました", EXPERT_NAME, Symbol(), type);
+    string message = "";
+    message += StringFormat("エントリー価格 %s\n", DoubleToString(OrderOpenPrice(), Digits));
+    message += StringFormat("エントリー時刻 %s\n", GetTimestamp(OrderOpenTime()));
+    message += StringFormat("ロット数 %.2f\n", OrderLots());
+    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), 0));
+    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
+    message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
+
+    return SendMail(subject, message);
 }
 
 //+------------------------------------------------------------------+
