@@ -115,8 +115,6 @@ int OrderSellEntry(double sell_entry) {
 //| 買いストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
 bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
-    static int prev_buy_ticket = 0;
-    static double prev_buy_entry = 0;
     if (prev_buy_ticket == buy_ticket && prev_buy_entry == buy_entry) {
         return true;
     }
@@ -145,8 +143,6 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
 //| 売りストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
 bool ModifySellOrder(int sell_ticket, double sell_entry) {
-    static int prev_sell_ticket = 0;
-    static double prev_sell_entry = 0;
     if (prev_sell_ticket == sell_ticket && prev_sell_entry == sell_entry) {
         return true;
     }
@@ -254,6 +250,43 @@ bool SendMailEntry(int ticket) {
     message += StringFormat("エントリー価格 %s\n", DoubleToString(OrderOpenPrice(), Digits));
     message += StringFormat("エントリー時刻 %s\n", GetTimestamp(OrderOpenTime()));
     message += StringFormat("ロット数 %.2f\n", OrderLots());
+    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), 0));
+    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), 0));
+    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
+    message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
+
+    return SendMail(subject, message);
+}
+
+//+------------------------------------------------------------------+
+//| 決済約定時の通知メールを送信する                                 |
+//+------------------------------------------------------------------+
+bool SendMailExit(int ticket) {
+    if (!OrderSelect(ticket, SELECT_BY_TICKET, MODE_HISTORY)) {
+        return false;
+    }
+
+    string type;
+    switch (OrderType()) {
+    case OP_BUY:
+    case OP_BUYLIMIT:
+    case OP_BUYSTOP:
+        type = "ロング";
+        break;
+    case OP_SELL:
+    case OP_SELLLIMIT:
+    case OP_SELLSTOP:
+        type = "ショート";
+        break;
+    }
+
+    string subject = StringFormat("[%s]%s %s決済しました", EXPERT_NAME, Symbol(), type);
+    string message = "";
+    message += StringFormat("決済価格 %s\n", DoubleToString(OrderClosePrice(), Digits));
+    message += StringFormat("決済時刻 %s\n", GetTimestamp(OrderCloseTime()));
+    message += StringFormat("ロット数 %.2f\n", OrderLots());
+    message += StringFormat("損益 %s\n", TextObject::FormatComma(OrderProfit(), 0));
+    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), 0));
     message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), 0));
     message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
     message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));

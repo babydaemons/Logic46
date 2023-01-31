@@ -6,7 +6,7 @@
 #property version   "1.00"
 #property strict
 
-#define __DEBUG_INTERVAL 500
+//#define __DEBUG_INTERVAL 500
 
 const string EXPERT_NAME = "SaftyBelt_atelierlapin";
 
@@ -19,7 +19,7 @@ enum ENUM_PRICE_TYPE {
 sinput string DUMMY00 = "";                             // 発注設定
 sinput int MAGIC_NUMBER = 12345678;                     // ├マジックナンバー
 sinput int ORDER_MODIFY_INTERVAL_SECONDS = 300;         // ├エントリー更新時間間隔(秒)
-sinput int TRAILING_STOP_INTERVAL_SECONDS = 5;          // ├トレーリングストップ更新時間間隔(秒)
+sinput int TRAILING_STOP_INTERVAL_SECONDS = 15;         // ├トレーリングストップ更新時間間隔(秒)
 sinput int RE_ORDER_DISABLE_MINUTES = 1440;             // ├再エントリー禁止時間(分)
 sinput ENUM_PRICE_TYPE PRICE_TYPE = PRICE_TYPE_POINT;   // ├価格種別(利確/損切/トレーリングストップ)
 input double ENTRY_WIDTH = 500;                         // ├エントリー待機価格幅

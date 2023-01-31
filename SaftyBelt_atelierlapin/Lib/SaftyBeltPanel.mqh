@@ -191,6 +191,10 @@ datetime last_order_modified;
 datetime last_position_checked;
 double last_position_profit;
 int last_position_type;
+int prev_buy_ticket;
+double prev_buy_entry;
+int prev_sell_ticket;
+double prev_sell_entry;
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -214,6 +218,7 @@ void UpdatePanel() {
     int sell_position_count = 0;
     datetime now = TimeCurrent();
     double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count);
+    bool watching = IsWatching();
     if (buy_position_count > 0) {
         if (MAIL_ENABLED && WatchStatus != WATCHSTATUS_TRAILING_LONG) {
             SendMailEntry(buy_ticket);
@@ -234,6 +239,16 @@ void UpdatePanel() {
         last_position_profit = total_profit;
         last_position_type = -1;
     }
+    if (buy_position_count == 0 && sell_position_count == 0) {
+        if (MAIL_ENABLED && WatchStatus == WATCHSTATUS_TRAILING_LONG) {
+            SendMailExit(prev_buy_ticket);
+        }
+        if (MAIL_ENABLED && WatchStatus == WATCHSTATUS_TRAILING_SHORT) {
+            SendMailExit(prev_sell_ticket);
+        }
+        WatchStatus = watching ? WATCHSTATUS_ENTRY_WATCHING : WATCHSTATUS_ENTRY_WAITING;
+        WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], CLOSE_TIME, OPEN_TIME);
+    }
 
 #ifdef __DEBUG_INTERVAL
 #ifdef __MQL4__
@@ -245,8 +260,8 @@ void UpdatePanel() {
         ChartRedraw();
         SleepEx(__DEBUG_INTERVAL, 0);
     }
+#endif
 
-    bool watching = IsWatching();
     datetime next_entry = last_position_checked + 60 * RE_ORDER_DISABLE_MINUTES;
     datetime next_modify = last_order_modified + ORDER_MODIFY_INTERVAL_SECONDS;
     datetime next_trailing = last_order_modified + TRAILING_STOP_INTERVAL_SECONDS;
@@ -335,8 +350,6 @@ void UpdatePanel() {
         LabelDispShortEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((sell_entry - bid) / point, 0)));
         LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        WatchStatus = watching ? WATCHSTATUS_ENTRY_WATCHING : WATCHSTATUS_ENTRY_WAITING;
-        WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], CLOSE_TIME, OPEN_TIME);
         LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
         LabelDispWatchStatus.SetTextColor(__LINE__, watching ? clrCyan : clrRed);
     }
