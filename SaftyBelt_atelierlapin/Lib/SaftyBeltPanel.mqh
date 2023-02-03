@@ -377,6 +377,7 @@ void UpdatePanel() {
     }
 
     LabelDispMailAdress.SetText(__LINE__, MAIL_TO_ADDRESS);
+    LabelDispMailAdress.SetTextColor(__LINE__, MAIL_ENABLED ? clrCyan : TextObject::NONE_COLOR);
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
         DispSettlementButton();
