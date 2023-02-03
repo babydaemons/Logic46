@@ -177,6 +177,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
     double profit_price = OrderClosePrice() - OrderOpenPrice();
     double profit_point = profit_price / Point();
     position_stop_loss = OrderStopLoss();
+    prev_buy_ticket = buy_ticket;
     if (profit_point < TRAILING_STOP) {
         return true;
     }
@@ -198,6 +199,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
     double profit_price = OrderOpenPrice() - OrderClosePrice();
     double profit_point = profit_price / Point();
     position_stop_loss = OrderStopLoss();
+    prev_sell_ticket = sell_ticket;
     if (profit_point < TRAILING_STOP) {
         return true;
     }
