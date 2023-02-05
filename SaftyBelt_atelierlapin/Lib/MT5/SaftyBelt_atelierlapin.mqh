@@ -11,6 +11,7 @@
 #include "ErrorDescription.mqh"
 
 CTrade trader;
+double last_total_lots;
 
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション損益を返す                       |
@@ -18,7 +19,7 @@ CTrade trader;
 double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_count, int& sell_ticket, double& sell_profit, int& sell_position_count) {
     int magic_number = GetMagicNumber();
     int position_count = OrdersTotal();
-    double total_profit = 0;
+    double total_profit = last_total_lots = 0;
     buy_ticket = sell_ticket = 0;
     buy_profit = sell_profit = 0;
     buy_position_count = sell_position_count = 0;
@@ -47,6 +48,7 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
             sell_ticket = (int)ticket;
             break;
         }
+        last_total_lots += OrderGetDouble(ORDER_VOLUME_CURRENT);
     }
 
     position_count = PositionsTotal();
@@ -75,6 +77,7 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
             ++sell_position_count;
             break;
         }
+        last_total_lots += PositionGetDouble(POSITION_VOLUME);
     }
     return total_profit;
 }
@@ -200,6 +203,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
     double profit_price = current_price - PositionGetDouble(POSITION_PRICE_OPEN);
     double profit_point = profit_price / Point();
     position_stop_loss = PositionGetDouble(POSITION_SL);
+    prev_buy_ticket = buy_ticket;
     if (profit_point < TRAILING_STOP) {
         return true;
     }
@@ -222,6 +226,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
     double profit_price = PositionGetDouble(POSITION_PRICE_OPEN) - current_price;
     double profit_point = profit_price / Point();
     position_stop_loss = PositionGetDouble(POSITION_SL);
+    prev_sell_ticket = sell_ticket;
     if (profit_point < TRAILING_STOP) {
         return true;
     }
@@ -274,18 +279,15 @@ bool SendMailEntry(int ticket) {
 //| 決済約定時の通知メールを送信する                                 |
 //+------------------------------------------------------------------+
 bool SendMailExit(int ticket) {
-    if (!HistoryDealSelect(ticket)) {
-        return false;
-    }
-
-    string type = HistoryDealGetInteger(ticket, DEAL_TYPE) == DEAL_TYPE_SELL ? "ロング" : "ショート";
+    string type = last_position_type > 0 ? "ロング" : "ショート";
+    double price = SymbolInfoDouble(Symbol(), last_position_profit > 0 ? SYMBOL_BID : SYMBOL_ASK);
 
     string subject = StringFormat("[%s]%s %s決済しました", EXPERT_NAME, Symbol(), type);
     string message = "";
-    message += StringFormat("決済価格 %s\n", DoubleToString(HistoryDealGetDouble(ticket, DEAL_PRICE), Digits()));
-    message += StringFormat("決済時刻 %s\n", GetTimestamp((datetime)HistoryDealGetInteger(ticket, DEAL_TIME)));
-    message += StringFormat("ロット数 %.2f\n", HistoryDealGetDouble(ticket, DEAL_VOLUME));
-    message += StringFormat("損益 %s\n", TextObject::FormatComma(HistoryDealGetDouble(ticket, DEAL_PROFIT), 0));
+    message += StringFormat("決済価格 %s\n", DoubleToString(price, Digits()));
+    message += StringFormat("決済時刻 %s\n", GetTimestamp(last_position_checked));
+    message += StringFormat("ロット数 %.2f\n", last_total_lots);
+    message += StringFormat("損益 %s\n", TextObject::FormatComma(last_position_profit, 0));
     message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), 0));
     message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), 0));
     message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
