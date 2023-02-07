@@ -272,7 +272,7 @@ bool SendMailEntry(int ticket) {
     message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
     message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
 
-    return SendMail(subject, message);
+    return MAIL_ENABLED ? SendMail(subject, message) : true;
 }
 
 //+------------------------------------------------------------------+
@@ -293,7 +293,7 @@ bool SendMailExit(int ticket) {
     message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
     message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
 
-    return SendMail(subject, message);
+    return MAIL_ENABLED ? SendMail(subject, message) : true;
 }
 
 //+------------------------------------------------------------------+
