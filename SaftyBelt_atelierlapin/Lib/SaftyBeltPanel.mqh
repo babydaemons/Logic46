@@ -342,12 +342,26 @@ void UpdatePanel() {
     LabelDispAskPrice.SetText(__LINE__, DoubleToString(ask, digit));
     LabelDispBidPrice.SetText(__LINE__, DoubleToString(bid, digit));
     if (buy_position_count == 0 && sell_position_count == 0) {
-        LabelDispLongEntryPrice.SetText(__LINE__, DoubleToString(buy_entry, digit));
-        LabelDispLongEntryPrice.SetTextColor(__LINE__, clrCyan);
-        LabelDispLongEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((buy_entry - ask) / point, 0)));
-        LabelDispShortEntryPrice.SetText(__LINE__, DoubleToString(sell_entry, digit));
-        LabelDispShortEntryPrice.SetTextColor(__LINE__, clrCyan);
-        LabelDispShortEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((sell_entry - bid) / point, 0)));
+        if (buy_entry > 0) {
+            LabelDispLongEntryPrice.SetText(__LINE__, DoubleToString(buy_entry, digit));
+            LabelDispLongEntryPrice.SetTextColor(__LINE__, clrCyan);
+            LabelDispLongEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((buy_entry - ask) / point, 0)));
+        }
+        else {
+            LabelDispLongEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+            LabelDispLongEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+            LabelDispLongEntryWidth.SetText(__LINE__, " ");
+        }
+        if (sell_entry > 0) {
+            LabelDispShortEntryPrice.SetText(__LINE__, DoubleToString(sell_entry, digit));
+            LabelDispShortEntryPrice.SetTextColor(__LINE__, clrCyan);
+            LabelDispShortEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((sell_entry - bid) / point, 0)));
+        }
+        else {
+            LabelDispShortEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+            LabelDispShortEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+            LabelDispShortEntryWidth.SetText(__LINE__, " ");
+        }
         LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
         LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
