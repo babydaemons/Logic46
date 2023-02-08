@@ -11,6 +11,12 @@ void Abort(string msg) {
     DebugBreak();
 }
 
+enum VISUAL_MODE {
+    VISUAL_MODE_UNKNOWN,
+    VISUAL_MODE_DISABLED,
+    VISUAL_MODE_ENABLED
+};
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -36,6 +42,7 @@ public:
         return (int)MathMax(ScaleSize(x, 24.0), min);
     }
 
+private:
     void Initialize(int line) {
         if (!Exist() && !ObjectCreate(0, obj_name, obj_type, 0, 0, 0)) {
             int error = GetLastError();
@@ -50,7 +57,12 @@ public:
         SetInteger(line, OBJPROP_ZORDER, 0);
     }
 
+public:
     void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
+        if (VisualMode()) {
+            return;
+        }
+
         Initialize(line);
 
         if (scaled) {
@@ -64,6 +76,10 @@ public:
     }
 
     void SetSize(int line, int size_x, int size_y, bool scaled = true) {
+        if (VisualMode()) {
+            return;
+        }
+
         if (scaled) {
             size_x = ScaleCoordinate(size_x);
             size_y = ScaleCoordinate(size_y);
@@ -76,6 +92,11 @@ public:
     }
 
     void GetRectangle(int line, int& x, int& y, int& size_x, int& size_y) {
+        if (VisualMode()) {
+            x = y = size_x = size_y = 0;
+            return;
+        }
+
         x = (int)GetInteger(line, OBJPROP_XDISTANCE);
         y = (int)GetInteger(line, OBJPROP_YDISTANCE);
         size_x = (int)GetInteger(line, OBJPROP_XSIZE);
@@ -83,6 +104,10 @@ public:
     }
 
     void SetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id, long value) {
+        if (VisualMode()) {
+            return;
+        }
+
         if (Exist() && !ObjectSetInteger(0, obj_name, prop_id, value)) {
             int error = GetLastError();
             Abort(StringFormat("DrawObject::SetInteger(line %d): ERROR %d", line, error));
@@ -90,6 +115,10 @@ public:
     }
 
     void SetString(int line, ENUM_OBJECT_PROPERTY_STRING prop_id, string value) {
+        if (VisualMode()) {
+            return;
+        }
+
         if (Exist() && !ObjectSetString(0, obj_name, prop_id, value)) {
             int error = GetLastError();
             Abort(StringFormat("DrawObject::SetString(line %d): ERROR %d", line, error));
@@ -97,6 +126,10 @@ public:
     }
 
     long GetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id) {
+        if (VisualMode()) {
+            return 0;
+        }
+
         long value = 0;
         if (Exist() && !ObjectGetInteger(0, obj_name, prop_id, 0, value)) {
             int error = GetLastError();
@@ -106,6 +139,10 @@ public:
     }
 
     string GetString(int line, ENUM_OBJECT_PROPERTY_STRING prop_id) {
+        if (VisualMode()) {
+            return "";
+        }
+
         string value = "";
         if (Exist() && !ObjectGetString(0, obj_name, prop_id, 0, value)) {
             int error = GetLastError();
@@ -119,6 +156,10 @@ public:
     }
 
     void Remove(int line) {
+        if (VisualMode()) {
+            return;
+        }
+
         if (Exist()) {
             if (!ObjectDelete(0, obj_name)) {
                 int error = GetLastError();
@@ -138,6 +179,10 @@ public:
     }
 
     bool Exist() {
+        if (VisualMode()) {
+            return true;
+        }
+
         int subwindow_number = ObjectFind(0, obj_name);
         return subwindow_number >= 0;
     }
@@ -145,10 +190,25 @@ public:
 protected:
     virtual void OnRemoved() {}
 
+    static bool VisualMode() {
+        if (visual_mode == VISUAL_MODE_UNKNOWN) {
+#ifdef __MQL4__
+            visual_mode = IsVisualMode() ? VISUAL_MODE_ENABLED : VISUAL_MODE_DISABLED;
+#else
+            visual_mode = MQLInfoInteger(MQL_VISUAL_MODE) == 1 ? VISUAL_MODE_ENABLED : VISUAL_MODE_DISABLED;
+#endif
+        }
+        return visual_mode == VISUAL_MODE_ENABLED;
+    }
+
 private:
     string obj_name;
     ENUM_OBJECT obj_type;
+
+    static VISUAL_MODE visual_mode;
 };
+
+VISUAL_MODE DrawObject::visual_mode = VISUAL_MODE_UNKNOWN;
 
 class TextObject : public DrawObject {
 public:
