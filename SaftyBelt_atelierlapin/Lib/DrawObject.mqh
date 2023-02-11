@@ -11,10 +11,10 @@ void Abort(string msg) {
     DebugBreak();
 }
 
-enum VISUAL_MODE {
-    VISUAL_MODE_UNKNOWN,
-    VISUAL_MODE_DISABLED,
-    VISUAL_MODE_ENABLED
+enum TESTING_MODE {
+    TESTING_MODE_UNKNOWN,
+    TESTING_MODE_DISABLED,
+    TESTING_MODE_ENABLED
 };
 
 //+------------------------------------------------------------------+
@@ -59,7 +59,7 @@ private:
 
 public:
     void Initialize(int line, int x, int y, int size_x, int size_y, bool scaled = true) {
-        if (VisualMode()) {
+        if (TesingMode()) {
             return;
         }
 
@@ -76,7 +76,7 @@ public:
     }
 
     void SetSize(int line, int size_x, int size_y, bool scaled = true) {
-        if (VisualMode()) {
+        if (TesingMode()) {
             return;
         }
 
@@ -92,7 +92,7 @@ public:
     }
 
     void GetRectangle(int line, int& x, int& y, int& size_x, int& size_y) {
-        if (VisualMode()) {
+        if (TesingMode()) {
             x = y = size_x = size_y = 0;
             return;
         }
@@ -104,7 +104,7 @@ public:
     }
 
     void SetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id, long value) {
-        if (VisualMode()) {
+        if (TesingMode()) {
             return;
         }
 
@@ -115,7 +115,7 @@ public:
     }
 
     void SetString(int line, ENUM_OBJECT_PROPERTY_STRING prop_id, string value) {
-        if (VisualMode()) {
+        if (TesingMode()) {
             return;
         }
 
@@ -126,7 +126,7 @@ public:
     }
 
     long GetInteger(int line, ENUM_OBJECT_PROPERTY_INTEGER prop_id) {
-        if (VisualMode()) {
+        if (TesingMode()) {
             return 0;
         }
 
@@ -139,7 +139,7 @@ public:
     }
 
     string GetString(int line, ENUM_OBJECT_PROPERTY_STRING prop_id) {
-        if (VisualMode()) {
+        if (TesingMode()) {
             return "";
         }
 
@@ -156,7 +156,7 @@ public:
     }
 
     void Remove(int line) {
-        if (VisualMode()) {
+        if (TesingMode()) {
             return;
         }
 
@@ -179,7 +179,7 @@ public:
     }
 
     bool Exist() {
-        if (VisualMode()) {
+        if (TesingMode()) {
             return true;
         }
 
@@ -190,25 +190,25 @@ public:
 protected:
     virtual void OnRemoved() {}
 
-    static bool VisualMode() {
-        if (visual_mode == VISUAL_MODE_UNKNOWN) {
+    static bool TesingMode() {
+        if (tesing_mode == TESTING_MODE_UNKNOWN) {
 #ifdef __MQL4__
-            visual_mode = IsVisualMode() ? VISUAL_MODE_ENABLED : VISUAL_MODE_DISABLED;
+            tesing_mode = IsTesting() && !IsVisualMode() ? TESTING_MODE_ENABLED : TESTING_MODE_DISABLED;
 #else
-            visual_mode = MQLInfoInteger(MQL_VISUAL_MODE) == 1 ? VISUAL_MODE_ENABLED : VISUAL_MODE_DISABLED;
+            tesing_mode = MQLInfoInteger(MQL_TESTER) == 1 && MQLInfoInteger(MQL_VISUAL_MODE) == 0 ? TESTING_MODE_ENABLED : TESTING_MODE_DISABLED;
 #endif
         }
-        return visual_mode == VISUAL_MODE_ENABLED;
+        return tesing_mode == TESTING_MODE_ENABLED;
     }
 
 private:
     string obj_name;
     ENUM_OBJECT obj_type;
 
-    static VISUAL_MODE visual_mode;
+    static TESTING_MODE tesing_mode;
 };
 
-VISUAL_MODE DrawObject::visual_mode = VISUAL_MODE_UNKNOWN;
+TESTING_MODE DrawObject::tesing_mode = TESTING_MODE_UNKNOWN;
 
 class TextObject : public DrawObject {
 public:
