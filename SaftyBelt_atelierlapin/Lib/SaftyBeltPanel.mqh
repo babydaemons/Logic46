@@ -55,11 +55,9 @@ LabelObject LabelDispPositionType(__LINE__, "　 ");
 LabelObject LabelDispProfit(__LINE__, " 　");
 LabelObject LabelDispLots(__LINE__, "　　　");
 LabelObject LabelDispLongEntryPrice(__LINE__, " 　 ");
-LabelObject LabelDispLongEntryWidth(__LINE__, "　  ");
-LabelObject LabelDispAskPrice(__LINE__, "   　");
+LabelObject LabelDispAskBidPrice(__LINE__, "   　");
 LabelObject LabelDispBidPrice(__LINE__, " 　   ");
 LabelObject LabelDispShortEntryPrice(__LINE__, "  　  ");
-LabelObject LabelDispShortEntryWidth(__LINE__, "   　 ");
 LabelObject LabelDispPositionStopLossPrice(__LINE__, "    　");
 LabelObject LabelDispPrevUpdateTime(__LINE__, "　　   ");
 LabelObject LabelDispUpdateInterval(__LINE__, " 　　  ");
@@ -98,10 +96,8 @@ void InitPanel() {
     int padding_y1 = 2;
     int size_x10 = DrawObject::ScaleSize(FONT_SIZE * 16);
     int size_y10 = DrawObject::ScaleSize(FONT_SIZE + 2 * margin_y1 + 2 * padding_y1);
-    int size_x20 = DrawObject::ScaleSize(FONT_SIZE * 7);
+    int size_x20 = DrawObject::ScaleSize(FONT_SIZE * 33);
     int size_y20 = size_y10;
-    int size_x30 = DrawObject::ScaleSize(FONT_SIZE * 24);
-    int size_y30 = size_y20;
 
     // ラベルオブジェクトの描画
     int x10 = x00 + DrawObject::ScaleSize(8);
@@ -146,7 +142,7 @@ void InitPanel() {
     y20 += size_y20;
     LabelDispLongEntryPrice.Initialize(__LINE__, x20, y20, size_x20, size_y20);
     y20 += size_y20;
-    LabelDispAskPrice.Initialize(__LINE__, x20, y20, size_x20, size_y20);
+    LabelDispAskBidPrice.Initialize(__LINE__, x20, y20, size_x20, size_y20);
     y20 += size_y20;
     LabelDispShortEntryPrice.Initialize(__LINE__, x20, y20, size_x20, size_y20);
     y20 += size_y20;
@@ -162,12 +158,6 @@ void InitPanel() {
     y20 += size_y20;
     LabelDispWatchStatus.Initialize(__LINE__, x20, y20, size_x20, size_y20);
 
-    LabelDispLongEntryWidth.Initialize(__LINE__, x30, y30, size_x30, size_y30);
-    y30 += size_y30;
-    LabelDispBidPrice.Initialize(__LINE__, x30, y30, size_x30, size_y30);
-    y30 += size_y30;
-    LabelDispShortEntryWidth.Initialize(__LINE__, x30, y30, size_x30, size_y30);
-
     // クイック決済ボタン表示チェックボックスの描画
     y10 += size_y10;
     LabelEnableOrder.Initialize(__LINE__, x10, y10, size_x10, size_y10);
@@ -177,7 +167,7 @@ void InitPanel() {
     CheckboxEnableSettlement.Initialize(__LINE__, x20, y10, size_chk, size_chk);
 
     // 背景パネルのサイズ更新
-    size_x00 = x30 + size_x30 - (int)(1.25 * x00);
+    size_x00 = x20 + size_x20 - (int)(1.25 * x00);
     size_y00 = y10 + size_y10 - (int)(0.75 * y00);
     Border.SetSize(__LINE__, size_x00 + 2 * line_width, size_y00 + 2 * line_width);
     Background.SetSize(__LINE__, size_x00, size_y00);
@@ -339,28 +329,23 @@ void UpdatePanel() {
     LabelDispPositionType.SetTextColor(__LINE__, position_status_color);
     LabelDispProfit.SetNumberValue(__LINE__, total_profit, 0);
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
-    LabelDispAskPrice.SetText(__LINE__, DoubleToString(ask, digit));
-    LabelDispBidPrice.SetText(__LINE__, DoubleToString(bid, digit));
+    LabelDispAskBidPrice.SetText(__LINE__, DoubleToString(ask, digit) + " " + DoubleToString(bid, digit));
     if (buy_position_count == 0 && sell_position_count == 0) {
         if (buy_entry > 0) {
-            LabelDispLongEntryPrice.SetText(__LINE__, DoubleToString(buy_entry, digit));
+            LabelDispLongEntryPrice.SetText(__LINE__, StringFormat("%s (%+.0fポイント)", DoubleToString(buy_entry, digit), NormalizeDouble((buy_entry - ask) / point, 0)));
             LabelDispLongEntryPrice.SetTextColor(__LINE__, clrCyan);
-            LabelDispLongEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((buy_entry - ask) / point, 0)));
         }
         else {
             LabelDispLongEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
             LabelDispLongEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-            LabelDispLongEntryWidth.SetText(__LINE__, " ");
         }
         if (sell_entry > 0) {
-            LabelDispShortEntryPrice.SetText(__LINE__, DoubleToString(sell_entry, digit));
+            LabelDispShortEntryPrice.SetText(__LINE__, StringFormat("%s (%+.0fポイント)", DoubleToString(sell_entry, digit), NormalizeDouble((sell_entry - bid) / point, 0)));
             LabelDispShortEntryPrice.SetTextColor(__LINE__, clrCyan);
-            LabelDispShortEntryWidth.SetText(__LINE__, StringFormat("(%+.0fポイント)", NormalizeDouble((sell_entry - bid) / point, 0)));
         }
         else {
             LabelDispShortEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
             LabelDispShortEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-            LabelDispShortEntryWidth.SetText(__LINE__, " ");
         }
         LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
@@ -370,10 +355,8 @@ void UpdatePanel() {
     else {
         LabelDispLongEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
         LabelDispLongEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        LabelDispLongEntryWidth.SetText(__LINE__, " ");
         LabelDispShortEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
         LabelDispShortEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        LabelDispShortEntryWidth.SetText(__LINE__, " ");
         LabelDispPositionStopLossPrice.SetText(__LINE__, DoubleToString(position_stop_loss, digit));
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, clrCyan);
         LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
@@ -427,11 +410,8 @@ void RemovePanel() {
     LabelDispProfit.Remove(__LINE__);
     LabelDispLots.Remove(__LINE__);
     LabelDispLongEntryPrice.Remove(__LINE__);
-    LabelDispLongEntryWidth.Remove(__LINE__);
-    LabelDispAskPrice.Remove(__LINE__);
-    LabelDispBidPrice.Remove(__LINE__);
+    LabelDispAskBidPrice.Remove(__LINE__);
     LabelDispShortEntryPrice.Remove(__LINE__);
-    LabelDispShortEntryWidth.Remove(__LINE__);
     LabelDispPositionStopLossPrice.Remove(__LINE__);
     LabelDispPrevUpdateTime.Remove(__LINE__);
     LabelDispUpdateInterval.Remove(__LINE__);
