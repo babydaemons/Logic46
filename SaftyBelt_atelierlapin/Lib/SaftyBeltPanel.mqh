@@ -265,20 +265,20 @@ void UpdatePanel() {
         enable_sell_order = last_position_type < 0 || now > next_entry;
     }
     if (watching && enable_buy_order && buy_ticket == 0 && sell_position_count == 0) {
-        buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+        buy_entry = GetBuyEntry(ask, point, digit);
         buy_ticket = OrderBuyEntry(buy_entry);
         last_order_modified = now;
     } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
         DeleteOrderAll();
-        buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+        buy_entry = GetBuyEntry(ask, point, digit);
         last_order_modified = now;
     } else if (now > next_modify && buy_ticket != 0 && buy_position_count == 0) {
-        buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+        buy_entry = GetBuyEntry(ask, point, digit);
         if (ModifyBuyOrder(buy_ticket, buy_entry)) {
             last_order_modified = now;
         }
     } else if (now > next_trailing && buy_ticket != 0 && buy_position_count > 0) {
-        buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+        buy_entry = GetBuyEntry(ask, point, digit);
         if (TrailingStopBuyPosition(buy_ticket, position_stop_loss)) {
             last_order_modified = now;
         }
@@ -290,20 +290,20 @@ void UpdatePanel() {
     }
 
     if (watching && enable_sell_order && sell_ticket == 0 && buy_position_count == 0) {
-        sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+        sell_entry = GetSellEntry(bid, point, digit);
         sell_ticket = OrderSellEntry(sell_entry);
         last_order_modified = now;
     } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
         DeleteOrderAll();
-        sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+        sell_entry = GetSellEntry(bid, point, digit);
         last_order_modified = now;
     } else if (now > next_modify && sell_ticket != 0 && sell_position_count == 0) {
-        sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+        sell_entry = GetSellEntry(bid, point, digit);
         if (ModifySellOrder(sell_ticket, sell_entry)) {
             last_order_modified = now;
         }
     } else if (now > next_trailing && sell_ticket != 0 && sell_position_count > 0) {
-        sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+        sell_entry = GetSellEntry(bid, point, digit);
         if (TrailingStopSellPosition(sell_ticket, position_stop_loss)) {
             last_order_modified = now;
         }

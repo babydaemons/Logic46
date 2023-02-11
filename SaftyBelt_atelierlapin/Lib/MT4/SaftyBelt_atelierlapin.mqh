@@ -69,14 +69,24 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
 //| 買いストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
 int OrderBuyEntry(double buy_entry) {
-    double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits);
-    double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits);
+    double sl = 0;
+    double tp = 0;
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits);
+        tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits);
+    }
+    else {
+        sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), Digits);
+        tp = NormalizeDouble(buy_entry + (1.00 + 0.01 * TAKE_PROFIT), Digits);
+    }
+
     if (STOP_LOSS == 0) {
         sl = 0;
     }
     if (TAKE_PROFIT == 0) {
         tp = 0;
     }
+
     for (int i = 1; i <= 10; ++i) {
         int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, EXPERT_NAME, MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
@@ -92,14 +102,24 @@ int OrderBuyEntry(double buy_entry) {
 //| 売りストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
 int OrderSellEntry(double sell_entry) {
-    double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits);
-    double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits);
+    double sl = 0;
+    double tp = 0;
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits);
+        tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits);
+    }
+    else {
+        sl = NormalizeDouble(sell_entry * (1.00 + 0.01 * STOP_LOSS), Digits);
+        tp = NormalizeDouble(sell_entry + (1.00 - 0.01 * TAKE_PROFIT), Digits);
+    }
+
     if (STOP_LOSS == 0) {
         sl = 0;
     }
     if (TAKE_PROFIT == 0) {
         tp = 0;
     }
+
     for (int i = 1; i <= 10; ++i) {
         int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, EXPERT_NAME, MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
@@ -118,14 +138,25 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
     if (prev_buy_ticket == buy_ticket && prev_buy_entry == buy_entry) {
         return true;
     }
-    double sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits);
-    double tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits);
+
+    double sl = 0;
+    double tp = 0;
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits);
+        tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits);
+    }
+    else {
+        sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), Digits);
+        tp = NormalizeDouble(buy_entry + (1.00 + 0.01 * TAKE_PROFIT), Digits);
+    }
+
     if (STOP_LOSS == 0) {
         sl = 0;
     }
     if (TAKE_PROFIT == 0) {
         tp = 0;
     }
+
     for (int i = 1; i <= 10; ++i) {
         bool suceed = OrderModify(buy_ticket, buy_entry, sl, tp, 0, clrNONE);
         if (suceed) {
@@ -146,14 +177,25 @@ bool ModifySellOrder(int sell_ticket, double sell_entry) {
     if (prev_sell_ticket == sell_ticket && prev_sell_entry == sell_entry) {
         return true;
     }
-    double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits);
-    double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits);
+
+    double sl = 0;
+    double tp = 0;
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits);
+        tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits);
+    }
+    else {
+        sl = NormalizeDouble(sell_entry * (1.00 + 0.01 * STOP_LOSS), Digits);
+        tp = NormalizeDouble(sell_entry + (1.00 - 0.01 * TAKE_PROFIT), Digits);
+    }
+
     if (STOP_LOSS == 0) {
         sl = 0;
     }
     if (TAKE_PROFIT == 0) {
         tp = 0;
     }
+
     for (int i = 1; i <= 10; ++i) {
         bool suceed = OrderModify(sell_ticket, sell_entry, sl, tp, 0, clrNONE);
         if (suceed) {
@@ -174,17 +216,32 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
     if (!OrderSelect(buy_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         return false;
     }
-    double profit_price = OrderClosePrice() - OrderOpenPrice();
+
+    double entry_price = OrderOpenPrice();
+    double current_price = OrderClosePrice();
+    double profit_price = current_price - entry_price;
     double profit_point = profit_price / Point();
     position_stop_loss = OrderStopLoss();
     prev_buy_ticket = buy_ticket;
-    if (profit_point < TRAILING_STOP) {
-        return true;
+
+    double sl = 0;
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        if (profit_point < TRAILING_STOP) {
+            return true;
+        }
+        sl = NormalizeDouble(current_price - TRAILING_STOP * Point(), Digits);
     }
-    double sl = NormalizeDouble(OrderClosePrice() - TRAILING_STOP * Point, Digits);
+    else {
+        double profit_percentage = profit_point / entry_price;
+        if (profit_percentage < TRAILING_STOP) {
+            return true;
+        }
+        sl = NormalizeDouble(current_price - (0.01 * TRAILING_STOP * entry_price), Digits);
+    }
+
     if (OrderStopLoss() < sl) {
         position_stop_loss = sl;
-        return OrderModify(buy_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE);
+        return OrderModify(buy_ticket, current_price, sl, OrderTakeProfit(), 0, clrNONE);
     }
     return true;
 }
@@ -196,14 +253,29 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
     if (!OrderSelect(sell_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         return false;
     }
-    double profit_price = OrderOpenPrice() - OrderClosePrice();
+
+    double entry_price = OrderOpenPrice();
+    double current_price = OrderClosePrice();
+    double profit_price = entry_price - current_price;
     double profit_point = profit_price / Point();
     position_stop_loss = OrderStopLoss();
     prev_sell_ticket = sell_ticket;
-    if (profit_point < TRAILING_STOP) {
-        return true;
+
+    double sl = 0;
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        if (profit_point < TRAILING_STOP) {
+            return true;
+        }
+        sl = NormalizeDouble(current_price + TRAILING_STOP * Point(), Digits);
     }
-    double sl = NormalizeDouble(OrderClosePrice() + TRAILING_STOP * Point, Digits);
+    else {
+        double profit_percentage = profit_point / entry_price;
+        if (profit_percentage < TRAILING_STOP) {
+            return true;
+        }
+        sl = NormalizeDouble(current_price + (0.01 * TRAILING_STOP * entry_price), Digits);
+    }
+
     if (OrderStopLoss() > sl) {
         position_stop_loss = sl;
         return OrderModify(sell_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE);

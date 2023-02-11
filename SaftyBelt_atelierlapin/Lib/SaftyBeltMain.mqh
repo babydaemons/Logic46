@@ -137,15 +137,40 @@ bool IsWatching() {
 }
 
 //+------------------------------------------------------------------+
-//|                                                                  |
+//| ロングエントリー価格を返す                                       |
+//+------------------------------------------------------------------+
+double GetBuyEntry(double ask, double point, int digit) {
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        return NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+    }
+    else {
+        return NormalizeDouble(ask * (1.00 + 0.01 * ENTRY_WIDTH), digit);
+    }
+}
+
+//+------------------------------------------------------------------+
+//| ショートエントリー価格を返す                                     |
+//+------------------------------------------------------------------+
+double GetSellEntry(double bid, double point, int digit) {
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        return NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+    }
+    else {
+        return NormalizeDouble(bid * (1.00 - 0.01 * ENTRY_WIDTH), digit);
+    }
+}
+
+//+------------------------------------------------------------------+
+//| インターバル時間間隔の文字列を返す                               |
 //+------------------------------------------------------------------+
 string GetInterval(datetime t) {
     return StringFormat("%d:%02d", (long)t / 60, (long)t % 60);
 }
 
 //+------------------------------------------------------------------+
-//|                                                                  |
+//| 秒単位時刻の文字列を返す                                         |
 //+------------------------------------------------------------------+
 string GetTimestamp(datetime t) {
     return StringFormat("%s:%02d", TimeToString(t, TIME_DATE | TIME_MINUTES), t % 60);
 }
+
