@@ -68,25 +68,7 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
 //+------------------------------------------------------------------+
 //| 買いストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
-int OrderBuyEntry(double buy_entry) {
-    double sl = 0;
-    double tp = 0;
-    if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits);
-        tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits);
-    }
-    else {
-        sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), Digits);
-        tp = NormalizeDouble(buy_entry + (1.00 + 0.01 * TAKE_PROFIT), Digits);
-    }
-
-    if (STOP_LOSS == 0) {
-        sl = 0;
-    }
-    if (TAKE_PROFIT == 0) {
-        tp = 0;
-    }
-
+int OrderBuyEntry(double buy_entry, double sl, double tp) {
     for (int i = 1; i <= 10; ++i) {
         int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, EXPERT_NAME, MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
@@ -101,25 +83,7 @@ int OrderBuyEntry(double buy_entry) {
 //+------------------------------------------------------------------+
 //| 売りストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
-int OrderSellEntry(double sell_entry) {
-    double sl = 0;
-    double tp = 0;
-    if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits);
-        tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits);
-    }
-    else {
-        sl = NormalizeDouble(sell_entry * (1.00 + 0.01 * STOP_LOSS), Digits);
-        tp = NormalizeDouble(sell_entry + (1.00 - 0.01 * TAKE_PROFIT), Digits);
-    }
-
-    if (STOP_LOSS == 0) {
-        sl = 0;
-    }
-    if (TAKE_PROFIT == 0) {
-        tp = 0;
-    }
-
+int OrderSellEntry(double sell_entry, double sl, double tp) {
     for (int i = 1; i <= 10; ++i) {
         int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, EXPERT_NAME, MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
@@ -134,27 +98,9 @@ int OrderSellEntry(double sell_entry) {
 //+------------------------------------------------------------------+
 //| 買いストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
+bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
     if (prev_buy_ticket == buy_ticket && prev_buy_entry == buy_entry) {
         return true;
-    }
-
-    double sl = 0;
-    double tp = 0;
-    if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits);
-        tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits);
-    }
-    else {
-        sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), Digits);
-        tp = NormalizeDouble(buy_entry + (1.00 + 0.01 * TAKE_PROFIT), Digits);
-    }
-
-    if (STOP_LOSS == 0) {
-        sl = 0;
-    }
-    if (TAKE_PROFIT == 0) {
-        tp = 0;
     }
 
     for (int i = 1; i <= 10; ++i) {
@@ -173,27 +119,9 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
 //+------------------------------------------------------------------+
 //| 売りストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifySellOrder(int sell_ticket, double sell_entry) {
+bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
     if (prev_sell_ticket == sell_ticket && prev_sell_entry == sell_entry) {
         return true;
-    }
-
-    double sl = 0;
-    double tp = 0;
-    if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits);
-        tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits);
-    }
-    else {
-        sl = NormalizeDouble(sell_entry * (1.00 + 0.01 * STOP_LOSS), Digits);
-        tp = NormalizeDouble(sell_entry + (1.00 - 0.01 * TAKE_PROFIT), Digits);
-    }
-
-    if (STOP_LOSS == 0) {
-        sl = 0;
-    }
-    if (TAKE_PROFIT == 0) {
-        tp = 0;
     }
 
     for (int i = 1; i <= 10; ++i) {

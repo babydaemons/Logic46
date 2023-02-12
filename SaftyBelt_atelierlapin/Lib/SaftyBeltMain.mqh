@@ -139,24 +139,44 @@ bool IsWatching() {
 //+------------------------------------------------------------------+
 //| ロングエントリー価格を返す                                       |
 //+------------------------------------------------------------------+
-double GetBuyEntry(double ask, double point, int digit) {
+void GetBuyEntry(double ask, double point, int digits, double& buy_entry, double& sl, double& tp) {
     if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        return NormalizeDouble(ask + ENTRY_WIDTH * point, digit);
+        buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * point, digits);
+        sl = NormalizeDouble(buy_entry - STOP_LOSS * point, digits);
+        tp = NormalizeDouble(buy_entry + TAKE_PROFIT * point, digits);
     }
     else {
-        return NormalizeDouble(ask * (1.00 + 0.01 * ENTRY_WIDTH), digit);
+        buy_entry = NormalizeDouble(ask * (1.00 + 0.01 * ENTRY_WIDTH), digits);
+        sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), digits);
+        tp = NormalizeDouble(buy_entry + (1.00 + 0.01 * TAKE_PROFIT), digits);
+    }
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
     }
 }
 
 //+------------------------------------------------------------------+
 //| ショートエントリー価格を返す                                     |
 //+------------------------------------------------------------------+
-double GetSellEntry(double bid, double point, int digit) {
+void GetSellEntry(double bid, double point, int digits, double& sell_entry, double& sl, double& tp) {
     if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        return NormalizeDouble(bid - ENTRY_WIDTH * point, digit);
+        sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * point, digits);
+        sl = NormalizeDouble(sell_entry + STOP_LOSS * point, digits);
+        tp = NormalizeDouble(sell_entry - TAKE_PROFIT * point, digits);
     }
     else {
-        return NormalizeDouble(bid * (1.00 - 0.01 * ENTRY_WIDTH), digit);
+        sell_entry = NormalizeDouble(bid * (1.00 - 0.01 * ENTRY_WIDTH), digits);
+        sl = NormalizeDouble(sell_entry * (1.00 + 0.01 * STOP_LOSS), digits);
+        tp = NormalizeDouble(sell_entry + (1.00 - 0.01 * TAKE_PROFIT), digits);
+    }
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0) {
+        tp = 0;
     }
 }
 

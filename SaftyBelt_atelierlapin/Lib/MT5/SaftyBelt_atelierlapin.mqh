@@ -85,40 +85,24 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
 //+------------------------------------------------------------------+
 //| 売り気配/買い気配を返す                                          |
 //+------------------------------------------------------------------+
-void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
+void GetPriceInfo(double& ask, double& bid, double& point, int& digits) {
     ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
     bid = SymbolInfoDouble(Symbol(), SYMBOL_BID);
     point = Point();
-    digit = Digits();
+    digits = Digits();
 }
 
 //+------------------------------------------------------------------+
 //| 買いストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
-int OrderBuyEntry(double buy_entry) {
-    double sl = 0;
-    double tp = 0;
-    if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits());
-        tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits());
-    }
-    else {
-        sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), Digits());
-        tp = NormalizeDouble(buy_entry + (1.00 + 0.01 * TAKE_PROFIT), Digits());
-    }
-
-    if (STOP_LOSS == 0) {
-        sl = 0;
-    }
-    if (TAKE_PROFIT == 0) {
-        tp = 0;
-    }
+int OrderBuyEntry(double buy_entry, double sl, double tp) {
     trader.LogLevel(LOG_LEVEL_NO);
     trader.SetExpertMagicNumber(MAGIC_NUMBER);
     for (int i = 1; i <= 10; ++i) {
         if (trader.BuyStop(LOTS, buy_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
         }
+        printf("ERROR: %s", ErrorDescription());
         Sleep(i * 100);
     }
     return 0;
@@ -127,21 +111,14 @@ int OrderBuyEntry(double buy_entry) {
 //+------------------------------------------------------------------+
 //| 売りストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
-int OrderSellEntry(double sell_entry) {
-    double sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits());
-    double tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits());
-    if (STOP_LOSS == 0) {
-        sl = 0;
-    }
-    if (TAKE_PROFIT == 0) {
-        tp = 0;
-    }
+int OrderSellEntry(double sell_entry, double sl, double tp) {
     trader.LogLevel(LOG_LEVEL_NO);
     trader.SetExpertMagicNumber(MAGIC_NUMBER);
     for (int i = 1; i <= 10; ++i) {
         if (trader.SellStop(LOTS, sell_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
         }
+        printf("ERROR: %s", ErrorDescription());
         Sleep(i * 100);
     }
     return 0;
@@ -150,27 +127,9 @@ int OrderSellEntry(double sell_entry) {
 //+------------------------------------------------------------------+
 //| 買いストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
+bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
     if (prev_buy_ticket == buy_ticket && prev_buy_entry == buy_entry) {
         return true;
-    }
-
-    double sl = 0;
-    double tp = 0;
-    if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        sl = NormalizeDouble(buy_entry - STOP_LOSS * Point(), Digits());
-        tp = NormalizeDouble(buy_entry + TAKE_PROFIT * Point(), Digits());
-    }
-    else {
-        sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), Digits());
-        tp = NormalizeDouble(buy_entry + (1.00 + 0.01 * TAKE_PROFIT), Digits());
-    }
-
-    if (STOP_LOSS == 0) {
-        sl = 0;
-    }
-    if (TAKE_PROFIT == 0) {
-        tp = 0;
     }
 
     for (int i = 1; i <= 10; ++i) {
@@ -188,27 +147,9 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry) {
 //+------------------------------------------------------------------+
 //| 売りストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
-bool ModifySellOrder(int sell_ticket, double sell_entry) {
+bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
     if (prev_sell_ticket == sell_ticket && prev_sell_entry == sell_entry) {
         return true;
-    }
-
-    double sl = 0;
-    double tp = 0;
-    if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        sl = NormalizeDouble(sell_entry + STOP_LOSS * Point(), Digits());
-        tp = NormalizeDouble(sell_entry - TAKE_PROFIT * Point(), Digits());
-    }
-    else {
-        sl = NormalizeDouble(sell_entry * (1.00 + 0.01 * STOP_LOSS), Digits());
-        tp = NormalizeDouble(sell_entry + (1.00 - 0.01 * TAKE_PROFIT), Digits());
-    }
-
-    if (STOP_LOSS == 0) {
-        sl = 0;
-    }
-    if (TAKE_PROFIT == 0) {
-        tp = 0;
     }
 
     for (int i = 1; i <= 10; ++i) {
