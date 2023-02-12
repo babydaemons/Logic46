@@ -15,52 +15,6 @@ const long TIME_ROUND = 24 * 60 * 60;
 datetime LastChecked;
 
 //+------------------------------------------------------------------+
-//| 時刻の書式チェック                                               |
-//+------------------------------------------------------------------+
-bool CheckTimeFormat(string time, long& T)
-{
-    if (StringLen(time) != 5) {
-        return false;
-    }
-
-    if (time[0] < '0' || '2' < time[0]) {
-        return false;
-    }
-
-    if (time[1] < '0' || '9' < time[1]) {
-        return false;
-    }
-
-    if (time[2] != ':') {
-        return false;
-    }
-
-    if (time[3] < '0' || '5' < time[3]) {
-        return false;
-    }
-
-    if (time[4] < '0' || '9' < time[4]) {
-        return false;
-    }
-
-    string t[];
-    StringSplit(time, ':', t);
-    long hour = StringToInteger(t[0]);
-    if (hour < 0 || 23 < hour) {
-        return false;
-    }
-
-    long minute = StringToInteger(t[1]);
-    if (minute < 0 || 59 < minute) {
-        return false;
-    }
-
-    T = (long)StringToTime(time) % TIME_ROUND;
-
-    return true;
-}
-
-//+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
@@ -224,6 +178,52 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
         }
         sl = NormalizeDouble(current_price + (0.01 * TRAILING_STOP * entry_price), digits);
     }
+
+    return true;
+}
+
+//+------------------------------------------------------------------+
+//| 時刻の書式チェック                                               |
+//+------------------------------------------------------------------+
+bool CheckTimeFormat(string time, long& T)
+{
+    if (StringLen(time) != 5) {
+        return false;
+    }
+
+    if (time[0] < '0' || '2' < time[0]) {
+        return false;
+    }
+
+    if (time[1] < '0' || '9' < time[1]) {
+        return false;
+    }
+
+    if (time[2] != ':') {
+        return false;
+    }
+
+    if (time[3] < '0' || '5' < time[3]) {
+        return false;
+    }
+
+    if (time[4] < '0' || '9' < time[4]) {
+        return false;
+    }
+
+    string t[];
+    StringSplit(time, ':', t);
+    long hour = StringToInteger(t[0]);
+    if (hour < 0 || 23 < hour) {
+        return false;
+    }
+
+    long minute = StringToInteger(t[1]);
+    if (minute < 0 || 59 < minute) {
+        return false;
+    }
+
+    T = (long)StringToTime(time) % TIME_ROUND;
 
     return true;
 }
