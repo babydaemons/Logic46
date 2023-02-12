@@ -14,6 +14,10 @@ const long TIME_ROUND = 24 * 60 * 60;
 
 datetime LastChecked;
 
+#ifdef __MQL5__
+int hStdDev;
+#endif
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -27,6 +31,10 @@ int OnInit() {
         MessageBox("「決済再開時刻(サーバー時刻)」の書式が不正です。\n\"00:00\"～\"23:59\"の間の時刻を入力してください。\n→パラメータ入力：" + OPEN_TIME);
         return INIT_PARAMETERS_INCORRECT;
     }
+
+#ifdef __MQL5__
+    hStdDev = iStdDev(Symbol(), PERIOD_M1, STDDEV_MINUTES, 0, MODE_SMA, PRICE_CLOSE);
+#endif
 
     if (Reason != REASON_CHARTCHANGE && Reason != REASON_PARAMETERS) {
         InitPanel();
@@ -99,10 +107,15 @@ void GetBuyEntry(double ask, double point, int digits, double& buy_entry, double
         sl = NormalizeDouble(buy_entry - STOP_LOSS * point, digits);
         tp = NormalizeDouble(buy_entry + TAKE_PROFIT * point, digits);
     }
-    else {
+    else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         buy_entry = NormalizeDouble(ask * (1.00 + 0.01 * ENTRY_WIDTH), digits);
         sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), digits);
         tp = NormalizeDouble(buy_entry + (1.00 + 0.01 * TAKE_PROFIT), digits);
+    }
+    else {
+        buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * stddev, digits);
+        sl = NormalizeDouble(buy_entry - STOP_LOSS * stddev, digits);
+        tp = NormalizeDouble(buy_entry + TAKE_PROFIT * stddev, digits);
     }
     if (STOP_LOSS == 0) {
         sl = 0;
@@ -121,10 +134,15 @@ void GetSellEntry(double bid, double point, int digits, double& sell_entry, doub
         sl = NormalizeDouble(sell_entry + STOP_LOSS * point, digits);
         tp = NormalizeDouble(sell_entry - TAKE_PROFIT * point, digits);
     }
-    else {
+    else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         sell_entry = NormalizeDouble(bid * (1.00 - 0.01 * ENTRY_WIDTH), digits);
         sl = NormalizeDouble(sell_entry * (1.00 + 0.01 * STOP_LOSS), digits);
         tp = NormalizeDouble(sell_entry + (1.00 - 0.01 * TAKE_PROFIT), digits);
+    }
+    else {
+        sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * stddev, digits);
+        sl = NormalizeDouble(sell_entry + STOP_LOSS * stddev, digits);
+        tp = NormalizeDouble(sell_entry - TAKE_PROFIT * stddev, digits);
     }
     if (STOP_LOSS == 0) {
         sl = 0;
@@ -147,12 +165,22 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
         }
         sl = NormalizeDouble(current_price - TRAILING_STOP * point, digits);
     }
-    else {
+    else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         double profit_percentage = profit_point / entry_price;
         if (profit_percentage < TRAILING_STOP) {
             return false;
         }
         sl = NormalizeDouble(current_price - (0.01 * TRAILING_STOP * entry_price), digits);
+    }
+    else {
+        if (stddev == 0) {
+            return false;
+        }
+        double profit_deviation = profit_point / stddev;
+        if (profit_deviation < TRAILING_STOP) {
+            return false;
+        }
+        sl = NormalizeDouble(current_price - TRAILING_STOP * stddev, digits);
     }
 
     return true;
@@ -171,15 +199,34 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
         }
         sl = NormalizeDouble(current_price + TRAILING_STOP * point, digits);
     }
-    else {
+    else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         double profit_percentage = profit_point / entry_price;
         if (profit_percentage < TRAILING_STOP) {
             return false;
         }
         sl = NormalizeDouble(current_price + (0.01 * TRAILING_STOP * entry_price), digits);
     }
+    else {
+        if (stddev == 0) {
+            return false;
+        }
+        double profit_deviation = profit_point / stddev;
+        if (profit_deviation < TRAILING_STOP) {
+            return false;
+        }
+        sl = NormalizeDouble(current_price + TRAILING_STOP * stddev, digits);
+    }
 
     return true;
+}
+
+//+------------------------------------------------------------------+
+//| 週末かどうか判定する                                             |
+//+------------------------------------------------------------------+
+bool IsWeekend() {
+    MqlDateTime tm = {};
+    TimeToStruct(TimeCurrent(), tm);
+    return tm.day_of_week < 1 || 5 < tm.day_of_week;
 }
 
 //+------------------------------------------------------------------+

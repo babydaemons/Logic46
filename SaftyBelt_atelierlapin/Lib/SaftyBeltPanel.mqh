@@ -185,11 +185,16 @@ int prev_buy_ticket;
 double prev_buy_entry;
 int prev_sell_ticket;
 double prev_sell_entry;
+double stddev;
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 void UpdatePanel() {
+    if (IsWeekend()) {
+        return;
+    }
+
     double ask = 0;
     double bid = 0;
     double point = 0;
@@ -205,6 +210,19 @@ void UpdatePanel() {
     datetime now = TimeCurrent();
     double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count);
     bool watching = IsWatching();
+
+    bool enable_order = true;
+    if (PRICE_TYPE == PRICE_TYPE_STDDEV /*&& buy_position_count == 0 && sell_position_count == 0*/) {
+#ifdef __MQL4__
+        stddev = iStdDev(Symbol(), PERIOD_M1, STDDEV_MINUTES, 0, MODE_SMA, PRICE_CLOSE, 0);
+#else
+        double sd[];
+        CopyBuffer(hStdDev, MAIN_LINE, 0, 1, sd);
+        stddev = sd[0];
+#endif
+        enable_order = stddev > 0;
+    }
+
     if (buy_position_count > 0) {
         if (MAIL_ENABLED && WatchStatus != WATCHSTATUS_TRAILING_LONG) {
             SendMailEntry(buy_ticket);
@@ -264,7 +282,9 @@ void UpdatePanel() {
     }
     if (watching && enable_buy_order && buy_ticket == 0 && sell_position_count == 0) {
         GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
-        buy_ticket = OrderBuyEntry(buy_entry, sl, tp);
+        if (enable_order) {
+            buy_ticket = OrderBuyEntry(buy_entry, sl, tp);
+        }
         last_order_modified = now;
     } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
         DeleteOrderAll();
@@ -272,7 +292,7 @@ void UpdatePanel() {
         last_order_modified = now;
     } else if (now > next_modify && buy_ticket != 0 && buy_position_count == 0) {
         GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
-        if (ModifyBuyOrder(buy_ticket, buy_entry, sl, tp)) {
+        if (enable_order && ModifyBuyOrder(buy_ticket, buy_entry, sl, tp)) {
             last_order_modified = now;
         }
     } else if (now > next_trailing && buy_ticket != 0 && buy_position_count > 0) {
@@ -289,7 +309,9 @@ void UpdatePanel() {
 
     if (watching && enable_sell_order && sell_ticket == 0 && buy_position_count == 0) {
         GetSellEntry(bid, point, digits, sell_entry, sl, tp);
-        sell_ticket = OrderSellEntry(sell_entry, sl, tp);
+        if (enable_order) {
+            sell_ticket = OrderSellEntry(sell_entry, sl, tp);
+        }
         last_order_modified = now;
     } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
         DeleteOrderAll();
@@ -297,7 +319,7 @@ void UpdatePanel() {
         last_order_modified = now;
     } else if (now > next_modify && sell_ticket != 0 && sell_position_count == 0) {
         GetSellEntry(bid, point, digits, sell_entry, sl, tp);
-        if (ModifySellOrder(sell_ticket, sell_entry, sl, tp)) {
+        if (enable_order && ModifySellOrder(sell_ticket, sell_entry, sl, tp)) {
             last_order_modified = now;
         }
     } else if (now > next_trailing && sell_ticket != 0 && sell_position_count > 0) {
