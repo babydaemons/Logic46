@@ -172,26 +172,12 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
         return false;
     }
 
-    double entry_price = PositionGetDouble(POSITION_PRICE_OPEN);
-    double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
-    double profit_price = current_price - entry_price;
-    double profit_point = profit_price / Point();
     position_stop_loss = PositionGetDouble(POSITION_SL);
     prev_buy_ticket = buy_ticket;
 
     double sl = 0;
-    if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        if (profit_point < TRAILING_STOP) {
-            return true;
-        }
-        sl = NormalizeDouble(current_price - TRAILING_STOP * Point(), Digits());
-    }
-    else {
-        double profit_percentage = profit_point / entry_price;
-        if (profit_percentage < TRAILING_STOP) {
-            return true;
-        }
-        sl = NormalizeDouble(current_price - (0.01 * TRAILING_STOP * entry_price), Digits());
+    if (!DoTrailingStopBuyPosition(PositionGetDouble(POSITION_PRICE_OPEN), PositionGetDouble(POSITION_PRICE_CURRENT), Point(), Digits(), sl)) {
+        return false;
     }
 
     if (PositionGetDouble(POSITION_SL) < sl) {
@@ -209,26 +195,12 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
         return false;
     }
 
-    double entry_price = PositionGetDouble(POSITION_PRICE_OPEN);
-    double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
-    double profit_price = entry_price - current_price;
-    double profit_point = profit_price / Point();
     position_stop_loss = PositionGetDouble(POSITION_SL);
     prev_sell_ticket = sell_ticket;
 
     double sl = 0;
-    if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        if (profit_point < TRAILING_STOP) {
-            return true;
-        }
-        sl = NormalizeDouble(current_price + TRAILING_STOP * Point(), Digits());
-    }
-    else {
-        double profit_percentage = profit_point / entry_price;
-        if (profit_percentage < TRAILING_STOP) {
-            return true;
-        }
-        sl = NormalizeDouble(current_price + (0.01 * TRAILING_STOP * entry_price), Digits());
+    if (!DoTrailingStopSellPosition(PositionGetDouble(POSITION_PRICE_OPEN), PositionGetDouble(POSITION_PRICE_CURRENT), Point(), Digits(), sl)) {
+        return false;
     }
 
     if (PositionGetDouble(POSITION_SL) > sl) {

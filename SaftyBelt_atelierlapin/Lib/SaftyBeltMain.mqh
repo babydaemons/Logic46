@@ -181,6 +181,54 @@ void GetSellEntry(double bid, double point, int digits, double& sell_entry, doub
 }
 
 //+------------------------------------------------------------------+
+//| 買いポジションのトレーリングストップを実行するか判断する         |
+//+------------------------------------------------------------------+
+bool DoTrailingStopBuyPosition(double entry_price, double current_price, double point, int digits, double& sl) {
+    double profit_price = current_price - entry_price;
+    double profit_point = profit_price / point;
+
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        if (profit_point < TRAILING_STOP) {
+            return false;
+        }
+        sl = NormalizeDouble(current_price - TRAILING_STOP * point, digits);
+    }
+    else {
+        double profit_percentage = profit_point / entry_price;
+        if (profit_percentage < TRAILING_STOP) {
+            return false;
+        }
+        sl = NormalizeDouble(current_price - (0.01 * TRAILING_STOP * entry_price), digits);
+    }
+
+    return true;
+}
+
+//+------------------------------------------------------------------+
+//| 売りポジションのトレーリングストップを実行するか判断する         |
+//+------------------------------------------------------------------+
+bool DoTrailingStopSellPosition(double entry_price, double current_price, double point, int digits, double& sl) {
+    double profit_price = entry_price - current_price;
+    double profit_point = profit_price / point;
+
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        if (profit_point < TRAILING_STOP) {
+            return false;
+        }
+        sl = NormalizeDouble(current_price + TRAILING_STOP * point, digits);
+    }
+    else {
+        double profit_percentage = profit_point / entry_price;
+        if (profit_percentage < TRAILING_STOP) {
+            return false;
+        }
+        sl = NormalizeDouble(current_price + (0.01 * TRAILING_STOP * entry_price), digits);
+    }
+
+    return true;
+}
+
+//+------------------------------------------------------------------+
 //| インターバル時間間隔の文字列を返す                               |
 //+------------------------------------------------------------------+
 string GetInterval(datetime t) {
