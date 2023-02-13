@@ -102,7 +102,7 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
         if (trader.BuyStop(LOTS, buy_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
         }
-        printf("ERROR: %s", ErrorDescription());
+        Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
     }
     return 0;
@@ -118,7 +118,7 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
         if (trader.SellStop(LOTS, sell_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
         }
-        printf("ERROR: %s", ErrorDescription());
+        Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
     }
     return 0;
@@ -139,6 +139,7 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
             prev_buy_entry = buy_entry;
             return true;
         }
+        Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
     }
     return false;
@@ -159,6 +160,7 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
             prev_sell_entry = sell_entry;
             return true;
         }
+        Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
     }
     return false;

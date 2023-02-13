@@ -74,7 +74,7 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
         if (ticket != -1) {
             return ticket;
         }
-        printf("ERROR: %s", ErrorDescription());
+        Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
     }
     return 0;
@@ -89,7 +89,7 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
         if (ticket != -1) {
             return ticket;
         }
-        printf("ERROR: %s", ErrorDescription());
+        Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
     }
     return 0;
@@ -110,7 +110,7 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
             prev_buy_entry = buy_entry;
             return true;
         }
-        printf("ERROR: %s", ErrorDescription());
+        Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
     }
     return false;
@@ -131,7 +131,7 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
             prev_sell_entry = sell_entry;
             return true;
         }
-        printf("ERROR: %s", ErrorDescription());
+        Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
     }
     return false;
