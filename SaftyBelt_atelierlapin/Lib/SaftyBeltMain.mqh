@@ -156,6 +156,10 @@ void GetSellEntry(double bid, double point, int digits, double& sell_entry, doub
 //| 買いポジションのトレーリングストップを実行するか判断する         |
 //+------------------------------------------------------------------+
 bool DoTrailingStopBuyPosition(double entry_price, double current_price, double point, int digits, double& sl) {
+    if (!TRAILING_STOP_ENABLE) {
+        return false;
+    }
+
     double profit_price = current_price - entry_price;
     double profit_point = profit_price / point;
 
@@ -190,6 +194,10 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
 //| 売りポジションのトレーリングストップを実行するか判断する         |
 //+------------------------------------------------------------------+
 bool DoTrailingStopSellPosition(double entry_price, double current_price, double point, int digits, double& sl) {
+    if (!TRAILING_STOP_ENABLE) {
+        return false;
+    }
+
     double profit_price = entry_price - current_price;
     double profit_point = profit_price / point;
 

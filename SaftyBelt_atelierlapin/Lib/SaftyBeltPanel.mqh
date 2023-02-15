@@ -383,14 +383,32 @@ void UpdatePanel() {
         LabelDispWatchStatus.SetTextColor(__LINE__, clrMagenta);
     }
     LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(last_order_modified));
-    int interval = buy_position_count == 0 && sell_position_count == 0 ? ORDER_MODIFY_INTERVAL_SECONDS : TRAILING_STOP_INTERVAL_SECONDS;
-    LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)interval));
-    if (enable_buy_order || enable_sell_order) {
-        LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((last_order_modified + interval) - now));
-        LabelDispNextUpdateTime.SetTextColor(__LINE__, clrCyan);
-    } else {
-        LabelDispNextUpdateTime.SetText(__LINE__, TextObject::NONE_TEXT);
-        LabelDispNextUpdateTime.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+
+    if (TRAILING_STOP_ENABLE) {
+        int interval = buy_position_count == 0 && sell_position_count == 0 ? ORDER_MODIFY_INTERVAL_SECONDS : TRAILING_STOP_INTERVAL_SECONDS;
+        LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)interval));
+        if (enable_buy_order || enable_sell_order) {
+            LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((last_order_modified + interval) - now));
+            LabelDispNextUpdateTime.SetTextColor(__LINE__, clrCyan);
+        } else {
+            LabelDispNextUpdateTime.SetText(__LINE__, TextObject::NONE_TEXT);
+            LabelDispNextUpdateTime.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+        }
+    }
+    else {
+        if (buy_position_count == 0 && sell_position_count == 0) {
+            const int interval = ORDER_MODIFY_INTERVAL_SECONDS;
+            LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)interval));
+            LabelDispUpdateInterval.SetTextColor(__LINE__, clrCyan);
+            LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((last_order_modified + interval) - now));
+            LabelDispNextUpdateTime.SetTextColor(__LINE__, clrCyan);
+        }
+        else {
+            LabelDispUpdateInterval.SetText(__LINE__, TextObject::NONE_TEXT);
+            LabelDispUpdateInterval.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+            LabelDispNextUpdateTime.SetText(__LINE__, TextObject::NONE_TEXT);
+            LabelDispNextUpdateTime.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+        }
     }
 
     LabelDispMailAdress.SetText(__LINE__, MAIL_TO_ADDRESS);
