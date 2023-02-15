@@ -179,7 +179,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
 
     double sl = 0;
     if (!DoTrailingStopBuyPosition(PositionGetDouble(POSITION_PRICE_OPEN), PositionGetDouble(POSITION_PRICE_CURRENT), Point(), Digits(), sl)) {
-        return false;
+        return true;
     }
 
     if (PositionGetDouble(POSITION_SL) < sl) {
@@ -202,7 +202,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
 
     double sl = 0;
     if (!DoTrailingStopSellPosition(PositionGetDouble(POSITION_PRICE_OPEN), PositionGetDouble(POSITION_PRICE_CURRENT), Point(), Digits(), sl)) {
-        return false;
+        return true;
     }
 
     if (PositionGetDouble(POSITION_SL) > sl) {
