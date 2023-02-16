@@ -52,13 +52,14 @@ int OnInit() {
 //| Expert deinitialization function                                 |
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason) {
-    EventKillTimer();
-
     if (reason != REASON_CHARTCHANGE && reason != REASON_PARAMETERS && reason != REASON_ACCOUNT) {
+        DeleteOrderAll();
         RemovePanel();
     }
 
     Reason = reason;
+
+    EventKillTimer();
 }
 
 //+------------------------------------------------------------------+

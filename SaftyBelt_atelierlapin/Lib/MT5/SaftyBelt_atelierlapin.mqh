@@ -6,7 +6,7 @@
 #property version   "1.00"
 #property strict
 
-#include <Trade/Trade.mqh>
+#include "./Trade.mqh"
 #include "../SaftyBeltPanel.mqh"
 #include "ErrorDescription.mqh"
 
@@ -310,6 +310,8 @@ void DeleteOrderAll() {
             if (succed) {
                 break;
             }
+
+            Alert(StringFormat("ERROR: %s", ErrorDescription()));
             Sleep(100 * count);
         }
 

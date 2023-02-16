@@ -322,15 +322,16 @@ void DeleteOrderAll() {
             continue;
         }
 
+        // https://www.mql5.com/en/forum/119596
+        //   1. OrderDelete for pending orders
+        //   2. OrderClose for open orders
         int ticket = OrderTicket();
-        double lots = OrderLots();
-        int type = OrderType();
-        double price = MarketInfo(symbol, type == OP_BUY ? MODE_BID : MODE_ASK);
         for (int count = 1; count <= 10; ++count) {
-            bool succed = OrderClose(ticket, lots, 10, clrNONE);
+            bool succed = OrderDelete(ticket, clrNONE);
             if (succed) {
                 break;
             }
+            Alert(StringFormat("ERROR: #%d: %s", ticket, ErrorDescription()));
             Sleep(100 * count);
         }
 
