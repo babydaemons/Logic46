@@ -13,6 +13,7 @@ long OpenTime;
 const long TIME_ROUND = 24 * 60 * 60;
 
 uint enable_entry_type;
+int currency_digits;
 
 #ifdef __MQL5__
 int hStdDev;
@@ -48,6 +49,7 @@ int OnInit() {
     EventSetTimer(1);
 
     enable_entry_type = ENTRY_TYPE;
+    currency_digits = AccountInfoString(ACCOUNT_CURRENCY) == "JPY" ? 0 : 2;
 
     return INIT_SUCCEEDED;
 }
@@ -302,3 +304,14 @@ string GetTimestamp(datetime t) {
     return StringFormat("%s:%02d", TimeToString(t, TIME_DATE | TIME_MINUTES), t % 60);
 }
 
+//+------------------------------------------------------------------+
+//| 中断時間の表示文字列を返す                                       |
+//+------------------------------------------------------------------+
+string GetSuspended() {
+    if (CLOSE_TIME == OPEN_TIME) {
+        return "24時間監視";
+    }
+    else {
+        return StringFormat("中断時間 %s～%s", CLOSE_TIME, OPEN_TIME);
+    }
+}

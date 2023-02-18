@@ -23,8 +23,8 @@ enum ENUM_WATCHSTATUS {
     WATCHSTATUS_TRAILING_SHORT,
 };
 const string WatchStatusMessages[] = {
-    "エントリー中断中です(中断時間 %s～%s)",
-    "エントリー監視中です(中断時間 %s～%s)",
+    "エントリー中断中です(%s)",
+    "エントリー監視中です(%s)",
     "ロングポジション決済監視中です",
     "ショートポジション決済監視中です",
 };
@@ -261,7 +261,7 @@ void UpdatePanel() {
             enable_entry = ENABLE_RE_ENTRY;
         }
         WatchStatus = watching ? WATCHSTATUS_ENTRY_WATCHING : WATCHSTATUS_ENTRY_WAITING;
-        WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], CLOSE_TIME, OPEN_TIME);
+        WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], GetSuspended());
     }
 
 #ifdef __DEBUG_INTERVAL
@@ -359,7 +359,7 @@ void UpdatePanel() {
     }
     LabelDispPositionType.SetText(__LINE__, position_status_message);
     LabelDispPositionType.SetTextColor(__LINE__, position_status_color);
-    LabelDispProfit.SetNumberValue(__LINE__, total_profit, 0);
+    LabelDispProfit.SetNumberValue(__LINE__, total_profit, currency_digits);
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
     LabelDispAskBidPrice.SetText(__LINE__, DoubleToString(ask, digits) + " / " + DoubleToString(bid, digits));
     if (buy_position_count == 0 && sell_position_count == 0) {
@@ -570,27 +570,3 @@ void RestoreSttlementButton() {
 int GetMagicNumber() {
     return MAGIC_NUMBER;
 }
-
-/*
-//+------------------------------------------------------------------+
-//| 指定マジックナンバーのポジション監視                             |
-//+------------------------------------------------------------------+
-void CheckMagicNumberPositions() {
-    ulong magic_number = GetMagicNumber();
-    double profit = GetMagicNumberProfit();
-    if (profit <= -STOP_LOSS) {
-        SendOrderCloseAll();
-        WatchStatus = WATCHSTATUS_STOPLOSS;
-        SettlementTime = TimeCurrent();
-        WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], TimeToString(SettlementTime));
-        UpdatePanel();
-    }
-    else if (+TAKE_PROFIT <= profit) {
-        SendOrderCloseAll();
-        WatchStatus = WATCHSTATUS_TAKEPROFIT;
-        SettlementTime = TimeCurrent();
-        WatchStatusMessage = StringFormat(WatchStatusMessages[WatchStatus], TimeToString(SettlementTime));
-        UpdatePanel();
-   }
-}
-*/
