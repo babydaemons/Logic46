@@ -66,6 +66,21 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
 }
 
 //+------------------------------------------------------------------+
+//| 抑制するエラーかチェックする                                     |
+//+------------------------------------------------------------------+
+bool IsSuppressError(int error) {
+    switch (error) {
+    case 132:
+        return true; // "market is closed";
+    case 133:
+        return true; // "trade is disabled";
+    case 134:
+        return true; // "not enough money";
+    }
+    return false;
+}
+
+//+------------------------------------------------------------------+
 //| 買いストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
 int OrderBuyEntry(double buy_entry, double sl, double tp) {
@@ -74,7 +89,19 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
         if (ticket != -1) {
             return ticket;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription()));
+        int error = GetLastError();
+        if (IsSuppressError(error)) {
+            return 0;
+        }
+        switch (error) {
+        case 4109:
+            enable_entry_type &= ~ENTRY_TYPE_BOTH_LONG_SHORT; // "trade is not allowed in the expert properties";
+            return 0;
+        case 4110:
+            enable_entry_type &= ~ENTRY_TYPE_LONG_ONLY; // "longs are not allowed in the expert properties";
+            return 0;
+        }
+        Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
         Sleep(i * 100);
     }
     return 0;
@@ -89,7 +116,19 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
         if (ticket != -1) {
             return ticket;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription()));
+        int error = GetLastError();
+        if (IsSuppressError(error)) {
+            return 0;
+        }
+        switch (error) {
+        case 4109:
+            enable_entry_type &= ~ENTRY_TYPE_BOTH_LONG_SHORT; // "trade is not allowed in the expert properties";
+            return 0;
+        case 4111:
+            enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY; // "shorts are not allowed in the expert properties";
+            return 0;
+        }
+        Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
         Sleep(i * 100);
     }
     return 0;

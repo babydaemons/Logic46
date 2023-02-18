@@ -287,10 +287,12 @@ void UpdatePanel() {
     if (enable_entry) {
         if (watching && buy_ticket == 0 && sell_position_count == 0) {
             GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
-            if (enable_order) {
+            if (enable_order && (enable_entry_type & ENTRY_TYPE_LONG_ONLY) != 0) {
                 buy_ticket = OrderBuyEntry(buy_entry, sl, tp);
+                if (buy_ticket > 0) {
+                    last_order_modified = now;
+                }
             }
-            last_order_modified = now;
         } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
             DeleteOrderAll();
             GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
@@ -316,10 +318,12 @@ void UpdatePanel() {
     if (enable_entry) {
         if (watching && sell_ticket == 0 && buy_position_count == 0) {
             GetSellEntry(bid, point, digits, sell_entry, sl, tp);
-            if (enable_order) {
+            if (enable_order && (enable_entry_type & ENTRY_TYPE_SHORT_ONLY) != 0) {
                 sell_ticket = OrderSellEntry(sell_entry, sl, tp);
+                if (sell_ticket > 0) {
+                    last_order_modified = now;
+                }
             }
-            last_order_modified = now;
         } else if (!watching && buy_ticket == 0 && sell_position_count == 0) {
             DeleteOrderAll();
             GetSellEntry(bid, point, digits, sell_entry, sl, tp);
@@ -359,7 +363,7 @@ void UpdatePanel() {
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
     LabelDispAskBidPrice.SetText(__LINE__, DoubleToString(ask, digits) + " / " + DoubleToString(bid, digits));
     if (buy_position_count == 0 && sell_position_count == 0) {
-        if (enable_entry && buy_entry > 0) {
+        if (enable_entry && (enable_entry_type & ENTRY_TYPE_LONG_ONLY) != 0 && buy_entry > 0) {
             LabelDispLongEntryPrice.SetText(__LINE__, StringFormat("%s (%+.0fポイント)", DoubleToString(buy_entry, digits), NormalizeDouble((buy_entry - ask) / point, 0)));
             LabelDispLongEntryPrice.SetTextColor(__LINE__, clrCyan);
         }
@@ -367,7 +371,7 @@ void UpdatePanel() {
             LabelDispLongEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
             LabelDispLongEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
         }
-        if (enable_entry && sell_entry > 0) {
+        if (enable_entry && (enable_entry_type & ENTRY_TYPE_SHORT_ONLY) != 0 && sell_entry > 0) {
             LabelDispShortEntryPrice.SetText(__LINE__, StringFormat("%s (%+.0fポイント)", DoubleToString(sell_entry, digits), NormalizeDouble((sell_entry - bid) / point, 0)));
             LabelDispShortEntryPrice.SetTextColor(__LINE__, clrCyan);
         }

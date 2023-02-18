@@ -93,6 +93,21 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digits) {
 }
 
 //+------------------------------------------------------------------+
+//| 抑制するエラーかチェックする                                     |
+//+------------------------------------------------------------------+
+bool IsSuppressError() {
+    switch (trader.ResultRetcode()) {
+    case TRADE_RETCODE_TRADE_DISABLED:
+        return true; // "trade disabled";
+    case TRADE_RETCODE_MARKET_CLOSED:
+        return true; // "market closed";
+    case TRADE_RETCODE_NO_MONEY:
+        return true; // "not enough money";
+    }
+    return false;
+}
+
+//+------------------------------------------------------------------+
 //| 買いストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
 int OrderBuyEntry(double buy_entry, double sl, double tp) {
@@ -101,6 +116,9 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
     for (int i = 1; i <= 10; ++i) {
         if (trader.BuyStop(LOTS, buy_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
+        }
+        if (IsSuppressError()) {
+            return 0;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
@@ -117,6 +135,9 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
     for (int i = 1; i <= 10; ++i) {
         if (trader.SellStop(LOTS, sell_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
+        }
+        if (IsSuppressError()) {
+            return 0;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);

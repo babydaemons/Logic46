@@ -12,7 +12,7 @@ long OpenTime;
 
 const long TIME_ROUND = 24 * 60 * 60;
 
-datetime LastChecked;
+uint enable_entry_type;
 
 #ifdef __MQL5__
 int hStdDev;
@@ -33,7 +33,9 @@ int OnInit() {
     }
 
 #ifdef __MQL5__
-    hStdDev = iStdDev(Symbol(), PERIOD_M1, STDDEV_MINUTES, 0, MODE_SMA, PRICE_CLOSE);
+    if (PRICE_TYPE == PRICE_TYPE_STDDEV) {
+        hStdDev = iStdDev(Symbol(), PERIOD_M1, STDDEV_MINUTES, 0, MODE_SMA, PRICE_CLOSE);
+    }
 #endif
 
     if (Reason != REASON_CHARTCHANGE && Reason != REASON_PARAMETERS) {
@@ -44,6 +46,8 @@ int OnInit() {
     }
 
     EventSetTimer(1);
+
+    enable_entry_type = ENTRY_TYPE;
 
     return INIT_SUCCEEDED;
 }
