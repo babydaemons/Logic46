@@ -302,7 +302,7 @@ void UpdatePanel() {
             }
         } else if (now > next_trailing && buy_ticket != 0 && buy_position_count > 0) {
             GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
-            if (TrailingStopBuyPosition(buy_ticket, position_stop_loss)) {
+            if (TRAILING_STOP_ENABLE && TrailingStopBuyPosition(buy_ticket, position_stop_loss)) {
                 last_order_modified = now;
             }
         }
@@ -331,7 +331,7 @@ void UpdatePanel() {
             }
         } else if (now > next_trailing && sell_ticket != 0 && sell_position_count > 0) {
             GetSellEntry(bid, point, digits, sell_entry, sl, tp);
-            if (TrailingStopSellPosition(sell_ticket, position_stop_loss)) {
+            if (TRAILING_STOP_ENABLE && TrailingStopSellPosition(sell_ticket, position_stop_loss)) {
                 last_order_modified = now;
             }
         }
