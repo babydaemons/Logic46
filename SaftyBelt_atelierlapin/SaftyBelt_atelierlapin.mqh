@@ -10,6 +10,7 @@
 
 const int STDDEV_MINUTES = 5 * 1440;
 const string EXPERT_NAME = "SaftyBelt_atelierlapin";
+const int ORDER_RETRY_COUNT = 60;
 
 enum ENUM_PRICE_TYPE {
     PRICE_TYPE_POINT, // ポイント(最小価格単位)

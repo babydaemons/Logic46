@@ -84,7 +84,7 @@ bool IsSuppressError(int error) {
 //| 買いストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
 int OrderBuyEntry(double buy_entry, double sl, double tp) {
-    for (int i = 1; i <= 10; ++i) {
+    for (int count = 1; count <= ORDER_RETRY_COUNT; ++count) {
         int ticket = OrderSend(Symbol(), OP_BUYSTOP, LOTS, buy_entry, SLIPPAGE, sl, tp, EXPERT_NAME, MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
             return ticket;
@@ -102,7 +102,7 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
             return 0;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
-        Sleep(i * 100);
+        Sleep(count * 100);
     }
     return 0;
 }
@@ -111,7 +111,7 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
 //| 売りストップ待機注文を出す                                       |
 //+------------------------------------------------------------------+
 int OrderSellEntry(double sell_entry, double sl, double tp) {
-    for (int i = 1; i <= 10; ++i) {
+    for (int count = 1; count <= ORDER_RETRY_COUNT; ++count) {
         int ticket = OrderSend(Symbol(), OP_SELLSTOP, LOTS, sell_entry, SLIPPAGE, sl, tp, EXPERT_NAME, MAGIC_NUMBER, 0, clrNONE);
         if (ticket != -1) {
             return ticket;
@@ -129,7 +129,7 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
             return 0;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
-        Sleep(i * 100);
+        Sleep(count * 100);
     }
     return 0;
 }
@@ -142,15 +142,19 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
         return true;
     }
 
-    for (int i = 1; i <= 10; ++i) {
+    for (int count = 1; count <= ORDER_RETRY_COUNT; ++count) {
         bool suceed = OrderModify(buy_ticket, buy_entry, sl, tp, 0, clrNONE);
         if (suceed) {
             prev_buy_ticket = buy_ticket;
             prev_buy_entry = buy_entry;
             return true;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription()));
-        Sleep(i * 100);
+        int error = GetLastError();
+        if (IsSuppressError(error)) {
+            return true;
+        }
+        Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+        Sleep(count * 100);
     }
     return false;
 }
@@ -163,15 +167,19 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
         return true;
     }
 
-    for (int i = 1; i <= 10; ++i) {
+    for (int count = 1; count <= ORDER_RETRY_COUNT; ++count) {
         bool suceed = OrderModify(sell_ticket, sell_entry, sl, tp, 0, clrNONE);
         if (suceed) {
             prev_sell_ticket = sell_ticket;
             prev_sell_entry = sell_entry;
             return true;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription()));
-        Sleep(i * 100);
+        int error = GetLastError();
+        if (IsSuppressError(error)) {
+            return true;
+        }
+        Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+        Sleep(count * 100);
     }
     return false;
 }
@@ -329,8 +337,8 @@ void ClosePositionAll() {
         double lots = OrderLots();
         int type = OrderType();
         double price = MarketInfo(symbol, type == OP_BUY ? MODE_BID : MODE_ASK);
-        for (int count = 1; count <= 10; ++count) {
-            bool succed = OrderClose(ticket, lots, 10, clrNONE);
+        for (int count = 1; count <= ORDER_RETRY_COUNT; ++count) {
+            bool succed = OrderClose(ticket, lots, price, SLIPPAGE, clrNONE);
             if (succed) {
                 break;
             }
