@@ -95,7 +95,7 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
         }
         switch (error) {
         case 4109:
-            enable_entry_type &= ~ENTRY_TYPE_BOTH_LONG_SHORT; // "trade is not allowed in the expert properties";
+            Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
             return 0;
         case 4110:
             enable_entry_type &= ~ENTRY_TYPE_LONG_ONLY; // "longs are not allowed in the expert properties";
@@ -122,7 +122,7 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
         }
         switch (error) {
         case 4109:
-            enable_entry_type &= ~ENTRY_TYPE_BOTH_LONG_SHORT; // "trade is not allowed in the expert properties";
+            Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
             return 0;
         case 4111:
             enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY; // "shorts are not allowed in the expert properties";
@@ -153,6 +153,14 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
         if (IsSuppressError(error)) {
             return true;
         }
+        switch (error) {
+        case 4109:
+            Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+            return true;
+        case 4111:
+            enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY; // "shorts are not allowed in the expert properties";
+            return true;
+        }
         Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
         Sleep(count * 100);
     }
@@ -176,6 +184,14 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
         }
         int error = GetLastError();
         if (IsSuppressError(error)) {
+            return true;
+        }
+        switch (error) {
+        case 4109:
+            Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+            return true;
+        case 4111:
+            enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY; // "shorts are not allowed in the expert properties";
             return true;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
