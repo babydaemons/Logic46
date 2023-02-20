@@ -49,7 +49,6 @@ LabelObject LabelPositionStopLossPrice(__LINE__, "発注中決済価格");
 LabelObject LabelPrevUpdateTime(__LINE__, "逆指値前回更新時刻");
 LabelObject LabelUpdateInterval(__LINE__, "更新時間間隔");
 LabelObject LabelNextUpdateTime(__LINE__, "次回の逆指値更新まで");
-LabelObject LabelMailAdress(__LINE__, "送信先メールアドレス");
 LabelObject LabelWatchStatus(__LINE__, "ポジション監視状態");
 LabelObject LabelEnableOrder(__LINE__, "クイック決済ボタン表示");
 LabelObject LabelDispSymbol(__LINE__, " ");
@@ -64,7 +63,6 @@ LabelObject LabelDispPositionStopLossPrice(__LINE__, "    　");
 LabelObject LabelDispPrevUpdateTime(__LINE__, "　　   ");
 LabelObject LabelDispUpdateInterval(__LINE__, " 　　  ");
 LabelObject LabelDispNextUpdateTime(__LINE__, "  　　 ");
-LabelObject LabelDispMailAdress(__LINE__, "   　　");
 LabelObject LabelDispWatchStatus(__LINE__, "　　");
 CheckboxObject CheckboxEnableSettlement(__LINE__, "　", false);
 ButtonObject ButtonSettlement(__LINE__, "マジックナンバー全決済");
@@ -130,8 +128,6 @@ void InitPanel() {
     y10 += size_y10;
     LabelNextUpdateTime.Initialize(__LINE__, x10, y10, size_x10, size_y10);
     y10 += size_y10;
-    LabelMailAdress.Initialize(__LINE__, x10, y10, size_x10, size_y10);
-    y10 += size_y10;
     LabelWatchStatus.Initialize(__LINE__, x10, y10, size_x10, size_y10);
 
     LabelDispSymbol.Initialize(__LINE__, x20, y20, size_x20, size_y20);
@@ -155,8 +151,6 @@ void InitPanel() {
     LabelDispUpdateInterval.Initialize(__LINE__, x20, y20, size_x20, size_y20);
     y20 += size_y20;
     LabelDispNextUpdateTime.Initialize(__LINE__, x20, y20, size_x20, size_y20);
-    y20 += size_y20;
-    LabelDispMailAdress.Initialize(__LINE__, x20, y20, size_x20, size_y20);
     y20 += size_y20;
     LabelDispWatchStatus.Initialize(__LINE__, x20, y20, size_x20, size_y20);
 
@@ -430,9 +424,6 @@ void UpdatePanel() {
         }
     }
 
-    LabelDispMailAdress.SetText(__LINE__, MAIL_TO_ADDRESS);
-    LabelDispMailAdress.SetTextColor(__LINE__, MAIL_ENABLED ? clrCyan : TextObject::NONE_COLOR);
-
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
         DispSettlementButton();
     } else {
@@ -459,7 +450,6 @@ void RemovePanel() {
     LabelPrevUpdateTime.Remove(__LINE__);
     LabelUpdateInterval.Remove(__LINE__);
     LabelNextUpdateTime.Remove(__LINE__);
-    LabelMailAdress.Remove(__LINE__);
     LabelWatchStatus.Remove(__LINE__);
     LabelEnableOrder.Remove(__LINE__);
     LabelDispSymbol.Remove(__LINE__);
@@ -473,7 +463,6 @@ void RemovePanel() {
     LabelDispPrevUpdateTime.Remove(__LINE__);
     LabelDispUpdateInterval.Remove(__LINE__);
     LabelDispNextUpdateTime.Remove(__LINE__);
-    LabelDispMailAdress.Remove(__LINE__);
     LabelDispWatchStatus.Remove(__LINE__);
     CheckboxEnableSettlement.Remove(__LINE__);
     ButtonSettlement.Remove(__LINE__);
