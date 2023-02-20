@@ -18,9 +18,9 @@ enum ENUM_PRICE_TYPE {
 };
 
 enum ENUM_ENTRY_TYPE {
-    ENTRY_TYPE_LONG_ONLY = 1, // ロングのみ許可
-    ENTRY_TYPE_SHORT_ONLY = 2, // ショートのみ許可
-    ENTRY_TYPE_BOTH_LONG_SHORT = 3, // ロング・ショート両方とも許可
+    ENTRY_TYPE_LONG_ONLY = 1, // Only Long
+    ENTRY_TYPE_SHORT_ONLY = 2, // Only Short
+    ENTRY_TYPE_BOTH_LONG_SHORT = 3, // Long & Short
 };
 
 sinput string DUMMY00 = "";                                     // 発注設定
