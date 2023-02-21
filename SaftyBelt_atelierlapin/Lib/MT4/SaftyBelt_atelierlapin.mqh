@@ -217,8 +217,14 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
     }
 
     if (OrderStopLoss() < sl) {
-        position_stop_loss = sl;
-        return OrderModify(buy_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE);
+        if (OrderModify(buy_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE)) {
+            position_stop_loss = sl;
+            ++trailing_count;
+            return true;
+        }
+        else {
+            return false;
+        }
     }
     return true;
 }
@@ -240,8 +246,14 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
     }
 
     if (OrderStopLoss() > sl) {
-        position_stop_loss = sl;
-        return OrderModify(sell_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE);
+        if (OrderModify(sell_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE)) {
+            position_stop_loss = sl;
+            ++trailing_count;
+            return true;
+        }
+        else {
+            return false;
+        }
     }
     return true;
 }

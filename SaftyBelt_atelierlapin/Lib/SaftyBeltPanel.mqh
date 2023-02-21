@@ -222,8 +222,11 @@ void UpdatePanel() {
     }
 
     if (buy_position_count > 0) {
-        if (MAIL_ENABLED && WatchStatus != WATCHSTATUS_TRAILING_LONG) {
-            SendMailEntry(buy_ticket);
+        if (WatchStatus != WATCHSTATUS_TRAILING_LONG) {
+            trailing_count = 1;
+            if (MAIL_ENABLED) {
+                SendMailEntry(buy_ticket);
+            }
         }
         WatchStatus = WATCHSTATUS_TRAILING_LONG;
         WatchStatusMessage = WatchStatusMessages[WatchStatus];
@@ -232,8 +235,11 @@ void UpdatePanel() {
         last_position_type = +1;
     }
     if (sell_position_count > 0) {
-        if (MAIL_ENABLED && WatchStatus != WATCHSTATUS_TRAILING_SHORT) {
-            SendMailEntry(sell_ticket);
+        if (WatchStatus != WATCHSTATUS_TRAILING_SHORT) {
+            trailing_count = 1;
+            if (MAIL_ENABLED) {
+                SendMailEntry(sell_ticket);
+            }
         }
         WatchStatus = WATCHSTATUS_TRAILING_SHORT;
         WatchStatusMessage = WatchStatusMessages[WatchStatus];

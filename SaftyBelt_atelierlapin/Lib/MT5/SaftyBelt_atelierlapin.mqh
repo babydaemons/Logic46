@@ -204,8 +204,14 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
     }
 
     if (PositionGetDouble(POSITION_SL) < sl) {
-        position_stop_loss = sl;
-        return trader.PositionModify(buy_ticket, sl, PositionGetDouble(POSITION_TP));
+        if (trader.PositionModify(buy_ticket, sl, PositionGetDouble(POSITION_TP))) {
+            position_stop_loss = sl;
+            ++trailing_count;
+            return true;
+        }
+        else {
+            return false;
+        }
     }
     return true;
 }
@@ -227,8 +233,14 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
     }
 
     if (PositionGetDouble(POSITION_SL) > sl) {
-        position_stop_loss = sl;
-        return trader.PositionModify(sell_ticket, sl, PositionGetDouble(POSITION_TP));
+        if (trader.PositionModify(sell_ticket, sl, PositionGetDouble(POSITION_TP))) {
+            position_stop_loss = sl;
+            ++trailing_count;
+            return true;
+        }
+        else {
+            return false;
+        }
     }
     return true;
 }

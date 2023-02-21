@@ -14,6 +14,7 @@ const long TIME_ROUND = 24 * 60 * 60;
 
 uint enable_entry_type;
 int currency_digits;
+int trailing_count;
 
 #ifdef __MQL5__
 int hStdDev;
@@ -171,27 +172,27 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
     double profit_point = profit_price / point;
 
     if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        if (profit_point < TRAILING_STOP) {
+        if (profit_point < trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price - TRAILING_STOP * point, digits);
+        sl = NormalizeDouble(current_price - TRAILING_STOP_LOSS * point, digits);
     }
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         double profit_percentage = profit_point / entry_price;
-        if (profit_percentage < TRAILING_STOP) {
+        if (profit_percentage < trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price - (0.01 * TRAILING_STOP * entry_price), digits);
+        sl = NormalizeDouble(current_price - (0.01 * TRAILING_STOP_LOSS * entry_price), digits);
     }
     else {
         if (stddev == 0) {
             return false;
         }
         double profit_deviation = profit_point / stddev;
-        if (profit_deviation < TRAILING_STOP) {
+        if (profit_deviation < trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price - TRAILING_STOP * stddev, digits);
+        sl = NormalizeDouble(current_price - TRAILING_STOP_LOSS * stddev, digits);
     }
 
     return true;
@@ -209,27 +210,27 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
     double profit_point = profit_price / point;
 
     if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        if (profit_point < TRAILING_STOP) {
+        if (profit_point < trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price + TRAILING_STOP * point, digits);
+        sl = NormalizeDouble(current_price + TRAILING_STOP_LOSS * point, digits);
     }
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         double profit_percentage = profit_point / entry_price;
-        if (profit_percentage < TRAILING_STOP) {
+        if (profit_percentage < trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price + (0.01 * TRAILING_STOP * entry_price), digits);
+        sl = NormalizeDouble(current_price + (0.01 * TRAILING_STOP_LOSS * entry_price), digits);
     }
     else {
         if (stddev == 0) {
             return false;
         }
         double profit_deviation = profit_point / stddev;
-        if (profit_deviation < TRAILING_STOP) {
+        if (profit_deviation < trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price + TRAILING_STOP * stddev, digits);
+        sl = NormalizeDouble(current_price + TRAILING_STOP_LOSS * stddev, digits);
     }
 
     return true;
