@@ -149,7 +149,7 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
 //| 買いストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
 bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
-    if (prev_buy_ticket == buy_ticket && prev_buy_entry == buy_entry) {
+    if (prev_buy_ticket == buy_ticket && prev_buy_entry == buy_entry && prev_buy_sl == sl && prev_buy_tp == tp) {
         return true;
     }
 
@@ -158,6 +158,8 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
         if (suceed) {
             prev_buy_ticket = buy_ticket;
             prev_buy_entry = buy_entry;
+            prev_buy_sl = sl;
+            prev_buy_tp = tp;
             return true;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription()));
@@ -170,7 +172,7 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
 //| 売りストップ待機注文を修正する                                   |
 //+------------------------------------------------------------------+
 bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
-    if (prev_sell_ticket == sell_ticket && prev_sell_entry == sell_entry) {
+    if (prev_sell_ticket == sell_ticket && prev_sell_entry == sell_entry && prev_sell_sl == sl && prev_sell_tp == tp) {
         return true;
     }
 
@@ -179,6 +181,8 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
         if (suceed) {
             prev_sell_ticket = sell_ticket;
             prev_sell_entry = sell_entry;
+            prev_sell_sl = sl;
+            prev_sell_tp = tp;
             return true;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription()));

@@ -181,8 +181,12 @@ double last_position_profit;
 int last_position_type;
 int prev_buy_ticket;
 double prev_buy_entry;
+double prev_buy_sl;
+double prev_buy_tp;
 int prev_sell_ticket;
 double prev_sell_entry;
+double prev_sell_sl;
+double prev_sell_tp;
 double stddev;
 
 //+------------------------------------------------------------------+
