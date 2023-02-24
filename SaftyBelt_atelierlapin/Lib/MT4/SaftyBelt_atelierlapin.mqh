@@ -207,22 +207,27 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
 //+------------------------------------------------------------------+
 //| 買いポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
+bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double& position_take_profit) {
     if (!OrderSelect(buy_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         return false;
     }
 
     position_stop_loss = OrderStopLoss();
+    position_take_profit = OrderTakeProfit();
     prev_buy_ticket = buy_ticket;
 
     double sl = 0;
-    if (!DoTrailingStopBuyPosition(OrderOpenPrice(), OrderClosePrice(), Point(), Digits, sl)) {
+    double tp = 0;
+    double entry_price = OrderOpenPrice();
+    double current_price = OrderClosePrice();
+    if (!DoTrailingStopBuyPosition(entry_price, current_price, Point(), Digits, sl, tp)) {
         return true;
     }
 
-    if (OrderStopLoss() < sl) {
-        if (OrderModify(buy_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE)) {
+    if (current_price > sl && position_stop_loss < sl) {
+        if (OrderModify(buy_ticket, current_price, sl, tp, 0, clrNONE)) {
             position_stop_loss = sl;
+            position_take_profit = tp;
             ++trailing_count;
             return true;
         }
@@ -236,22 +241,27 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss) {
 //+------------------------------------------------------------------+
 //| 売りポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss) {
+bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, double& position_take_profit) {
     if (!OrderSelect(sell_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         return false;
     }
 
     position_stop_loss = OrderStopLoss();
+    position_take_profit = OrderTakeProfit();
     prev_sell_ticket = sell_ticket;
 
     double sl = 0;
-    if (!DoTrailingStopSellPosition(OrderOpenPrice(), OrderClosePrice(), Point(), Digits, sl)) {
+    double tp = 0;
+    double entry_price = OrderOpenPrice();
+    double current_price = OrderClosePrice();
+    if (!DoTrailingStopSellPosition(entry_price, current_price, Point(), Digits, sl, tp)) {
         return true;
     }
 
-    if (OrderStopLoss() > sl) {
-        if (OrderModify(sell_ticket, OrderClosePrice(), sl, OrderTakeProfit(), 0, clrNONE)) {
+    if (current_price < sl && position_stop_loss > sl) {
+        if (OrderModify(sell_ticket, current_price, sl, tp, 0, clrNONE)) {
             position_stop_loss = sl;
+            position_take_profit = tp;
             ++trailing_count;
             return true;
         }

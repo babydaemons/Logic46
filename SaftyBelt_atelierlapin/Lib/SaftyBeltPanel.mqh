@@ -287,7 +287,6 @@ void UpdatePanel() {
     static double sell_entry = 0;
     static double sl = 0;
     static double tp = 0;
-    static double position_stop_loss = 0;
     if (enable_entry) {
         if (watching && buy_ticket == 0 && sell_position_count == 0) {
             GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
@@ -307,8 +306,7 @@ void UpdatePanel() {
                 last_order_modified = now;
             }
         } else if (now > next_trailing && buy_ticket != 0 && buy_position_count > 0) {
-            GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
-            if (TRAILING_STOP_ENABLE && TrailingStopBuyPosition(buy_ticket, position_stop_loss)) {
+            if (TRAILING_STOP_ENABLE && TrailingStopBuyPosition(buy_ticket, sl, tp)) {
                 last_order_modified = now;
             }
         }
@@ -338,8 +336,7 @@ void UpdatePanel() {
                 last_order_modified = now;
             }
         } else if (now > next_trailing && sell_ticket != 0 && sell_position_count > 0) {
-            GetSellEntry(bid, point, digits, sell_entry, sl, tp);
-            if (TRAILING_STOP_ENABLE && TrailingStopSellPosition(sell_ticket, position_stop_loss)) {
+            if (TRAILING_STOP_ENABLE && TrailingStopSellPosition(sell_ticket, sl, tp)) {
                 last_order_modified = now;
             }
         }
@@ -399,7 +396,7 @@ void UpdatePanel() {
         LabelDispLongEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
         LabelDispShortEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
         LabelDispShortEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        LabelDispPositionStopLossPrice.SetText(__LINE__, DoubleToString(position_stop_loss, digits));
+        LabelDispPositionStopLossPrice.SetText(__LINE__, DoubleToString(sl, digits));
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, clrCyan);
         LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
         LabelDispWatchStatus.SetTextColor(__LINE__, clrMagenta);
@@ -410,8 +407,15 @@ void UpdatePanel() {
         int interval = buy_position_count == 0 && sell_position_count == 0 ? ORDER_MODIFY_INTERVAL_SECONDS : TRAILING_STOP_INTERVAL_SECONDS;
         LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)interval));
         LabelDispUpdateInterval.SetTextColor(__LINE__, clrCyan);
-        if (enable_order) {
-            LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((last_order_modified + interval) - now));
+        if (enable_order && last_order_modified > 0) {
+            long next_update = ((long)last_order_modified + interval) - (long)now;
+            if (next_update < -1) {
+                DebugBreak();
+            }
+            if (next_update < 0) {
+                next_update = 0;
+            }
+            LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((long)next_update));
             LabelDispNextUpdateTime.SetTextColor(__LINE__, clrCyan);
         } else {
             LabelDispNextUpdateTime.SetText(__LINE__, TextObject::NONE_TEXT);
@@ -419,11 +423,18 @@ void UpdatePanel() {
         }
     }
     else {
-        if (enable_entry && buy_position_count == 0 && sell_position_count == 0) {
+        if (enable_entry && last_order_modified > 0 && buy_position_count == 0 && sell_position_count == 0) {
             const int interval = ORDER_MODIFY_INTERVAL_SECONDS;
+            long next_update = ((long)last_order_modified + interval) - (long)now;
+            if (next_update < -1) {
+                DebugBreak();
+            }
+            if (next_update < 0) {
+                next_update = 0;
+            }
             LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)interval));
             LabelDispUpdateInterval.SetTextColor(__LINE__, clrCyan);
-            LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((last_order_modified + interval) - now));
+            LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((long)next_update));
             LabelDispNextUpdateTime.SetTextColor(__LINE__, clrCyan);
         }
         else {

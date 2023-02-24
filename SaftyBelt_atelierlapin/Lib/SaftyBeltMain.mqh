@@ -34,6 +34,47 @@ int OnInit() {
         return INIT_PARAMETERS_INCORRECT;
     }
 
+    if (ORDER_MODIFY_INTERVAL_SECONDS <= 0) {
+        MessageBox("「逆指値更新間隔(秒)」はゼロより大きい秒数を指定してください。\n→パラメータ入力：" + IntegerToString(ORDER_MODIFY_INTERVAL_SECONDS));
+        return INIT_PARAMETERS_INCORRECT;
+    }
+
+    if (TRAILING_STOP_INTERVAL_SECONDS <= 0) {
+        MessageBox("「トレーリングストップ更新間隔(秒)」はゼロより大きい秒数を指定してください。\n→パラメータ入力：" + IntegerToString(TRAILING_STOP_INTERVAL_SECONDS));
+        return INIT_PARAMETERS_INCORRECT;
+    }
+
+    if (RE_ENTRY_DISABLE_MINUTES <= 0) {
+        MessageBox("「再エントリー禁止時間(分)」はゼロより大きい秒数を指定してください。\n→パラメータ入力：" + IntegerToString(RE_ENTRY_DISABLE_MINUTES));
+        return INIT_PARAMETERS_INCORRECT;
+    }
+
+    if (ENTRY_WIDTH <= 0) {
+        MessageBox("「逆指値注文価格幅」はゼロより大きい値を指定してください。\n→パラメータ入力：" + DoubleToString(ENTRY_WIDTH, 2));
+        return INIT_PARAMETERS_INCORRECT;
+    }
+
+    if (TAKE_PROFIT <= 0) {
+        MessageBox("「利確価格幅」はゼロより大きい値を指定してください。\n→パラメータ入力：" + DoubleToString(TAKE_PROFIT, 2));
+        return INIT_PARAMETERS_INCORRECT;
+    }
+
+    if (STOP_LOSS <= 0) {
+        MessageBox("「損切価格幅」はゼロより大きい値を指定してください。\n→パラメータ入力：" + DoubleToString(STOP_LOSS, 2));
+        return INIT_PARAMETERS_INCORRECT;
+    }
+
+    if (TRAILING_STOP_ENABLE) {
+        if (TRAILING_STOP_LOSS <= 0) {
+            MessageBox("「トレーリングストップ損切価格幅」はゼロより大きい値を指定してください。\n→パラメータ入力：" + DoubleToString(TRAILING_STOP_LOSS, 2));
+            return INIT_PARAMETERS_INCORRECT;
+        }
+        if (TRAILING_TYPE != TRAILING_TYPE_WITHOUT_TP && TRAILING_TAKE_PROFIT <= 0) {
+            MessageBox("「トレーリングストップ利確価格幅」はゼロより大きい値を指定してください。\n→パラメータ入力：" + DoubleToString(TRAILING_TAKE_PROFIT, 2));
+            return INIT_PARAMETERS_INCORRECT;
+        }
+    }
+
 #ifdef __MQL5__
     if (PRICE_TYPE == PRICE_TYPE_STDDEV) {
         hStdDev = iStdDev(Symbol(), PERIOD_M1, STDDEV_MINUTES, 0, MODE_SMA, PRICE_CLOSE);
@@ -118,7 +159,7 @@ void GetBuyEntry(double ask, double point, int digits, double& buy_entry, double
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         buy_entry = NormalizeDouble(ask * (1.00 + 0.01 * ENTRY_WIDTH), digits);
         sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), digits);
-        tp = NormalizeDouble(buy_entry + (1.00 + 0.01 * TAKE_PROFIT), digits);
+        tp = NormalizeDouble(buy_entry * (1.00 + 0.01 * TAKE_PROFIT), digits);
     }
     else {
         buy_entry = NormalizeDouble(ask + ENTRY_WIDTH * stddev, digits);
@@ -145,7 +186,7 @@ void GetSellEntry(double bid, double point, int digits, double& sell_entry, doub
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         sell_entry = NormalizeDouble(bid * (1.00 - 0.01 * ENTRY_WIDTH), digits);
         sl = NormalizeDouble(sell_entry * (1.00 + 0.01 * STOP_LOSS), digits);
-        tp = NormalizeDouble(sell_entry + (1.00 - 0.01 * TAKE_PROFIT), digits);
+        tp = NormalizeDouble(sell_entry * (1.00 - 0.01 * TAKE_PROFIT), digits);
     }
     else {
         sell_entry = NormalizeDouble(bid - ENTRY_WIDTH * stddev, digits);
@@ -163,36 +204,39 @@ void GetSellEntry(double bid, double point, int digits, double& sell_entry, doub
 //+------------------------------------------------------------------+
 //| 買いポジションのトレーリングストップを実行するか判断する         |
 //+------------------------------------------------------------------+
-bool DoTrailingStopBuyPosition(double entry_price, double current_price, double point, int digits, double& sl) {
+bool DoTrailingStopBuyPosition(double entry_price, double current_price, double point, int digits, double& sl, double& tp) {
     if (!TRAILING_STOP_ENABLE) {
         return false;
     }
 
     double profit_price = current_price - entry_price;
-    double profit_point = profit_price / point;
-
+    int next_trailing_count = trailing_count + 1;
     if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        if (profit_point < trailing_count * TRAILING_STOP_LOSS) {
+        double profit_point = profit_price / point;
+        if (profit_point < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price - TRAILING_STOP_LOSS * point, digits);
+        sl = NormalizeDouble(entry_price + next_trailing_count * TRAILING_STOP_LOSS * point, digits);
+        tp = NormalizeDouble(entry_price + next_trailing_count * TRAILING_TAKE_PROFIT * point, digits);
     }
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
-        double profit_percentage = profit_point / entry_price;
-        if (profit_percentage < trailing_count * TRAILING_STOP_LOSS) {
+        double profit_percentage = 100 * profit_price / entry_price;
+        if (profit_percentage < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price - (0.01 * TRAILING_STOP_LOSS * entry_price), digits);
+        sl = NormalizeDouble(entry_price + (0.01 * next_trailing_count * TRAILING_STOP_LOSS * entry_price), digits);
+        tp = NormalizeDouble(entry_price + (0.01 * next_trailing_count * TRAILING_TAKE_PROFIT * entry_price), digits);
     }
     else {
         if (stddev == 0) {
             return false;
         }
-        double profit_deviation = profit_point / stddev;
-        if (profit_deviation < trailing_count * TRAILING_STOP_LOSS) {
+        double profit_deviation = profit_price / stddev;
+        if (profit_deviation < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price - TRAILING_STOP_LOSS * stddev, digits);
+        sl = NormalizeDouble(entry_price + next_trailing_count * TRAILING_STOP_LOSS * stddev, digits);
+        tp = NormalizeDouble(entry_price + next_trailing_count * TRAILING_TAKE_PROFIT * stddev, digits);
     }
 
     return true;
@@ -201,36 +245,39 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
 //+------------------------------------------------------------------+
 //| 売りポジションのトレーリングストップを実行するか判断する         |
 //+------------------------------------------------------------------+
-bool DoTrailingStopSellPosition(double entry_price, double current_price, double point, int digits, double& sl) {
+bool DoTrailingStopSellPosition(double entry_price, double current_price, double point, int digits, double& sl, double& tp) {
     if (!TRAILING_STOP_ENABLE) {
         return false;
     }
 
     double profit_price = entry_price - current_price;
-    double profit_point = profit_price / point;
-
+    int next_trailing_count = trailing_count + 1;
     if (PRICE_TYPE == PRICE_TYPE_POINT) {
-        if (profit_point < trailing_count * TRAILING_STOP_LOSS) {
+        double profit_point = profit_price / point;
+        if (profit_point < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price + TRAILING_STOP_LOSS * point, digits);
+        sl = NormalizeDouble(entry_price - next_trailing_count * TRAILING_STOP_LOSS * point, digits);
+        tp = NormalizeDouble(entry_price - next_trailing_count * TRAILING_TAKE_PROFIT * point, digits);
     }
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
-        double profit_percentage = profit_point / entry_price;
-        if (profit_percentage < trailing_count * TRAILING_STOP_LOSS) {
+        double profit_percentage = 100 * profit_price / entry_price;
+        if (profit_percentage < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price + (0.01 * TRAILING_STOP_LOSS * entry_price), digits);
+        sl = NormalizeDouble(entry_price - (0.01 * next_trailing_count * TRAILING_STOP_LOSS * entry_price), digits);
+        tp = NormalizeDouble(entry_price - (0.01 * next_trailing_count * TRAILING_TAKE_PROFIT * entry_price), digits);
     }
     else {
         if (stddev == 0) {
             return false;
         }
-        double profit_deviation = profit_point / stddev;
-        if (profit_deviation < trailing_count * TRAILING_STOP_LOSS) {
+        double profit_deviation = profit_price / stddev;
+        if (profit_deviation < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(current_price + TRAILING_STOP_LOSS * stddev, digits);
+        sl = NormalizeDouble(entry_price - next_trailing_count * TRAILING_STOP_LOSS * stddev, digits);
+        tp = NormalizeDouble(entry_price - next_trailing_count * TRAILING_TAKE_PROFIT * stddev, digits);
     }
 
     return true;
