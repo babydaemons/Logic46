@@ -217,8 +217,8 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
         if (profit_point < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(entry_price + next_trailing_count * TRAILING_STOP_LOSS * point, digits);
-        tp = NormalizeDouble(entry_price + next_trailing_count * TRAILING_TAKE_PROFIT * point, digits);
+        sl = NormalizeDouble(current_price - TRAILING_STOP_LOSS * point, digits);
+        tp = NormalizeDouble(current_price + TRAILING_TAKE_PROFIT * point, digits);
     }
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         double profit_percentage = 100 * profit_price / entry_price;
@@ -226,8 +226,8 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
         if (profit_percentage < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(entry_price + (0.01 * next_trailing_count * TRAILING_STOP_LOSS * entry_price), digits);
-        tp = NormalizeDouble(entry_price + (0.01 * next_trailing_count * TRAILING_TAKE_PROFIT * entry_price), digits);
+        sl = NormalizeDouble(current_price - (0.01 * TRAILING_STOP_LOSS * entry_price), digits);
+        tp = NormalizeDouble(current_price + (0.01 * TRAILING_TAKE_PROFIT * entry_price), digits);
     }
     else {
         if (stddev == 0) {
@@ -239,8 +239,8 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
         if (profit_deviation < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(entry_price + next_trailing_count * TRAILING_STOP_LOSS * stddev, digits);
-        tp = NormalizeDouble(entry_price + next_trailing_count * TRAILING_TAKE_PROFIT * stddev, digits);
+        sl = NormalizeDouble(current_price - TRAILING_STOP_LOSS * stddev, digits);
+        tp = NormalizeDouble(current_price + TRAILING_TAKE_PROFIT * stddev, digits);
     }
 
     return true;
@@ -262,8 +262,8 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
         if (profit_point < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(entry_price - next_trailing_count * TRAILING_STOP_LOSS * point, digits);
-        tp = NormalizeDouble(entry_price - next_trailing_count * TRAILING_TAKE_PROFIT * point, digits);
+        sl = NormalizeDouble(current_price + TRAILING_STOP_LOSS * point, digits);
+        tp = NormalizeDouble(current_price - TRAILING_TAKE_PROFIT * point, digits);
     }
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         double profit_percentage = 100 * profit_price / entry_price;
@@ -271,8 +271,8 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
         if (profit_percentage < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(entry_price - (0.01 * next_trailing_count * TRAILING_STOP_LOSS * entry_price), digits);
-        tp = NormalizeDouble(entry_price - (0.01 * next_trailing_count * TRAILING_TAKE_PROFIT * entry_price), digits);
+        sl = NormalizeDouble(current_price + (0.01 * TRAILING_STOP_LOSS * entry_price), digits);
+        tp = NormalizeDouble(current_price - (0.01 * TRAILING_TAKE_PROFIT * entry_price), digits);
     }
     else {
         if (stddev == 0) {
@@ -284,8 +284,8 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
         if (profit_deviation < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
-        sl = NormalizeDouble(entry_price - next_trailing_count * TRAILING_STOP_LOSS * stddev, digits);
-        tp = NormalizeDouble(entry_price - next_trailing_count * TRAILING_TAKE_PROFIT * stddev, digits);
+        sl = NormalizeDouble(current_price + TRAILING_STOP_LOSS * stddev, digits);
+        tp = NormalizeDouble(current_price - TRAILING_TAKE_PROFIT * stddev, digits);
     }
 
     return true;
