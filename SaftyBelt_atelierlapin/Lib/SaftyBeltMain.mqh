@@ -54,7 +54,7 @@ int OnInit() {
         return INIT_PARAMETERS_INCORRECT;
     }
 
-    if (TAKE_PROFIT <= 0) {
+    if (TRAILING_TYPE != TRAILING_TYPE_WITHOUT_TP && TAKE_PROFIT <= 0) {
         MessageBox("「利確価格幅」はゼロより大きい値を指定してください。\n→パラメータ入力：" + DoubleToString(TAKE_PROFIT, 2));
         return INIT_PARAMETERS_INCORRECT;
     }
@@ -169,7 +169,7 @@ void GetBuyEntry(double ask, double point, int digits, double& buy_entry, double
     if (STOP_LOSS == 0) {
         sl = 0;
     }
-    if (TAKE_PROFIT == 0) {
+    if (TAKE_PROFIT == 0 || TRAILING_TYPE == TRAILING_TYPE_WITHOUT_TP) {
         tp = 0;
     }
 }
@@ -196,7 +196,7 @@ void GetSellEntry(double bid, double point, int digits, double& sell_entry, doub
     if (STOP_LOSS == 0) {
         sl = 0;
     }
-    if (TAKE_PROFIT == 0) {
+    if (TAKE_PROFIT == 0 || TRAILING_TYPE == TRAILING_TYPE_WITHOUT_TP) {
         tp = 0;
     }
 }
@@ -243,6 +243,13 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
         tp = NormalizeDouble(current_price + TRAILING_TAKE_PROFIT * stddev, digits);
     }
 
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0 || TRAILING_TYPE == TRAILING_TYPE_WITHOUT_TP) {
+        tp = 0;
+    }
+
     return true;
 }
 
@@ -286,6 +293,13 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
         }
         sl = NormalizeDouble(current_price + TRAILING_STOP_LOSS * stddev, digits);
         tp = NormalizeDouble(current_price - TRAILING_TAKE_PROFIT * stddev, digits);
+    }
+
+    if (STOP_LOSS == 0) {
+        sl = 0;
+    }
+    if (TAKE_PROFIT == 0 || TRAILING_TYPE == TRAILING_TYPE_WITHOUT_TP) {
+        tp = 0;
     }
 
     return true;
