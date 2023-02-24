@@ -207,7 +207,7 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
 //+------------------------------------------------------------------+
 //| 買いポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double& position_take_profit) {
+bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double& position_take_profit, string& profit_status) {
     if (!OrderSelect(buy_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         return false;
     }
@@ -220,7 +220,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double&
     double tp = 0;
     double entry_price = OrderOpenPrice();
     double current_price = OrderClosePrice();
-    if (!DoTrailingStopBuyPosition(entry_price, current_price, Point(), Digits, sl, tp)) {
+    if (!DoTrailingStopBuyPosition(entry_price, current_price, Point(), Digits, sl, tp, profit_status)) {
         return true;
     }
 
@@ -241,7 +241,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double&
 //+------------------------------------------------------------------+
 //| 売りポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, double& position_take_profit) {
+bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, double& position_take_profit, string& profit_status) {
     if (!OrderSelect(sell_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         return false;
     }
@@ -254,7 +254,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, doubl
     double tp = 0;
     double entry_price = OrderOpenPrice();
     double current_price = OrderClosePrice();
-    if (!DoTrailingStopSellPosition(entry_price, current_price, Point(), Digits, sl, tp)) {
+    if (!DoTrailingStopSellPosition(entry_price, current_price, Point(), Digits, sl, tp, profit_status)) {
         return true;
     }
 

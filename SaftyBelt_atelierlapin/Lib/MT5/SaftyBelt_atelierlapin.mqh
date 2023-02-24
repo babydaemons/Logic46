@@ -157,9 +157,8 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
         return false;
     }
 
-    double price = OrderGetDouble(ORDER_PRICE_CURRENT);
     for (int i = 1; i <= 10; ++i) {
-        bool suceed = trader.OrderModify(buy_ticket, price, sl, tp, ORDER_TIME_GTC, 0);
+        bool suceed = trader.OrderModify(buy_ticket, buy_entry, sl, tp, ORDER_TIME_GTC, 0);
         if (suceed) {
             prev_buy_ticket = buy_ticket;
             prev_buy_entry = buy_entry;
@@ -185,9 +184,8 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
         return false;
     }
 
-    double price = OrderGetDouble(ORDER_PRICE_CURRENT);
     for (int i = 1; i <= 10; ++i) {
-        bool suceed = trader.OrderModify(sell_ticket, price, sl, tp, ORDER_TIME_GTC, 0);
+        bool suceed = trader.OrderModify(sell_ticket, sell_entry, sl, tp, ORDER_TIME_GTC, 0);
         if (suceed) {
             prev_sell_ticket = sell_ticket;
             prev_sell_entry = sell_entry;
@@ -204,7 +202,7 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
 //+------------------------------------------------------------------+
 //| 買いポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double& position_take_profit) {
+bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double& position_take_profit, string& profit_status) {
     if (!PositionSelectByTicket(buy_ticket)) {
         return false;
     }
@@ -217,7 +215,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double&
     double tp = 0;
     double entry_price = PositionGetDouble(POSITION_PRICE_OPEN);
     double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
-    if (!DoTrailingStopBuyPosition(entry_price, current_price, Point(), Digits(), sl, tp)) {
+    if (!DoTrailingStopBuyPosition(entry_price, current_price, Point(), Digits(), sl, tp, profit_status)) {
         return true;
     }
 
@@ -238,7 +236,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double&
 //+------------------------------------------------------------------+
 //| 売りポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, double& position_take_profit) {
+bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, double& position_take_profit, string& profit_status) {
     if (!PositionSelectByTicket(sell_ticket)) {
         return false;
     }
@@ -251,7 +249,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, doubl
     double tp = 0;
     double entry_price = PositionGetDouble(POSITION_PRICE_OPEN);
     double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
-    if (!DoTrailingStopSellPosition(entry_price, current_price, Point(), Digits(), sl, tp)) {
+    if (!DoTrailingStopSellPosition(entry_price, current_price, Point(), Digits(), sl, tp, profit_status)) {
         return true;
     }
 

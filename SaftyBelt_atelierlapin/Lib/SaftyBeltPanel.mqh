@@ -287,6 +287,7 @@ void UpdatePanel() {
     static double sell_entry = 0;
     static double sl = 0;
     static double tp = 0;
+    static string profit_status = "";
     if (enable_entry) {
         if (watching && buy_ticket == 0 && sell_position_count == 0) {
             GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
@@ -306,7 +307,7 @@ void UpdatePanel() {
                 last_order_modified = now;
             }
         } else if (now > next_trailing && buy_ticket != 0 && buy_position_count > 0) {
-            if (TRAILING_STOP_ENABLE && TrailingStopBuyPosition(buy_ticket, sl, tp)) {
+            if (TRAILING_STOP_ENABLE && TrailingStopBuyPosition(buy_ticket, sl, tp, profit_status)) {
                 last_order_modified = now;
             }
         }
@@ -336,7 +337,7 @@ void UpdatePanel() {
                 last_order_modified = now;
             }
         } else if (now > next_trailing && sell_ticket != 0 && sell_position_count > 0) {
-            if (TRAILING_STOP_ENABLE && TrailingStopSellPosition(sell_ticket, sl, tp)) {
+            if (TRAILING_STOP_ENABLE && TrailingStopSellPosition(sell_ticket, sl, tp, profit_status)) {
                 last_order_modified = now;
             }
         }
@@ -360,7 +361,14 @@ void UpdatePanel() {
     }
     LabelDispPositionType.SetText(__LINE__, position_status_message);
     LabelDispPositionType.SetTextColor(__LINE__, position_status_color);
-    LabelDispProfit.SetNumberValue(__LINE__, total_profit, currency_digits);
+    if (buy_position_count > 0 || sell_position_count > 0) {
+        LabelDispProfit.SetText(__LINE__, TextObject::FormatComma(total_profit, currency_digits) + " (" + profit_status + ")");
+        LabelDispProfit.SetTextColor(__LINE__, total_profit >= 0 ? clrCyan : clrRed);
+    }
+    else {
+        LabelDispProfit.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispProfit.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+    }
     LabelDispLots.SetText(__LINE__, DoubleToString(LOTS, 2));
     LabelDispAskBidPrice.SetText(__LINE__, DoubleToString(ask, digits) + " / " + DoubleToString(bid, digits));
     if (buy_position_count == 0 && sell_position_count == 0) {

@@ -204,7 +204,7 @@ void GetSellEntry(double bid, double point, int digits, double& sell_entry, doub
 //+------------------------------------------------------------------+
 //| 買いポジションのトレーリングストップを実行するか判断する         |
 //+------------------------------------------------------------------+
-bool DoTrailingStopBuyPosition(double entry_price, double current_price, double point, int digits, double& sl, double& tp) {
+bool DoTrailingStopBuyPosition(double entry_price, double current_price, double point, int digits, double& sl, double& tp, string& profit_status) {
     if (!TRAILING_STOP_ENABLE) {
         return false;
     }
@@ -213,6 +213,7 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
     int next_trailing_count = trailing_count + 1;
     if (PRICE_TYPE == PRICE_TYPE_POINT) {
         double profit_point = profit_price / point;
+        profit_status = StringFormat("%+.0fポイント", profit_point);
         if (profit_point < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
@@ -221,6 +222,7 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
     }
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         double profit_percentage = 100 * profit_price / entry_price;
+        profit_status = StringFormat("%+4.2f％", profit_percentage);
         if (profit_percentage < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
@@ -229,9 +231,11 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
     }
     else {
         if (stddev == 0) {
+            profit_status = StringFormat("%+4.2fσ", 0);
             return false;
         }
         double profit_deviation = profit_price / stddev;
+        profit_status = StringFormat("%+4.2fσ", profit_deviation);
         if (profit_deviation < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
@@ -245,7 +249,7 @@ bool DoTrailingStopBuyPosition(double entry_price, double current_price, double 
 //+------------------------------------------------------------------+
 //| 売りポジションのトレーリングストップを実行するか判断する         |
 //+------------------------------------------------------------------+
-bool DoTrailingStopSellPosition(double entry_price, double current_price, double point, int digits, double& sl, double& tp) {
+bool DoTrailingStopSellPosition(double entry_price, double current_price, double point, int digits, double& sl, double& tp, string& profit_status) {
     if (!TRAILING_STOP_ENABLE) {
         return false;
     }
@@ -254,6 +258,7 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
     int next_trailing_count = trailing_count + 1;
     if (PRICE_TYPE == PRICE_TYPE_POINT) {
         double profit_point = profit_price / point;
+        profit_status = StringFormat("%+.0fポイント", profit_point);
         if (profit_point < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
@@ -262,6 +267,7 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
     }
     else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
         double profit_percentage = 100 * profit_price / entry_price;
+        profit_status = StringFormat("%+4.2f％", profit_percentage);
         if (profit_percentage < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }
@@ -270,9 +276,11 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
     }
     else {
         if (stddev == 0) {
+            profit_status = StringFormat("%+4.2fσ", 0);
             return false;
         }
         double profit_deviation = profit_price / stddev;
+        profit_status = StringFormat("%+4.2fσ", profit_deviation);
         if (profit_deviation < next_trailing_count * TRAILING_STOP_LOSS) {
             return false;
         }

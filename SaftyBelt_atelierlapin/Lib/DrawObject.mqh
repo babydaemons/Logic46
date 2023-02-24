@@ -301,7 +301,7 @@ public:
             return NONE_TEXT;
         }
 
-        string sign   = number >= 0 ? "" : "-";
+        string sign   = number >= 0 ? "+" : "-";
         string snum   = DoubleToString(MathAbs(number), precision);
         int    decp   = StringFind(snum, ".", 0);
         string sright = StringSubstr(snum, decp + 1, precision);
