@@ -166,6 +166,9 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
             prev_buy_tp = tp;
             return true;
         }
+        if (IsSuppressError()) {
+            return true;
+        }
         Alert(StringFormat("ERROR: %s", ErrorDescription()));
         Sleep(i * 100);
     }
@@ -191,6 +194,9 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
             prev_sell_entry = sell_entry;
             prev_sell_sl = sl;
             prev_sell_tp = tp;
+            return true;
+        }
+        if (IsSuppressError()) {
             return true;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription()));
