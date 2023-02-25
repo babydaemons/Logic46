@@ -298,6 +298,31 @@ bool DoTrailingStopSellPosition(double entry_price, double current_price, double
 }
 
 //+------------------------------------------------------------------+
+//| 価格情報の状態文字列を返す                                       |
+//+------------------------------------------------------------------+
+string GetPriceStatus(double price_width, double price, double point) {
+    string price_status = "";
+    double price_point = price_width / point;
+    if (PRICE_TYPE == PRICE_TYPE_POINT) {
+        price_status = StringFormat("%+.0fポイント", price_point);
+    }
+    else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
+        double price_percentage = 100 * price_width / price;
+        price_status = StringFormat("%+.0fポイント / %+4.2f％", price_point, price_percentage);
+    }
+    else {
+        if (stddev == 0) {
+            price_status = StringFormat("%+.0fポイント / %+4.2fσ", price_point, 0);
+        }
+        else {
+            double price_deviation = price_width / stddev;
+            price_status = StringFormat("%+.0fポイント / %+4.2fσ", price_point, price_deviation);
+        }
+    }
+    return price_status;
+}
+
+//+------------------------------------------------------------------+
 //| 週末かどうか判定する                                             |
 //+------------------------------------------------------------------+
 bool IsWeekend() {
