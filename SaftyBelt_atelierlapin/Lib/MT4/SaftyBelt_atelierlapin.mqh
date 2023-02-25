@@ -12,13 +12,14 @@
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション損益を返す                       |
 //+------------------------------------------------------------------+
-double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_count, int& sell_ticket, double& sell_profit, int& sell_position_count) {
+double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_count, int& sell_ticket, double& sell_profit, int& sell_position_count, double& profit_price, double& entry_price) {
     int magic_number = GetMagicNumber();
     int position_count = OrdersTotal();
     double profit = 0;
     buy_ticket = sell_ticket = 0;
     buy_profit = sell_profit = 0;
     buy_position_count = sell_position_count = 0;
+    profit_price = entry_price = 0;
     for (int i = 0; i < position_count ; ++i) {
         if (!OrderSelect(i, SELECT_BY_POS)) {
             continue;
@@ -29,11 +30,14 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
         if (OrderSymbol() != Symbol()) {
             continue;
         }
+        double current_price = OrderClosePrice();
+        entry_price = OrderOpenPrice();
         switch (OrderType()) {
         case OP_BUY:
             buy_ticket = OrderTicket();
             buy_profit = OrderProfit() + OrderSwap();
             profit += buy_profit;
+            profit_price = +(current_price - entry_price);
             ++buy_position_count;
             break;
         case OP_BUYLIMIT:
@@ -44,6 +48,7 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
             sell_ticket = OrderTicket();
             sell_profit = OrderProfit() + OrderSwap();
             profit += sell_profit;
+            profit_price = +(current_price - entry_price);
             ++sell_position_count;
             break;
         case OP_SELLLIMIT:
@@ -207,7 +212,7 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
 //+------------------------------------------------------------------+
 //| 買いポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double& position_take_profit, string& profit_status) {
+bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double& position_take_profit) {
     if (!OrderSelect(buy_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         return false;
     }
@@ -220,7 +225,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double&
     double tp = 0;
     double entry_price = OrderOpenPrice();
     double current_price = OrderClosePrice();
-    if (!DoTrailingStopBuyPosition(entry_price, current_price, Point(), Digits, sl, tp, profit_status)) {
+    if (!DoTrailingStopBuyPosition(entry_price, current_price, Point(), Digits, sl, tp)) {
         return true;
     }
 
@@ -241,7 +246,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double&
 //+------------------------------------------------------------------+
 //| 売りポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, double& position_take_profit, string& profit_status) {
+bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, double& position_take_profit) {
     if (!OrderSelect(sell_ticket, SELECT_BY_TICKET, MODE_TRADES)) {
         return false;
     }
@@ -254,7 +259,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, doubl
     double tp = 0;
     double entry_price = OrderOpenPrice();
     double current_price = OrderClosePrice();
-    if (!DoTrailingStopSellPosition(entry_price, current_price, Point(), Digits, sl, tp, profit_status)) {
+    if (!DoTrailingStopSellPosition(entry_price, current_price, Point(), Digits, sl, tp)) {
         return true;
     }
 

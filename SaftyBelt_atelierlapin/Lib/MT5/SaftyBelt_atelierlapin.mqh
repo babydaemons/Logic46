@@ -16,13 +16,14 @@ double last_total_lots;
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション損益を返す                       |
 //+------------------------------------------------------------------+
-double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_count, int& sell_ticket, double& sell_profit, int& sell_position_count) {
+double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_count, int& sell_ticket, double& sell_profit, int& sell_position_count, double& profit_price, double& entry_price) {
     int magic_number = GetMagicNumber();
     int position_count = OrdersTotal();
     double total_profit = last_total_lots = 0;
     buy_ticket = sell_ticket = 0;
     buy_profit = sell_profit = 0;
     buy_position_count = sell_position_count = 0;
+    profit_price = entry_price = 0;
     for (int i = 0; i < position_count ; ++i) {
         ulong ticket = OrderGetTicket(i);
         if (!OrderSelect(ticket)) {
@@ -52,6 +53,7 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
     }
 
     position_count = PositionsTotal();
+    double current_price = 0;
     for (int i = 0; i < position_count ; ++i) {
         ulong ticket = PositionGetTicket(i);
         if (!PositionSelectByTicket(ticket)) {
@@ -63,17 +65,23 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
         if (PositionGetString(POSITION_SYMBOL) != Symbol()) {
             continue;
         }
+
+        entry_price = PositionGetDouble(POSITION_PRICE_OPEN);
+        current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
+
         switch ((int)PositionGetInteger(POSITION_TYPE)) {
         case POSITION_TYPE_BUY:
             buy_ticket = (int)ticket;
             buy_profit = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
             total_profit += buy_profit;
+            profit_price = +(current_price - entry_price);
             ++buy_position_count;
             break;
         case POSITION_TYPE_SELL:
             sell_ticket = (int)ticket;
             sell_profit = PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
             total_profit += sell_profit;
+            profit_price = -(current_price - entry_price);
             ++sell_position_count;
             break;
         }
@@ -208,7 +216,7 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
 //+------------------------------------------------------------------+
 //| 買いポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double& position_take_profit, string& profit_status) {
+bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double& position_take_profit) {
     if (!PositionSelectByTicket(buy_ticket)) {
         return false;
     }
@@ -221,7 +229,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double&
     double tp = 0;
     double entry_price = PositionGetDouble(POSITION_PRICE_OPEN);
     double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
-    if (!DoTrailingStopBuyPosition(entry_price, current_price, Point(), Digits(), sl, tp, profit_status)) {
+    if (!DoTrailingStopBuyPosition(entry_price, current_price, Point(), Digits(), sl, tp)) {
         return true;
     }
 
@@ -242,7 +250,7 @@ bool TrailingStopBuyPosition(int buy_ticket, double& position_stop_loss, double&
 //+------------------------------------------------------------------+
 //| 売りポジションのトレーリングストップを実行する                   |
 //+------------------------------------------------------------------+
-bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, double& position_take_profit, string& profit_status) {
+bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, double& position_take_profit) {
     if (!PositionSelectByTicket(sell_ticket)) {
         return false;
     }
@@ -255,7 +263,7 @@ bool TrailingStopSellPosition(int sell_ticket, double& position_stop_loss, doubl
     double tp = 0;
     double entry_price = PositionGetDouble(POSITION_PRICE_OPEN);
     double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
-    if (!DoTrailingStopSellPosition(entry_price, current_price, Point(), Digits(), sl, tp, profit_status)) {
+    if (!DoTrailingStopSellPosition(entry_price, current_price, Point(), Digits(), sl, tp)) {
         return true;
     }
 

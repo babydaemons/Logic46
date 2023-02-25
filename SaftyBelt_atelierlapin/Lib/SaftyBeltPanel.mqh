@@ -210,7 +210,9 @@ void UpdatePanel() {
     double sell_profit = 0;
     int sell_position_count = 0;
     datetime now = TimeCurrent();
-    double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count);
+    double profit_price = 0;
+    double entry_price = 0;
+    double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count, profit_price, entry_price);
     bool watching = IsWatching();
 
     bool enable_order = true;
@@ -287,7 +289,6 @@ void UpdatePanel() {
     static double sell_entry = 0;
     static double sl = 0;
     static double tp = 0;
-    static string profit_status = "";
     if (enable_entry) {
         if (watching && buy_ticket == 0 && sell_position_count == 0) {
             GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
@@ -307,7 +308,7 @@ void UpdatePanel() {
                 last_order_modified = now;
             }
         } else if (now > next_trailing && buy_ticket != 0 && buy_position_count > 0) {
-            if (TRAILING_STOP_ENABLE && TrailingStopBuyPosition(buy_ticket, sl, tp, profit_status)) {
+            if (TRAILING_STOP_ENABLE && TrailingStopBuyPosition(buy_ticket, sl, tp)) {
                 last_order_modified = now;
             }
         }
@@ -337,7 +338,7 @@ void UpdatePanel() {
                 last_order_modified = now;
             }
         } else if (now > next_trailing && sell_ticket != 0 && sell_position_count > 0) {
-            if (TRAILING_STOP_ENABLE && TrailingStopSellPosition(sell_ticket, sl, tp, profit_status)) {
+            if (TRAILING_STOP_ENABLE && TrailingStopSellPosition(sell_ticket, sl, tp)) {
                 last_order_modified = now;
             }
         }
@@ -362,6 +363,24 @@ void UpdatePanel() {
     LabelDispPositionType.SetText(__LINE__, position_status_message);
     LabelDispPositionType.SetTextColor(__LINE__, position_status_color);
     if (buy_position_count > 0 || sell_position_count > 0) {
+        string profit_status = "";
+        if (PRICE_TYPE == PRICE_TYPE_POINT) {
+            double profit_point = profit_price / point;
+            profit_status = StringFormat("%+.0fポイント", profit_point);
+        }
+        else if (PRICE_TYPE == PRICE_TYPE_PERCENT) {
+            double profit_percentage = 100 * profit_price / entry_price;
+            profit_status = StringFormat("%+4.2f％", profit_percentage);
+        }
+        else {
+            if (stddev == 0) {
+                profit_status = StringFormat("%+4.2fσ", 0);
+            }
+            else {
+                double profit_deviation = profit_price / stddev;
+                profit_status = StringFormat("%+4.2fσ", profit_deviation);
+            }
+        }
         LabelDispProfit.SetText(__LINE__, TextObject::FormatComma(total_profit, currency_digits) + " (" + profit_status + ")");
         LabelDispProfit.SetTextColor(__LINE__, total_profit >= 0 ? clrCyan : clrRed);
     }
