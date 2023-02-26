@@ -42,9 +42,8 @@ LabelObject LabelSymbol(__LINE__, "銘柄");
 LabelObject LabelPositionType(__LINE__, "ポジション");
 LabelObject LabelProfit(__LINE__, "ポジション損益");
 LabelObject LabelLots(__LINE__, "発注ロット数");
-LabelObject LabelLongEntryPrice(__LINE__, "ロング待機中逆指値価格");
 LabelObject LabelAskBid(__LINE__, "Ask/Bid");
-LabelObject LabelShortEntryPrice(__LINE__, "ショート待機中逆指値価格");
+LabelObject LabelEntryPrice(__LINE__, "待機中逆指値価格");
 LabelObject LabelPositionStopLossPrice(__LINE__, "発注中決済価格");
 LabelObject LabelPrevUpdateTime(__LINE__, "逆指値前回更新時刻");
 LabelObject LabelUpdateInterval(__LINE__, "更新時間間隔");
@@ -55,10 +54,9 @@ LabelObject LabelDispSymbol(__LINE__, " ");
 LabelObject LabelDispPositionType(__LINE__, "　 ");
 LabelObject LabelDispProfit(__LINE__, " 　");
 LabelObject LabelDispLots(__LINE__, "　　　");
-LabelObject LabelDispLongEntryPrice(__LINE__, " 　 ");
 LabelObject LabelDispAskBidPrice(__LINE__, "   　");
 LabelObject LabelDispBidPrice(__LINE__, " 　   ");
-LabelObject LabelDispShortEntryPrice(__LINE__, "  　  ");
+LabelObject LabelDispEntryPrice(__LINE__, "  　  ");
 LabelObject LabelDispPositionStopLossPrice(__LINE__, "    　");
 LabelObject LabelDispPrevUpdateTime(__LINE__, "　　   ");
 LabelObject LabelDispUpdateInterval(__LINE__, " 　　  ");
@@ -114,11 +112,9 @@ void InitPanel() {
     y10 += size_y10;
     LabelLots.Initialize(__LINE__, x10, y10, size_x10, size_y10);
     y10 += size_y10;
-    LabelLongEntryPrice.Initialize(__LINE__, x10, y10, size_x10, size_y10);
-    y10 += size_y10;
     LabelAskBid.Initialize(__LINE__, x10, y10, size_x10, size_y10);
     y10 += size_y10;
-    LabelShortEntryPrice.Initialize(__LINE__, x10, y10, size_x10, size_y10);
+    LabelEntryPrice.Initialize(__LINE__, x10, y10, size_x10, size_y10);
     y10 += size_y10;
     LabelPositionStopLossPrice.Initialize(__LINE__, x10, y10, size_x10, size_y10);
     y10 += size_y10;
@@ -138,11 +134,9 @@ void InitPanel() {
     y20 += size_y20;
     LabelDispLots.Initialize(__LINE__, x20, y20, size_x20, size_y20);
     y20 += size_y20;
-    LabelDispLongEntryPrice.Initialize(__LINE__, x20, y20, size_x20, size_y20);
-    y20 += size_y20;
     LabelDispAskBidPrice.Initialize(__LINE__, x20, y20, size_x20, size_y20);
     y20 += size_y20;
-    LabelDispShortEntryPrice.Initialize(__LINE__, x20, y20, size_x20, size_y20);
+    LabelDispEntryPrice.Initialize(__LINE__, x20, y20, size_x20, size_y20);
     y20 += size_y20;
     LabelDispPositionStopLossPrice.Initialize(__LINE__, x20, y20, size_x20, size_y20);
     y20 += size_y20;
@@ -170,9 +164,9 @@ void InitPanel() {
 
     ChartRedraw();
 
-    UpdatePanel();
-
     enable_entry = true;
+
+    UpdatePanel();
 }
 
 datetime last_order_modified;
@@ -187,7 +181,6 @@ int prev_sell_ticket;
 double prev_sell_entry;
 double prev_sell_sl;
 double prev_sell_tp;
-double stddev;
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -215,21 +208,8 @@ void UpdatePanel() {
     double total_profit = GetPositionProfit(buy_ticket, buy_profit, buy_position_count, sell_ticket, sell_profit, sell_position_count, profit_price, entry_price);
     bool watching = IsWatching();
 
-    bool enable_order = true;
-    if (PRICE_TYPE == PRICE_TYPE_STDDEV) {
-#ifdef __MQL4__
-        stddev = iStdDev(Symbol(), PERIOD_M1, STDDEV_MINUTES, 0, MODE_SMA, PRICE_CLOSE, 0);
-#else
-        double sd[];
-        CopyBuffer(hStdDev, MAIN_LINE, 0, 1, sd);
-        stddev = sd[0];
-#endif
-        enable_order = stddev > 0;
-    }
-
     if (buy_position_count > 0) {
         if (WatchStatus != WATCHSTATUS_TRAILING_LONG) {
-            trailing_count = 1;
             if (MAIL_ENABLED) {
                 SendMailEntry(buy_ticket);
             }
@@ -242,7 +222,6 @@ void UpdatePanel() {
     }
     if (sell_position_count > 0) {
         if (WatchStatus != WATCHSTATUS_TRAILING_SHORT) {
-            trailing_count = 1;
             if (MAIL_ENABLED) {
                 SendMailEntry(sell_ticket);
             }
@@ -284,15 +263,14 @@ void UpdatePanel() {
 
     datetime next_entry = last_position_checked + 60 * RE_ENTRY_DISABLE_MINUTES;
     datetime next_modify = last_order_modified + ORDER_MODIFY_INTERVAL_SECONDS;
-    datetime next_trailing = last_order_modified + TRAILING_STOP_INTERVAL_SECONDS;
     static double buy_entry = 0;
     static double sell_entry = 0;
     static double sl = 0;
     static double tp = 0;
-    if (enable_entry) {
+    if (enable_entry && now > next_entry) {
         if (watching && buy_ticket == 0 && sell_position_count == 0) {
             GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
-            if (enable_order && (enable_entry_type & ENTRY_TYPE_LONG_ONLY) != 0) {
+            if ((enable_entry_type & ENTRY_TYPE_LONG_ONLY) != 0) {
                 buy_ticket = OrderBuyEntry(buy_entry, sl, tp);
                 if (buy_ticket > 0) {
                     last_order_modified = now;
@@ -304,25 +282,16 @@ void UpdatePanel() {
             last_order_modified = now;
         } else if (now > next_modify && buy_ticket != 0 && buy_position_count == 0) {
             GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
-            if (enable_order && ModifyBuyOrder(buy_ticket, buy_entry, sl, tp)) {
-                last_order_modified = now;
-            }
-        } else if (now > next_trailing && buy_ticket != 0 && buy_position_count > 0) {
-            if (TRAILING_STOP_ENABLE && TrailingStopBuyPosition(buy_ticket, sl, tp)) {
-                last_order_modified = now;
-            }
-        }
-        if (buy_position_count > 0 && sell_position_count == 0) {
-            if (sell_ticket != 0 && DeleteSellOrder(sell_ticket)) {
+            if (ModifyBuyOrder(buy_ticket, buy_entry, sl, tp)) {
                 last_order_modified = now;
             }
         }
     }
 
-    if (enable_entry) {
+    if (enable_entry && now > next_entry) {
         if (watching && sell_ticket == 0 && buy_position_count == 0) {
             GetSellEntry(bid, point, digits, sell_entry, sl, tp);
-            if (enable_order && (enable_entry_type & ENTRY_TYPE_SHORT_ONLY) != 0) {
+            if ((enable_entry_type & ENTRY_TYPE_SHORT_ONLY) != 0) {
                 sell_ticket = OrderSellEntry(sell_entry, sl, tp);
                 if (sell_ticket > 0) {
                     last_order_modified = now;
@@ -334,16 +303,7 @@ void UpdatePanel() {
             last_order_modified = now;
         } else if (now > next_modify && sell_ticket != 0 && sell_position_count == 0) {
             GetSellEntry(bid, point, digits, sell_entry, sl, tp);
-            if (enable_order && ModifySellOrder(sell_ticket, sell_entry, sl, tp)) {
-                last_order_modified = now;
-            }
-        } else if (now > next_trailing && sell_ticket != 0 && sell_position_count > 0) {
-            if (TRAILING_STOP_ENABLE && TrailingStopSellPosition(sell_ticket, sl, tp)) {
-                last_order_modified = now;
-            }
-        }
-        if (sell_position_count > 0 && buy_position_count == 0) {
-            if (buy_ticket != 0 && DeleteBuyOrder(buy_ticket)) {
+            if (ModifySellOrder(sell_ticket, sell_entry, sl, tp)) {
                 last_order_modified = now;
             }
         }
@@ -376,21 +336,17 @@ void UpdatePanel() {
     if (buy_position_count == 0 && sell_position_count == 0) {
         if (enable_entry && (enable_entry_type & ENTRY_TYPE_LONG_ONLY) != 0 && buy_entry > 0) {
             string price_status = GetPriceStatus(buy_entry - ask, ask, point);
-            LabelDispLongEntryPrice.SetText(__LINE__, StringFormat("%s (%s)", DoubleToString(buy_entry, digits), price_status));
-            LabelDispLongEntryPrice.SetTextColor(__LINE__, clrCyan);
+            LabelDispEntryPrice.SetText(__LINE__, StringFormat("%s (%s)", DoubleToString(buy_entry, digits), price_status));
+            LabelDispEntryPrice.SetTextColor(__LINE__, clrCyan);
         }
-        else {
-            LabelDispLongEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
-            LabelDispLongEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        }
-        if (enable_entry && (enable_entry_type & ENTRY_TYPE_SHORT_ONLY) != 0 && sell_entry > 0) {
+        else if (enable_entry && (enable_entry_type & ENTRY_TYPE_SHORT_ONLY) != 0 && sell_entry > 0) {
             string price_status = GetPriceStatus(sell_entry - bid, bid, point);
-            LabelDispShortEntryPrice.SetText(__LINE__, StringFormat("%s (%s)", DoubleToString(sell_entry, digits), price_status));
-            LabelDispShortEntryPrice.SetTextColor(__LINE__, clrCyan);
+            LabelDispEntryPrice.SetText(__LINE__, StringFormat("%s (%s)", DoubleToString(sell_entry, digits), price_status));
+            LabelDispEntryPrice.SetTextColor(__LINE__, clrCyan);
         }
         else {
-            LabelDispShortEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
-            LabelDispShortEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+            LabelDispEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+            LabelDispEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
         }
         LabelDispPositionStopLossPrice.SetText(__LINE__, TextObject::NONE_TEXT);
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
@@ -404,10 +360,8 @@ void UpdatePanel() {
         }
     }
     else {
-        LabelDispLongEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
-        LabelDispLongEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        LabelDispShortEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
-        LabelDispShortEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+        LabelDispEntryPrice.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispEntryPrice.SetTextColor(__LINE__, TextObject::NONE_COLOR);
         LabelDispPositionStopLossPrice.SetText(__LINE__, DoubleToString(sl, digits));
         LabelDispPositionStopLossPrice.SetTextColor(__LINE__, clrCyan);
         LabelDispWatchStatus.SetText(__LINE__, WatchStatusMessage);
@@ -415,46 +369,25 @@ void UpdatePanel() {
     }
     LabelDispPrevUpdateTime.SetText(__LINE__, GetTimestamp(last_order_modified));
 
-    if (enable_entry && TRAILING_STOP_ENABLE) {
-        int interval = buy_position_count == 0 && sell_position_count == 0 ? ORDER_MODIFY_INTERVAL_SECONDS : TRAILING_STOP_INTERVAL_SECONDS;
+    if (enable_entry && last_order_modified > 0 && buy_position_count == 0 && sell_position_count == 0) {
+        const int interval = ORDER_MODIFY_INTERVAL_SECONDS;
+        long next_update = ((long)last_order_modified + interval) - (long)now;
+        if (next_update < -1) {
+            DebugBreak();
+        }
+        if (next_update < 0) {
+            next_update = 0;
+        }
         LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)interval));
         LabelDispUpdateInterval.SetTextColor(__LINE__, clrCyan);
-        if (enable_order && last_order_modified > 0) {
-            long next_update = ((long)last_order_modified + interval) - (long)now;
-            if (next_update < -1) {
-                DebugBreak();
-            }
-            if (next_update < 0) {
-                next_update = 0;
-            }
-            LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((long)next_update));
-            LabelDispNextUpdateTime.SetTextColor(__LINE__, clrCyan);
-        } else {
-            LabelDispNextUpdateTime.SetText(__LINE__, TextObject::NONE_TEXT);
-            LabelDispNextUpdateTime.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        }
+        LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((long)next_update));
+        LabelDispNextUpdateTime.SetTextColor(__LINE__, clrCyan);
     }
     else {
-        if (enable_entry && last_order_modified > 0 && buy_position_count == 0 && sell_position_count == 0) {
-            const int interval = ORDER_MODIFY_INTERVAL_SECONDS;
-            long next_update = ((long)last_order_modified + interval) - (long)now;
-            if (next_update < -1) {
-                DebugBreak();
-            }
-            if (next_update < 0) {
-                next_update = 0;
-            }
-            LabelDispUpdateInterval.SetText(__LINE__, GetInterval((datetime)interval));
-            LabelDispUpdateInterval.SetTextColor(__LINE__, clrCyan);
-            LabelDispNextUpdateTime.SetText(__LINE__, GetInterval((long)next_update));
-            LabelDispNextUpdateTime.SetTextColor(__LINE__, clrCyan);
-        }
-        else {
-            LabelDispUpdateInterval.SetText(__LINE__, TextObject::NONE_TEXT);
-            LabelDispUpdateInterval.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-            LabelDispNextUpdateTime.SetText(__LINE__, TextObject::NONE_TEXT);
-            LabelDispNextUpdateTime.SetTextColor(__LINE__, TextObject::NONE_COLOR);
-        }
+        LabelDispUpdateInterval.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispUpdateInterval.SetTextColor(__LINE__, TextObject::NONE_COLOR);
+        LabelDispNextUpdateTime.SetText(__LINE__, TextObject::NONE_TEXT);
+        LabelDispNextUpdateTime.SetTextColor(__LINE__, TextObject::NONE_COLOR);
     }
 
     if (CheckboxEnableSettlement.IsChecked(__LINE__)) {
@@ -476,9 +409,8 @@ void RemovePanel() {
     LabelPositionType.Remove(__LINE__);
     LabelProfit.Remove(__LINE__);
     LabelLots.Remove(__LINE__);
-    LabelLongEntryPrice.Remove(__LINE__);
     LabelAskBid.Remove(__LINE__);
-    LabelShortEntryPrice.Remove(__LINE__);
+    LabelEntryPrice.Remove(__LINE__);
     LabelPositionStopLossPrice.Remove(__LINE__);
     LabelPrevUpdateTime.Remove(__LINE__);
     LabelUpdateInterval.Remove(__LINE__);
@@ -489,9 +421,8 @@ void RemovePanel() {
     LabelDispPositionType.Remove(__LINE__);
     LabelDispProfit.Remove(__LINE__);
     LabelDispLots.Remove(__LINE__);
-    LabelDispLongEntryPrice.Remove(__LINE__);
     LabelDispAskBidPrice.Remove(__LINE__);
-    LabelDispShortEntryPrice.Remove(__LINE__);
+    LabelDispEntryPrice.Remove(__LINE__);
     LabelDispPositionStopLossPrice.Remove(__LINE__);
     LabelDispPrevUpdateTime.Remove(__LINE__);
     LabelDispUpdateInterval.Remove(__LINE__);
