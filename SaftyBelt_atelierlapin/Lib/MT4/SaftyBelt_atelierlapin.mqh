@@ -236,9 +236,9 @@ bool SendMailEntry(int ticket) {
     message += StringFormat("エントリー価格 %s\n", DoubleToString(OrderOpenPrice(), Digits));
     message += StringFormat("エントリー時刻 %s\n", GetTimestamp(OrderOpenTime()));
     message += StringFormat("ロット数 %.2f\n", OrderLots());
-    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), 0));
-    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), 0));
-    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
+    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), currency_digits));
+    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), currency_digits));
+    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), currency_digits));
     message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
 
     return MAIL_ENABLED ? SendMail(subject, message) : true;
@@ -272,9 +272,9 @@ bool SendMailExit(int ticket) {
     message += StringFormat("決済時刻 %s\n", GetTimestamp(OrderCloseTime()));
     message += StringFormat("ロット数 %.2f\n", OrderLots());
     message += StringFormat("損益 %s\n", TextObject::FormatComma(OrderProfit(), 0));
-    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), 0));
-    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), 0));
-    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
+    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), currency_digits));
+    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), currency_digits));
+    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), currency_digits));
     message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
 
     return MAIL_ENABLED ? SendMail(subject, message) : true;

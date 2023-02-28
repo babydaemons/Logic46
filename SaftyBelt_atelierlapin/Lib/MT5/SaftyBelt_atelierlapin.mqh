@@ -11,7 +11,6 @@
 #include "ErrorDescription.mqh"
 
 CTrade trader;
-double last_total_lots;
 
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション損益を返す                       |
@@ -19,7 +18,7 @@ double last_total_lots;
 double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_count, int& sell_ticket, double& sell_profit, int& sell_position_count, double& profit_price, double& entry_price) {
     int magic_number = GetMagicNumber();
     int position_count = OrdersTotal();
-    double total_profit = last_total_lots = 0;
+    double total_profit = 0;
     buy_ticket = sell_ticket = 0;
     buy_profit = sell_profit = 0;
     buy_position_count = sell_position_count = 0;
@@ -49,7 +48,6 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
             sell_ticket = (int)ticket;
             break;
         }
-        last_total_lots += OrderGetDouble(ORDER_VOLUME_CURRENT);
     }
 
     position_count = PositionsTotal();
@@ -85,7 +83,6 @@ double GetPositionProfit(int& buy_ticket, double& buy_profit, int& buy_position_
             ++sell_position_count;
             break;
         }
-        last_total_lots += PositionGetDouble(POSITION_VOLUME);
     }
     return total_profit;
 }
@@ -121,6 +118,7 @@ bool IsSuppressError() {
 int OrderBuyEntry(double buy_entry, double sl, double tp) {
     trader.LogLevel(LOG_LEVEL_NO);
     trader.SetExpertMagicNumber(MAGIC_NUMBER);
+    trader.SetDeviationInPoints(SLIPPAGE);
     for (int i = 1; i <= 10; ++i) {
         if (trader.BuyStop(LOTS, buy_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
@@ -140,6 +138,7 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
 int OrderSellEntry(double sell_entry, double sl, double tp) {
     trader.LogLevel(LOG_LEVEL_NO);
     trader.SetExpertMagicNumber(MAGIC_NUMBER);
+    trader.SetDeviationInPoints(SLIPPAGE);
     for (int i = 1; i <= 10; ++i) {
         if (trader.SellStop(LOTS, sell_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
@@ -228,9 +227,9 @@ bool SendMailEntry(int ticket) {
     message += StringFormat("エントリー価格 %s\n", DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN), Digits()));
     message += StringFormat("エントリー時刻 %s\n", GetTimestamp((datetime)PositionGetInteger(POSITION_TIME)));
     message += StringFormat("ロット数 %.2f\n", PositionGetDouble(POSITION_VOLUME));
-    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), 0));
-    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), 0));
-    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
+    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), currency_digits));
+    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), currency_digits));
+    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), currency_digits));
     message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
 
     return MAIL_ENABLED ? SendMail(subject, message) : true;
@@ -247,11 +246,11 @@ bool SendMailExit(int ticket) {
     string message = "";
     message += StringFormat("決済価格 %s\n", DoubleToString(price, Digits()));
     message += StringFormat("決済時刻 %s\n", GetTimestamp(last_position_checked));
-    message += StringFormat("ロット数 %.2f\n", last_total_lots);
-    message += StringFormat("損益 %s\n", TextObject::FormatComma(last_position_profit, 0));
-    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), 0));
-    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), 0));
-    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), 0));
+    message += StringFormat("ロット数 %.2f\n", LOTS);
+    message += StringFormat("損益(概算) %s\n", TextObject::FormatComma(last_position_profit, currency_digits));
+    message += StringFormat("口座残高 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_BALANCE), currency_digits));
+    message += StringFormat("必要証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN), currency_digits));
+    message += StringFormat("余剰証拠金 %s\n", TextObject::FormatComma(AccountInfoDouble(ACCOUNT_MARGIN_FREE), currency_digits));
     message += StringFormat("証拠金維持率 %.0f%%\n", AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
 
     return MAIL_ENABLED ? SendMail(subject, message) : true;
