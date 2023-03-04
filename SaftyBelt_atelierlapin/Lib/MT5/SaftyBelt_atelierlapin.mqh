@@ -101,15 +101,127 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digits) {
 //| 抑制するエラーかチェックする                                     |
 //+------------------------------------------------------------------+
 bool IsSuppressError() {
+    string error_string = "";
     switch (trader.ResultRetcode()) {
-    case TRADE_RETCODE_TRADE_DISABLED:
-        return true; // "trade disabled";
-    case TRADE_RETCODE_MARKET_CLOSED:
-        return true; // "market closed";
-    case TRADE_RETCODE_NO_MONEY:
-        return true; // "not enough money";
+    case TRADE_RETCODE_DONE: // "リクエスト完了。"
+    case TRADE_RETCODE_TRADE_DISABLED: // "取引が無効化されています。"
+    case TRADE_RETCODE_MARKET_CLOSED: // "市場が閉鎖中。"
+    case TRADE_RETCODE_NO_MONEY: // "リクエストを完了するのに資金が不充分。"
+        return true;
+    case TRADE_RETCODE_REQUOTE:
+        error_string = "リクオート。";
+        break;
+    case TRADE_RETCODE_REJECT:
+        error_string = "リクエストの拒否。";
+        break;
+    case TRADE_RETCODE_CANCEL:
+        error_string = "トレーダーによるリクエストのキャンセル。";
+        break;
+    case TRADE_RETCODE_PLACED:
+        error_string = "注文が出されました。";
+        break;
+    case TRADE_RETCODE_DONE_PARTIAL:
+        error_string = "リクエストが一部のみ完了。";
+        break;
+    case TRADE_RETCODE_ERROR:
+        error_string = "リクエスト処理エラー。";
+        break;
+    case TRADE_RETCODE_TIMEOUT:
+        error_string = "リクエストが時間切れでキャンセル。";
+        break;
+    case TRADE_RETCODE_INVALID:
+        error_string = "無効なリクエスト。";
+        break;
+    case TRADE_RETCODE_INVALID_VOLUME:
+        error_string = "リクエスト内の無効なボリューム。";
+        break;
+    case TRADE_RETCODE_INVALID_PRICE:
+        error_string = "リクエスト内の無効な価格。";
+        break;
+    case TRADE_RETCODE_INVALID_STOPS:
+        error_string = "リクエスト内の無効なストップ。";
+        break;
+    case TRADE_RETCODE_PRICE_CHANGED:
+        error_string = "価格変更。";
+        break;
+    case TRADE_RETCODE_PRICE_OFF:
+        error_string = "リクエスト処理に必要な相場が不在。";
+        break;
+    case TRADE_RETCODE_INVALID_EXPIRATION:
+        error_string = "リクエスト内の無効な注文有効期限。";
+        break;
+    case TRADE_RETCODE_ORDER_CHANGED:
+        error_string = "注文状態の変化。";
+        break;
+    case TRADE_RETCODE_TOO_MANY_REQUESTS:
+        error_string = "頻繁過ぎるリクエスト。";
+        break;
+    case TRADE_RETCODE_NO_CHANGES:
+        error_string = "リクエストに変更なし。";
+        break;
+    case TRADE_RETCODE_SERVER_DISABLES_AT:
+        error_string = "サーバが自動取引を無効化。";
+        break;
+    case TRADE_RETCODE_CLIENT_DISABLES_AT:
+        error_string = "クライアント端末が自動取引を無効化。";
+        break;
+    case TRADE_RETCODE_LOCKED:
+        error_string = "リクエストが処理のためにロック中。";
+        break;
+    case TRADE_RETCODE_FROZEN:
+        error_string = "注文やポジションが凍結。";
+        break;
+    case TRADE_RETCODE_INVALID_FILL:
+        error_string = "無効な注文充填タイプ。";
+        break;
+    case TRADE_RETCODE_CONNECTION:
+        error_string = "取引サーバに未接続。";
+        break;
+    case TRADE_RETCODE_ONLY_REAL:
+        error_string = "操作は、ライブ口座のみで許可。";
+        break;
+    case TRADE_RETCODE_LIMIT_ORDERS:
+        error_string = "未決注文の数が上限に達しました。";
+        break;
+    case TRADE_RETCODE_LIMIT_VOLUME:
+        error_string = "シンボルの注文やポジションのボリュームが限界に達しました。";
+        break;
+    case TRADE_RETCODE_INVALID_ORDER:
+        error_string = "不正または禁止された注文の種類。";
+        break;
+    case TRADE_RETCODE_POSITION_CLOSED:
+        error_string = "指定されたPOSITION_IDENTIFIER を持つポジションがすでに閉鎖。";
+        break;
+    case TRADE_RETCODE_INVALID_CLOSE_VOLUME:
+        error_string = "決済ボリュームが現在のポジションのボリュームを超過。";
+        break;
+    case TRADE_RETCODE_CLOSE_ORDER_EXIST:
+        error_string = "指定されたポジションの決済注文が既存：反対のポジションを決済しようとしているときにそのポジションの決済注文が既に存在している場合";
+        break;
+    case TRADE_RETCODE_LIMIT_POSITIONS:
+        error_string = "アカウントに同時に存在するポジションの数は、サーバー設定によって制限されます。 限度に達すると、サーバーは出された注文を処理するときにcase TRADE_RETCODE_LIMIT_POSITIONSエラーを返します。 これは、ポジション会計タイプによって異なる動作につながります。";
+        break;
+    case TRADE_RETCODE_REJECT_CANCEL:
+        error_string = "未決注文アクティベーションリクエストは却下され、注文はキャンセルされます。";
+        break;
+    case TRADE_RETCODE_LONG_ONLY:
+        error_string = "銘柄に\"Only long positions are allowed（買いポジションのみ）\" (POSITION_TYPE_BUY)のルールが設定されているため、リクエストは却下されます。";
+        break;
+    case TRADE_RETCODE_SHORT_ONLY:
+        error_string = "銘柄に\"Only short positions are allowed（売りポジションのみ）\" (POSITION_TYPE_SELL)のルールが設定されているため、リクエストは却下されます。";
+        break;
+    case TRADE_RETCODE_CLOSE_ONLY:
+        error_string = "銘柄に\"Only position closing is allowed（ポジション決済のみ）\"のルールが設定されているため、リクエストは却下されます。";
+        break;
+    case TRADE_RETCODE_FIFO_CLOSE:
+        error_string = "取引口座に\"Position closing is allowed only by FIFO rule（FIFOによるポジション決済のみ）\"(ACCOUNT_FIFO_CLOSE=true)のフラグが設定されているため、リクエストは却下されます";
+        break;
+    case TRADE_RETCODE_HEDGE_PROHIBITED:
+        error_string = "口座で「単一の銘柄の反対のポジションは無効にする」ルールが設定されているため、リクエストが拒否されます。たとえば、銘柄に買いポジションがある場合、売りポジションを開いたり、売り指値注文を出すことはできません。このルールは口座がヘッジ勘定の場合 (ACCOUNT_MARGIN_MODE=ACCOUNT_MARGIN_MODE_RETAIL_HEDGING)のみ適用されます。";
+        break;
     }
-    return false;
+    Alert(error_string);
+    return true;
 }
 
 //+------------------------------------------------------------------+
