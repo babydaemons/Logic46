@@ -14,6 +14,13 @@ const long TIME_ROUND = 24 * 60 * 60;
 
 uint enable_entry_type;
 int currency_digits;
+bool is_testing;
+
+int SecondsOfWeek(int day, int hour, int minute, int second) {
+    return ((day * 60 + hour) + minute) * 60 + second;
+}
+int T1 = SecondsOfWeek(1,  0,  0,  0);
+int T2 = SecondsOfWeek(5, 23, 59, 59);
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -65,6 +72,12 @@ int OnInit() {
 
     enable_entry_type = ENTRY_TYPE;
     currency_digits = AccountInfoString(ACCOUNT_CURRENCY) == "JPY" ? 0 : 2;
+
+#ifdef __MQL4__
+    is_testing = IsTesting() || IsOptimization();
+#else
+    is_testing = (bool)MQLInfoInteger(MQL_TESTER) || (bool)MQLInfoInteger(MQL_FORWARD) || (bool)MQLInfoInteger(MQL_OPTIMIZATION) || (bool)MQLInfoInteger(MQL_VISUAL_MODE);
+#endif 
 
     return INIT_SUCCEEDED;
 }
@@ -134,6 +147,9 @@ void GetBuyEntry(double ask, double point, int digits, double& buy_entry, double
         sl = NormalizeDouble(buy_entry * (1.00 - 0.01 * STOP_LOSS), digits);
         tp = NormalizeDouble(buy_entry * (1.00 + 0.01 * TAKE_PROFIT), digits);
     }
+    if (sl < 0.5 * ask) {
+        sl = NormalizeDouble(0.5 * ask, digits);
+    }
     if (STOP_LOSS == 0) {
         sl = 0;
     }
@@ -155,6 +171,9 @@ void GetSellEntry(double bid, double point, int digits, double& sell_entry, doub
         sell_entry = NormalizeDouble(bid * (1.00 - 0.01 * ENTRY_WIDTH), digits);
         sl = NormalizeDouble(sell_entry * (1.00 + 0.01 * STOP_LOSS), digits);
         tp = NormalizeDouble(sell_entry * (1.00 - 0.01 * TAKE_PROFIT), digits);
+    }
+    if (tp < 0.5 * bid) {
+        tp = NormalizeDouble(0.5 * bid, digits);
     }
     if (STOP_LOSS == 0) {
         sl = 0;
@@ -181,12 +200,44 @@ string GetPriceStatus(double price_width, double price, double point) {
 }
 
 //+------------------------------------------------------------------+
-//| 週末かどうか判定する                                             |
+//| トレードできるか判定する                                         |
 //+------------------------------------------------------------------+
-bool IsWeekend() {
+ulong diff_microsecond;
+bool IsEnabledTrade() {
+    if (last_order_modified == 0) {
+        last_order_modified = TimeCurrent();
+    }
+
+    if (is_testing) {
+        return true;
+    }
+
+    datetime now = TimeCurrent();
+    static datetime prev_datetime = 0;
+    if (prev_datetime == 0) {
+        prev_datetime = now;
+    }
+    datetime current_datetime = now;
+
     MqlDateTime tm = {};
-    TimeToStruct(TimeCurrent(), tm);
-    return tm.day_of_week < 1 || 5 < tm.day_of_week;
+#ifdef __MQL5__
+    TimeToStruct(TimeTradeServer(), tm);
+    if (tm.day_of_week < 1 || 5 < tm.day_of_week) {
+        return false;
+    }
+#endif
+
+    TimeToStruct(now, tm);
+    int T = SecondsOfWeek(tm.day_of_week, tm.hour, tm.min, tm.sec);
+    if (0 < tm.day_of_week < 1 && 5 < tm.day_of_week < 6) {
+        return true;
+    }
+
+    bool enable_trade = current_datetime > prev_datetime;
+
+    prev_datetime = current_datetime;
+
+    return enable_trade;
 }
 
 //+------------------------------------------------------------------+

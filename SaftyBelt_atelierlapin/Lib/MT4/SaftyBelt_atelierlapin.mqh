@@ -76,14 +76,11 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
 bool IsSuppressError(int error) {
     switch (error) {
     case 0: // "no error"
-        return true;
     case 1: // "no error, trade conditions not changed"
-        return true;
     case 132: // "market is closed"
-        return true;
     case 133: // "trade is disabled"
-        return true;
     case 134: // "not enough money"
+    case 145: // "modification denied because order is too close to market"
         return true;
     }
     return false;
@@ -153,15 +150,12 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
 
     for (int count = 1; count <= ORDER_RETRY_COUNT; ++count) {
         bool suceed = OrderModify(buy_ticket, buy_entry, sl, tp, 0, clrNONE);
-        if (suceed) {
+        int error = GetLastError();
+        if (suceed || IsSuppressError(error)) {
             prev_buy_ticket = buy_ticket;
             prev_buy_entry = buy_entry;
             prev_buy_sl = sl;
             prev_buy_tp = tp;
-            return true;
-        }
-        int error = GetLastError();
-        if (IsSuppressError(error)) {
             return true;
         }
         switch (error) {
@@ -188,15 +182,12 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
 
     for (int count = 1; count <= ORDER_RETRY_COUNT; ++count) {
         bool suceed = OrderModify(sell_ticket, sell_entry, sl, tp, 0, clrNONE);
-        if (suceed) {
+        int error = GetLastError();
+        if (suceed || IsSuppressError(error)) {
             prev_sell_ticket = sell_ticket;
             prev_sell_entry = sell_entry;
             prev_sell_sl = sl;
             prev_sell_tp = tp;
-            return true;
-        }
-        int error = GetLastError();
-        if (IsSuppressError(error)) {
             return true;
         }
         switch (error) {

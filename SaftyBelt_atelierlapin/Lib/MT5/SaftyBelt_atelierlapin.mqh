@@ -107,6 +107,7 @@ bool IsSuppressError() {
     case TRADE_RETCODE_TRADE_DISABLED: // "取引が無効化されています。"
     case TRADE_RETCODE_MARKET_CLOSED: // "市場が閉鎖中。"
     case TRADE_RETCODE_NO_MONEY: // "リクエストを完了するのに資金が不充分。"
+    case TRADE_RETCODE_NO_CHANGES: // "リクエストに変更なし。"
         return true;
     case TRADE_RETCODE_REQUOTE:
         error_string = "リクオート。";
@@ -155,9 +156,6 @@ bool IsSuppressError() {
         break;
     case TRADE_RETCODE_TOO_MANY_REQUESTS:
         error_string = "頻繁過ぎるリクエスト。";
-        break;
-    case TRADE_RETCODE_NO_CHANGES:
-        error_string = "リクエストに変更なし。";
         break;
     case TRADE_RETCODE_SERVER_DISABLES_AT:
         error_string = "サーバが自動取引を無効化。";
@@ -278,14 +276,11 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
 
     for (int i = 1; i <= 10; ++i) {
         bool suceed = trader.OrderModify(buy_ticket, buy_entry, sl, tp, ORDER_TIME_GTC, 0);
-        if (suceed) {
+        if (suceed || IsSuppressError()) {
             prev_buy_ticket = buy_ticket;
             prev_buy_entry = buy_entry;
             prev_buy_sl = sl;
             prev_buy_tp = tp;
-            return true;
-        }
-        if (IsSuppressError()) {
             return true;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription()));
@@ -308,14 +303,11 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
 
     for (int i = 1; i <= 10; ++i) {
         bool suceed = trader.OrderModify(sell_ticket, sell_entry, sl, tp, ORDER_TIME_GTC, 0);
-        if (suceed) {
+        if (suceed || IsSuppressError()) {
             prev_sell_ticket = sell_ticket;
             prev_sell_entry = sell_entry;
             prev_sell_sl = sl;
             prev_sell_tp = tp;
-            return true;
-        }
-        if (IsSuppressError()) {
             return true;
         }
         Alert(StringFormat("ERROR: %s", ErrorDescription()));

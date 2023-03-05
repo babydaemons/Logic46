@@ -186,9 +186,7 @@ double prev_sell_tp;
 //|                                                                  |
 //+------------------------------------------------------------------+
 void UpdatePanel() {
-    if (IsWeekend()) {
-        return;
-    }
+    bool enable_trade = IsEnabledTrade();
 
     double ask = 0;
     double bid = 0;
@@ -267,7 +265,7 @@ void UpdatePanel() {
     static double sell_entry = 0;
     static double sl = 0;
     static double tp = 0;
-    if (enable_entry && now > next_entry) {
+    if (enable_trade && enable_entry && now > next_entry) {
         if (watching && buy_ticket == 0 && sell_position_count == 0) {
             GetBuyEntry(ask, point, digits, buy_entry, sl, tp);
             if ((enable_entry_type & ENTRY_TYPE_LONG_ONLY) != 0) {
@@ -288,7 +286,7 @@ void UpdatePanel() {
         }
     }
 
-    if (enable_entry && now > next_entry) {
+    if (enable_trade && enable_entry && now > next_entry) {
         if (watching && sell_ticket == 0 && buy_position_count == 0) {
             GetSellEntry(bid, point, digits, sell_entry, sl, tp);
             if ((enable_entry_type & ENTRY_TYPE_SHORT_ONLY) != 0) {
@@ -372,9 +370,6 @@ void UpdatePanel() {
     if (enable_entry && last_order_modified > 0 && buy_position_count == 0 && sell_position_count == 0) {
         const int interval = ORDER_MODIFY_INTERVAL_SECONDS;
         long next_update = ((long)last_order_modified + interval) - (long)now;
-        if (next_update < -1) {
-            DebugBreak();
-        }
         if (next_update < 0) {
             next_update = 0;
         }
