@@ -12,10 +12,12 @@
 #include "MQL45/MQL45.mqh"
 #include "AutoSummerTime.mqh"
 
-input double LOTS = 0.1; // ロット
+input double LOTS = 0.01; // ロット
 input double MIN_LOTS = 0.1; // 最小ロット
 input double MAX_LOTS = 10.0; // 最大ロット
 input double BALANCE_PER_LOT = 100000.0; // ロット当たりの証拠金
+input double ENTRY_OFFSET_HOURS = 8.50; // 仲値決定前の発注時間差分(hour)
+input double EXIT_OFFSET_HOURS = 3.50; // 仲値決定後の決済時間差分(hour)
 input bool USE_MM = true; // 複利運用
 input int SLIPPAGE = 10; // スリッページ
 input int MAGIC = 15151515; // マジックナンバー
@@ -24,14 +26,18 @@ MQL45_APPLICATION_START()
 
 int ticket;
 double lots;
+int ENTRY_OFFSET_MINUTES;
+int EXIT_OFFSET_MINUTES;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
 {
-    return INIT_SUCCEEDED;
+    ENTRY_OFFSET_MINUTES = (int)(ENTRY_OFFSET_HOURS * 60);
+    EXIT_OFFSET_MINUTES = (int)(EXIT_OFFSET_HOURS * 60);
     ticket = 0;
+    return INIT_SUCCEEDED;
 }
 
 //+------------------------------------------------------------------+
@@ -47,14 +53,14 @@ void OnDeinit(const int reason)
 void OnTick()
 {
     datetime localtime = AutoSummerTime::TimeLocal();
+    datetime servertime = TimeCurrent();
 
-    int hour = 0;
-    int minute = 0;
-    if (!IsFiveTenDay(localtime, hour, minute)) {
+    int offset_minutes = 0;
+    if (!IsFiveTenDay(localtime, offset_minutes)) {
         return;
     }
 
-    if (ticket == 0 && hour == 8 && minute == 30) {
+    if (ticket == 0 && offset_minutes == -ENTRY_OFFSET_MINUTES) {
         if (USE_MM) {
             lots = MathFloor(AccountInfoDouble(ACCOUNT_BALANCE) / BALANCE_PER_LOT) * LOTS;
             lots = MathMin(MathMax(lots, MIN_LOTS), MAX_LOTS);
@@ -66,7 +72,12 @@ void OnTick()
         return;
     }
 
-    if (ticket != 0 && hour == 12 && minute == 30) {
+    if (ticket != 0 && offset_minutes == +EXIT_OFFSET_MINUTES) {
+        if (!OrderSelect(ticket, SELECT_BY_TICKET)) {
+            return;
+        }
+        double profit = OrderProfit() + OrderSwap();
+        printf("#%d: +%.0f", ticket, profit);
         if (OrderClose(ticket, lots, Bid, SLIPPAGE, clrRed)) {
             ticket = 0;
         }
@@ -92,12 +103,11 @@ double OnTester()
 //+------------------------------------------------------------------+
 //| ゴトー日かチェックする                                           |
 //+------------------------------------------------------------------+
-bool IsFiveTenDay(datetime localtime, int& hour, int& minute)
+bool IsFiveTenDay(datetime localtime, int& offset_minutes)
 {
     MqlDateTime dt = {};
     TimeToStruct(localtime, dt);
-    hour = dt.hour;
-    minute = dt.min;
+    offset_minutes = (60 * dt.hour + dt.min) - (10 * 60);
 
     // https://gemforex.com/media/beginner/510/
     switch (dt.day) {
