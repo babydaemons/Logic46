@@ -397,10 +397,10 @@ void DeleteOrderAll() {
 
         for (int count = 1; count <= 10; ++count) {
             bool succed = trader.OrderDelete(ticket);
-            if (succed) {
+            int error = GetLastError();
+            if (succed || IsSuppressError()) {
                 break;
             }
-
             Alert(StringFormat("ERROR: %s", ErrorDescription()));
             Sleep(100 * count);
         }

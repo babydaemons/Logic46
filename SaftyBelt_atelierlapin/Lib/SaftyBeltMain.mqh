@@ -16,11 +16,54 @@ uint enable_entry_type;
 int currency_digits;
 bool is_testing;
 
-int SecondsOfWeek(int day, int hour, int minute, int second) {
-    return ((day * 60 + hour) + minute) * 60 + second;
-}
-int T1 = SecondsOfWeek(1,  0,  0,  0);
-int T2 = SecondsOfWeek(5, 23, 59, 59);
+struct MARKET_TIMES {
+    int count;
+    datetime open[];
+    datetime close[];
+
+    void Initialize(ENUM_DAY_OF_WEEK wday) {
+        uint session = 0;
+#ifdef __VERBOSE_MARKET_TIMES
+        static const string wday_name[] = { "日", "月", "火", "水", "木", "金", "土" };
+        printf(wday_name[wday] + "曜日:");
+        
+#endif // __VERBOSE_MARKET_TIMES
+        while (true) {
+            datetime market_open = 0;
+            datetime market_close = 0;
+            if (!SymbolInfoSessionTrade(Symbol(), wday, session, market_open, market_close)) {
+                break;
+            }
+            market_times[wday].Append(market_open, market_close);
+#ifdef __VERBOSE_MARKET_TIMES
+            printf("  session[%d]: %s:%02d ... %s:%02d",
+                session,
+                TimeToString(market_open, TIME_MINUTES), market_open % 60,
+                TimeToString(market_close, TIME_MINUTES), market_close % 60);
+#endif // __VERBOSE_MARKET_TIMES
+            ++session;
+        }
+    }
+
+    void Append(datetime market_open, datetime market_close) {
+        ++count;
+        ArrayResize(open, count);
+        ArrayResize(close, count);
+        open[count - 1] = market_open;
+        close[count - 1] = market_close;
+    }
+
+    bool IsEnabledTrade(datetime second_of_day) {
+        for (int i = 0; i < count; ++i) {
+            if (open[i] <= second_of_day && second_of_day <= close[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+MARKET_TIMES market_times[7];
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -59,6 +102,11 @@ int OnInit() {
     if (STOP_LOSS < 0) {
         MessageBox("「損切価格幅」はゼロ以上の値を指定してください。\n→パラメータ入力：" + DoubleToString(STOP_LOSS, 2));
         return INIT_PARAMETERS_INCORRECT;
+    }
+
+    for (int day = MONDAY; day < SATURDAY; ++day) {
+        ENUM_DAY_OF_WEEK wday = ENUM_DAY_OF_WEEK(day);
+        market_times[day].Initialize(wday);
     }
 
     if (Reason != REASON_CHARTCHANGE && Reason != REASON_PARAMETERS) {
@@ -202,7 +250,6 @@ string GetPriceStatus(double price_width, double price, double point) {
 //+------------------------------------------------------------------+
 //| トレードできるか判定する                                         |
 //+------------------------------------------------------------------+
-ulong diff_microsecond;
 bool IsEnabledTrade() {
     if (last_order_modified == 0) {
         last_order_modified = TimeCurrent();
@@ -213,29 +260,41 @@ bool IsEnabledTrade() {
     }
 
     datetime now = TimeCurrent();
-    static datetime prev_datetime = 0;
-    if (prev_datetime == 0) {
-        prev_datetime = now;
+    static datetime prev_time = 0;
+    if (prev_time == 0) {
+        prev_time = now;
     }
-    datetime current_datetime = now;
+    datetime current_time = now;
 
-    MqlDateTime tm = {};
 #ifdef __MQL5__
-    TimeToStruct(TimeTradeServer(), tm);
-    if (tm.day_of_week < 1 || 5 < tm.day_of_week) {
-        return false;
+    datetime server_time = TimeTradeServer();
+#else
+    static datetime local_time = 0;
+    datetime server_time = 0;
+    if (local_time == 0) {
+        local_time = TimeLocal();
+    }
+    if (current_time > prev_time) {
+        local_time = TimeLocal();
+        server_time = now;
+    }
+    else {
+        server_time = prev_time + (TimeLocal() - local_time);
     }
 #endif
 
-    TimeToStruct(now, tm);
-    int T = SecondsOfWeek(tm.day_of_week, tm.hour, tm.min, tm.sec);
-    if (0 < tm.day_of_week < 1 && 5 < tm.day_of_week < 6) {
-        return true;
+    MqlDateTime server = {};
+    TimeToStruct(server_time, server);
+    if (server.day_of_week < 1 || 5 < server.day_of_week) {
+        return false;
+    }
+    if (server.day_of_year == 0) {
+        return false;
     }
 
-    bool enable_trade = current_datetime > prev_datetime;
-
-    prev_datetime = current_datetime;
+    datetime second_of_day = (server.hour * 60 + server.min) * 60 + server.sec;
+    bool enable_trade = market_times[server.day_of_week].IsEnabledTrade(second_of_day);
+    prev_time = current_time;
 
     return enable_trade;
 }

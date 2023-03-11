@@ -335,7 +335,8 @@ void DeleteOrderAll() {
         int ticket = OrderTicket();
         for (int count = 1; count <= 10; ++count) {
             bool succed = OrderDelete(ticket, clrNONE);
-            if (succed) {
+            int error = GetLastError();
+            if (succed || IsSuppressError(error)) {
                 break;
             }
             Alert(StringFormat("ERROR: #%d: %s", ticket, ErrorDescription()));
