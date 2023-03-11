@@ -28,6 +28,7 @@ int ticket;
 double lots;
 int ENTRY_OFFSET_MINUTES;
 int EXIT_OFFSET_MINUTES;
+int HOLD_MINUTES;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -36,6 +37,7 @@ int OnInit()
 {
     ENTRY_OFFSET_MINUTES = (int)(ENTRY_OFFSET_HOURS * 60);
     EXIT_OFFSET_MINUTES = (int)(EXIT_OFFSET_HOURS * 60);
+    HOLD_MINUTES = ENTRY_OFFSET_MINUTES + EXIT_OFFSET_MINUTES;
     ticket = 0;
     return INIT_SUCCEEDED;
 }
@@ -60,6 +62,7 @@ void OnTick()
         return;
     }
 
+    static datetime entrytime = 0;
     if (ticket == 0 && offset_minutes == -ENTRY_OFFSET_MINUTES) {
         if (USE_MM) {
             lots = MathFloor(AccountInfoDouble(ACCOUNT_BALANCE) / BALANCE_PER_LOT) * LOTS;
@@ -69,19 +72,24 @@ void OnTick()
             lots = LOTS;
         }
         ticket = OrderSend("USDJPY", OP_BUY, lots, Ask, SLIPPAGE, 0, 0, "", MAGIC, 0, clrBlue);
+        entrytime = servertime;
         return;
     }
 
-    if (ticket != 0 && offset_minutes == +EXIT_OFFSET_MINUTES) {
-        if (!OrderSelect(ticket, SELECT_BY_TICKET)) {
+    if (ticket != 0) {
+        MqlDateTime current = {};
+        TimeToStruct(servertime, current);
+        if ((offset_minutes == +EXIT_OFFSET_MINUTES) || (servertime > entrytime + HOLD_MINUTES * 60) || (current.day_of_week == 5 && current.hour == 23 && current.min == 45)) {
+            if (!OrderSelect(ticket, SELECT_BY_TICKET)) {
+                return;
+            }
+            double profit = OrderProfit() + OrderSwap();
+            printf("#%d: +%.0f", ticket, profit);
+            if (OrderClose(ticket, lots, Bid, SLIPPAGE, clrRed)) {
+                ticket = 0;
+            }
             return;
         }
-        double profit = OrderProfit() + OrderSwap();
-        printf("#%d: +%.0f", ticket, profit);
-        if (OrderClose(ticket, lots, Bid, SLIPPAGE, clrRed)) {
-            ticket = 0;
-        }
-        return;
     }
 }
 
