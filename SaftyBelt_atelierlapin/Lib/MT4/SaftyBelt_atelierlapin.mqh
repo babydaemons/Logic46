@@ -75,12 +75,12 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digit) {
 //+------------------------------------------------------------------+
 bool IsSuppressError(int error) {
     switch (error) {
-    case 0: // "no error"
-    case 1: // "no error, trade conditions not changed"
-    case 132: // "market is closed"
-    case 133: // "trade is disabled"
-    case 134: // "not enough money"
-    case 145: // "modification denied because order is too close to market"
+    case ERR_NO_ERROR: // 0: "エラーはありません。"
+    case ERR_NO_RESULT: // 1: "エラーはありません。取引条件(SL/TP)は変更されていません。"
+    case ERR_MARKET_CLOSED: // 132: "休場中の可能性があり発注できません。監視・決済中断時刻の設定を確認してください。"
+    case ERR_TRADE_DISABLED: // 133: "開設した口座では取引できない通貨ペアが選択されています。"
+    case ERR_NOT_ENOUGH_MONEY: // 134: "証拠金が不足しています。"
+    case ERR_TRADE_MODIFY_DENIED: // 145: "休場中の可能性があり待機注文修正できません。監視・決済中断時刻の設定を確認してください。"
         return true;
     }
     return false;
@@ -100,14 +100,14 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
             return 0;
         }
         switch (error) {
-        case 4109: // "trade is not allowed in the expert properties"
-            printf("ERROR: %s", ErrorDescription(error));
+        case ERR_TRADE_NOT_ALLOWED: // 4109: "自動取引が許可されていません。"
+            printf("EA: %s: %s", EXPERT_NAME, ErrorDescription(error));
             return 0;
-        case 4110: // "longs are not allowed in the expert properties"
+        case ERR_LONGS_NOT_ALLOWED: // 4110: "\"[Expert] - [全般] - [コモン] -[ポジション]\"でロングが許可されていません。"
             enable_entry_type &= ~ENTRY_TYPE_LONG_ONLY;
             return 0;
         }
-        printf("ERROR: %s", ErrorDescription(error));
+        printf("EA: %s: %s", EXPERT_NAME, ErrorDescription(error));
         Sleep(count * 100);
     }
     return 0;
@@ -127,14 +127,14 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
             return 0;
         }
         switch (error) {
-        case 4109: // "trade is not allowed in the expert properties"
-            printf("ERROR: %s", ErrorDescription(error));
+        case ERR_TRADE_NOT_ALLOWED: // 4109: "自動取引が許可されていません。"
+            printf("EA: %s: %s", EXPERT_NAME, ErrorDescription(error));
             return 0;
-        case 4111: // "shorts are not allowed in the expert properties"
+        case ERR_SHORTS_NOT_ALLOWED: // 4111: "\"[Expert] - [全般] - [コモン] -[ポジション]\"でショートが許可されていません。"
             enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY;
             return 0;
         }
-        printf("ERROR: %s", ErrorDescription(error));
+        printf("EA: %s: %s", EXPERT_NAME, ErrorDescription(error));
         Sleep(count * 100);
     }
     return 0;
@@ -159,14 +159,14 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
             return true;
         }
         switch (error) {
-        case 4109: // "trade is not allowed in the expert properties"
-            printf("ERROR: %s", ErrorDescription(error));
+        case ERR_TRADE_NOT_ALLOWED: // 4109: "自動取引が許可されていません。"
+            printf("EA: %s: %s", EXPERT_NAME, ErrorDescription(error));
             return true;
-        case 4111: // "shorts are not allowed in the expert properties"
-            enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY;
+        case ERR_LONGS_NOT_ALLOWED: // 4110: "\"[Expert] - [全般] - [コモン] -[ポジション]\"でロングが許可されていません。"
+            enable_entry_type &= ~ENTRY_TYPE_LONG_ONLY;
             return true;
         }
-        printf("ERROR: %s", ErrorDescription(error));
+        printf("EA: %s: %s", EXPERT_NAME, ErrorDescription(error));
         Sleep(count * 100);
     }
     return false;
@@ -191,14 +191,14 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
             return true;
         }
         switch (error) {
-        case 4109: // "trade is not allowed in the expert properties"
-            printf("ERROR: %s", ErrorDescription(error));
+        case ERR_TRADE_NOT_ALLOWED: // 4109: "自動取引が許可されていません。"
+            printf("EA: %s: %s", EXPERT_NAME, ErrorDescription(error));
             return true;
-        case 4111: // "shorts are not allowed in the expert properties"
+        case ERR_SHORTS_NOT_ALLOWED: // 4111: "\"[Expert] - [全般] - [コモン] -[ポジション]\"でショートが許可されていません。"
             enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY;
             return true;
         }
-        printf("ERROR: %s", ErrorDescription(error));
+        printf("EA: %s: %s", EXPERT_NAME, ErrorDescription(error));
         Sleep(count * 100);
     }
     return false;

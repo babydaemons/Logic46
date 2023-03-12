@@ -12,6 +12,14 @@
 
 CTrade trader;
 
+enum ENUM_MARKET_ORDER_TYPE {
+    MARKET_ORDER_ENTRY,
+    MARKET_ORDER_MODIFY,
+    MARKET_ORDER_DELETE,
+};
+
+const string market_order_names[] = { "発注", "待機注文修正", "待機注文取り消し" };
+
 //+------------------------------------------------------------------+
 //| 指定マジックナンバーのポジション損益を返す                       |
 //+------------------------------------------------------------------+
@@ -100,15 +108,23 @@ void GetPriceInfo(double& ask, double& bid, double& point, int& digits) {
 //+------------------------------------------------------------------+
 //| 抑制するエラーかチェックする                                     |
 //+------------------------------------------------------------------+
-bool IsSuppressError() {
+bool IsSuppressError(ENUM_MARKET_ORDER_TYPE type) {
     string error_string = "";
     switch (trader.ResultRetcode()) {
     case TRADE_RETCODE_DONE: // "リクエスト完了。"
-    case TRADE_RETCODE_TRADE_DISABLED: // "取引が無効化されています。"
-    case TRADE_RETCODE_MARKET_CLOSED: // "市場が閉鎖中。"
-    case TRADE_RETCODE_NO_MONEY: // "リクエストを完了するのに資金が不充分。"
-    case TRADE_RETCODE_NO_CHANGES: // "リクエストに変更なし。"
         return true;
+    case TRADE_RETCODE_TRADE_DISABLED: 
+        error_string = "取引が無効化されています。";
+        break;
+    case TRADE_RETCODE_NO_CHANGES: // "リクエストに変更なし。"
+        error_string = "エラーはありません。取引条件(SL/TP)は変更されていません。";
+        break;
+    case TRADE_RETCODE_NO_MONEY:
+        error_string = "証拠金が不足しています。";
+        break;
+    case TRADE_RETCODE_MARKET_CLOSED:
+        error_string = StringFormat("休場中の可能性があり%sできません。監視・決済中断時刻の設定を確認してください。", market_order_names[type]);
+        break;
     case TRADE_RETCODE_REQUOTE:
         error_string = "リクオート。";
         break;
@@ -218,7 +234,7 @@ bool IsSuppressError() {
         error_string = "口座で「単一の銘柄の反対のポジションは無効にする」ルールが設定されているため、リクエストが拒否されます。たとえば、銘柄に買いポジションがある場合、売りポジションを開いたり、売り指値注文を出すことはできません。このルールは口座がヘッジ勘定の場合 (ACCOUNT_MARGIN_MODE=ACCOUNT_MARGIN_MODE_RETAIL_HEDGING)のみ適用されます。";
         break;
     }
-    printf(error_string);
+    printf("EA: %s: %s", EXPERT_NAME, error_string);
     return true;
 }
 
@@ -233,10 +249,10 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
         if (trader.BuyStop(LOTS, buy_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
         }
-        if (IsSuppressError()) {
+        if (IsSuppressError(MARKET_ORDER_ENTRY)) {
             return 0;
         }
-        printf("ERROR: %s", ErrorDescription());
+        printf("EA: %s: %s", EXPERT_NAME, ErrorDescription());
         Sleep(i * 100);
     }
     return 0;
@@ -253,10 +269,10 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
         if (trader.SellStop(LOTS, sell_entry, Symbol(), sl, tp, ORDER_TIME_GTC, 0, "SaftyBelt_atelierlapin")) {
             return (int)trader.ResultOrder();
         }
-        if (IsSuppressError()) {
+        if (IsSuppressError(MARKET_ORDER_ENTRY)) {
             return 0;
         }
-        printf("ERROR: %s", ErrorDescription());
+        printf("EA: %s: %s", EXPERT_NAME, ErrorDescription());
         Sleep(i * 100);
     }
     return 0;
@@ -276,14 +292,14 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
 
     for (int i = 1; i <= 10; ++i) {
         bool suceed = trader.OrderModify(buy_ticket, buy_entry, sl, tp, ORDER_TIME_GTC, 0);
-        if (suceed || IsSuppressError()) {
+        if (suceed || IsSuppressError(MARKET_ORDER_MODIFY)) {
             prev_buy_ticket = buy_ticket;
             prev_buy_entry = buy_entry;
             prev_buy_sl = sl;
             prev_buy_tp = tp;
             return true;
         }
-        printf("ERROR: %s", ErrorDescription());
+        printf("EA: %s: %s", EXPERT_NAME, ErrorDescription());
         Sleep(i * 100);
     }
     return false;
@@ -303,14 +319,14 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
 
     for (int i = 1; i <= 10; ++i) {
         bool suceed = trader.OrderModify(sell_ticket, sell_entry, sl, tp, ORDER_TIME_GTC, 0);
-        if (suceed || IsSuppressError()) {
+        if (suceed || IsSuppressError(MARKET_ORDER_MODIFY)) {
             prev_sell_ticket = sell_ticket;
             prev_sell_entry = sell_entry;
             prev_sell_sl = sl;
             prev_sell_tp = tp;
             return true;
         }
-        printf("ERROR: %s", ErrorDescription());
+        printf("EA: %s: %s", EXPERT_NAME, ErrorDescription());
         Sleep(i * 100);
     }
     return false;
@@ -398,10 +414,10 @@ void DeleteOrderAll() {
         for (int count = 1; count <= 10; ++count) {
             bool succed = trader.OrderDelete(ticket);
             int error = GetLastError();
-            if (succed || IsSuppressError()) {
+            if (succed || IsSuppressError(MARKET_ORDER_DELETE)) {
                 break;
             }
-            printf("ERROR: %s", ErrorDescription());
+            printf("EA: %s: #%d: %s", EXPERT_NAME, ticket, ErrorDescription());
             Sleep(100 * count);
         }
 
