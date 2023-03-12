@@ -101,13 +101,13 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
         }
         switch (error) {
         case 4109: // "trade is not allowed in the expert properties"
-            Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+            printf("ERROR: %s", ErrorDescription(error));
             return 0;
         case 4110: // "longs are not allowed in the expert properties"
             enable_entry_type &= ~ENTRY_TYPE_LONG_ONLY;
             return 0;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+        printf("ERROR: %s", ErrorDescription(error));
         Sleep(count * 100);
     }
     return 0;
@@ -128,13 +128,13 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
         }
         switch (error) {
         case 4109: // "trade is not allowed in the expert properties"
-            Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+            printf("ERROR: %s", ErrorDescription(error));
             return 0;
         case 4111: // "shorts are not allowed in the expert properties"
             enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY;
             return 0;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+        printf("ERROR: %s", ErrorDescription(error));
         Sleep(count * 100);
     }
     return 0;
@@ -160,13 +160,13 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
         }
         switch (error) {
         case 4109: // "trade is not allowed in the expert properties"
-            Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+            printf("ERROR: %s", ErrorDescription(error));
             return true;
         case 4111: // "shorts are not allowed in the expert properties"
             enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY;
             return true;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+        printf("ERROR: %s", ErrorDescription(error));
         Sleep(count * 100);
     }
     return false;
@@ -192,13 +192,13 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
         }
         switch (error) {
         case 4109: // "trade is not allowed in the expert properties"
-            Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+            printf("ERROR: %s", ErrorDescription(error));
             return true;
         case 4111: // "shorts are not allowed in the expert properties"
             enable_entry_type &= ~ENTRY_TYPE_SHORT_ONLY;
             return true;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription(error)));
+        printf("ERROR: %s", ErrorDescription(error));
         Sleep(count * 100);
     }
     return false;
@@ -339,7 +339,7 @@ void DeleteOrderAll() {
             if (succed || IsSuppressError(error)) {
                 break;
             }
-            Alert(StringFormat("ERROR: #%d: %s", ticket, ErrorDescription()));
+            printf("ERROR: #%d: %s", ticket, ErrorDescription());
             Sleep(100 * count);
         }
 

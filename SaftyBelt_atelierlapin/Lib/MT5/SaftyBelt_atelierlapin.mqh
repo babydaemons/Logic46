@@ -218,7 +218,7 @@ bool IsSuppressError() {
         error_string = "口座で「単一の銘柄の反対のポジションは無効にする」ルールが設定されているため、リクエストが拒否されます。たとえば、銘柄に買いポジションがある場合、売りポジションを開いたり、売り指値注文を出すことはできません。このルールは口座がヘッジ勘定の場合 (ACCOUNT_MARGIN_MODE=ACCOUNT_MARGIN_MODE_RETAIL_HEDGING)のみ適用されます。";
         break;
     }
-    Alert(error_string);
+    printf(error_string);
     return true;
 }
 
@@ -236,7 +236,7 @@ int OrderBuyEntry(double buy_entry, double sl, double tp) {
         if (IsSuppressError()) {
             return 0;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription()));
+        printf("ERROR: %s", ErrorDescription());
         Sleep(i * 100);
     }
     return 0;
@@ -256,7 +256,7 @@ int OrderSellEntry(double sell_entry, double sl, double tp) {
         if (IsSuppressError()) {
             return 0;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription()));
+        printf("ERROR: %s", ErrorDescription());
         Sleep(i * 100);
     }
     return 0;
@@ -283,7 +283,7 @@ bool ModifyBuyOrder(int buy_ticket, double buy_entry, double sl, double tp) {
             prev_buy_tp = tp;
             return true;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription()));
+        printf("ERROR: %s", ErrorDescription());
         Sleep(i * 100);
     }
     return false;
@@ -310,7 +310,7 @@ bool ModifySellOrder(int sell_ticket, double sell_entry, double sl, double tp) {
             prev_sell_tp = tp;
             return true;
         }
-        Alert(StringFormat("ERROR: %s", ErrorDescription()));
+        printf("ERROR: %s", ErrorDescription());
         Sleep(i * 100);
     }
     return false;
@@ -401,7 +401,7 @@ void DeleteOrderAll() {
             if (succed || IsSuppressError()) {
                 break;
             }
-            Alert(StringFormat("ERROR: %s", ErrorDescription()));
+            printf("ERROR: %s", ErrorDescription());
             Sleep(100 * count);
         }
 
