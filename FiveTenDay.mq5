@@ -12,15 +12,14 @@
 #include "MQL45/MQL45.mqh"
 #include "AutoSummerTime.mqh"
 
-input double LOTS = 0.01; // ロット
-input double MIN_LOTS = 0.1; // 最小ロット
-input double MAX_LOTS = 10.0; // 最大ロット
-input double BALANCE_PER_LOT = 100000.0; // ロット当たりの証拠金
-input double ENTRY_OFFSET_HOURS = 8.50; // 仲値決定前の発注時間差分(hour)
-input double EXIT_OFFSET_HOURS = 3.50; // 仲値決定後の決済時間差分(hour)
-input bool USE_MM = true; // 複利運用
-input int SLIPPAGE = 10; // スリッページ
-input int MAGIC = 15151515; // マジックナンバー
+input double ENTRY_OFFSET_HOURS = 3.50; // 仲値決定前の発注時間差分(hour)
+input double EXIT_OFFSET_HOURS = 3.70; // 仲値決定後の決済時間差分(hour)
+sinput bool USE_MM = true; // 複利運用
+sinput double LOTS = 0.01; // ロット数
+sinput double MAX_LOTS = 0.0; // 最大ロット数(0.0で自動設定)
+sinput double MIN_MARGIN_LEVEL = 400.0; // 最低証拠金維持率(%)
+sinput int SLIPPAGE = 10; // スリッページ
+sinput int MAGIC = 15151515; // マジックナンバー
 
 MQL45_APPLICATION_START()
 
@@ -58,15 +57,11 @@ void OnTick()
     datetime servertime = TimeCurrent();
 
     int offset_minutes = 0;
-    if (!IsFiveTenDay(localtime, offset_minutes)) {
-        return;
-    }
-
+    bool is_five_ten_day = IsFiveTenDay(localtime, offset_minutes);
     static datetime entrytime = 0;
-    if (ticket == 0 && offset_minutes == -ENTRY_OFFSET_MINUTES) {
+    if (is_five_ten_day && ticket == 0 && offset_minutes == -ENTRY_OFFSET_MINUTES) {
         if (USE_MM) {
-            lots = MathFloor(AccountInfoDouble(ACCOUNT_BALANCE) / BALANCE_PER_LOT) * LOTS;
-            lots = MathMin(MathMax(lots, MIN_LOTS), MAX_LOTS);
+            lots = GetMaxLot(MIN_MARGIN_LEVEL, MAX_LOTS);
         }
         else {
             lots = LOTS;
@@ -126,6 +121,7 @@ bool IsFiveTenDay(datetime localtime, int& offset_minutes)
         case 25:
         case 30:
             return true;
+
         case  3:
         case  4:
         case  8:
@@ -144,6 +140,42 @@ bool IsFiveTenDay(datetime localtime, int& offset_minutes)
             break;
     }
     return false;
+}
+
+//+------------------------------------------------------------------+
+//|【関数】 証拠金維持率に対してのロット数を取得する
+//| 
+//|【引数】 min_margin_level:証拠金維持率  (200%に設定したい場合、200)
+//|         max_lot:最大ロット数を設定する (0設定で、自動取得) 
+//|
+//|【戻値】 ロット数(1000通貨=0.01) 
+//|
+//|【参考】 https://fx-prog.com/ea-sorce7/ 
+//+------------------------------------------------------------------+
+double GetMaxLot(double min_margin_level, double max_lot)
+{
+    // 最大ロット数確認
+    double broker_max_lot = MarketInfo(Symbol(), MODE_MAXLOT);
+    double broker_min_lot = MarketInfo(Symbol(), MODE_MINLOT);
+
+    if (max_lot == 0 || max_lot > broker_max_lot) {
+        max_lot = broker_max_lot;
+    }
+
+    // 口座残高
+    double balance = AccountInfoDouble(ACCOUNT_BALANCE);
+
+    // 利用可能金額算出
+    double notional_amount = balance / (0.01 * min_margin_level);
+
+    // 必要証拠金(1ロット分)で割る
+    double result_lot = notional_amount / MarketInfo(Symbol(), MODE_MARGINREQUIRED);
+
+    // 少数点を0.01単位までにする
+    double normalize_lot = MathFloor(result_lot / broker_min_lot) * broker_min_lot;
+
+    // 最大ロット数を超えている場合は、最大ロット数にする
+    return MathMin(normalize_lot, max_lot);
 }
 
 MQL45_APPLICATION_END()
