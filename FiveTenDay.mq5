@@ -12,8 +12,9 @@
 #include "MQL45/MQL45.mqh"
 #include "AutoSummerTime.mqh"
 
-input double ENTRY_OFFSET_HOURS = 3.50; // 仲値決定前の発注時間差分(hour)
-input double EXIT_OFFSET_HOURS = 3.70; // 仲値決定後の決済時間差分(hour)
+input double ENTRY_OFFSET_HOURS = 9.0; // 仲値決定前の発注時間差分(hour)
+input double EXIT_OFFSET_HOURS = 3.5; // 仲値決定後の決済時間差分(hour)
+input int SCAN_BARS = 4; // エントリー前にトレンド確認するバーの本数(hour))
 sinput bool USE_MM = true; // 複利運用
 sinput double LOTS = 0.01; // ロット数
 sinput double MAX_LOTS = 0.0; // 最大ロット数(0.0で自動設定)
@@ -60,6 +61,15 @@ void OnTick()
     bool is_five_ten_day = IsFiveTenDay(localtime, offset_minutes);
     static datetime entrytime = 0;
     if (is_five_ten_day && ticket == 0 && offset_minutes == -ENTRY_OFFSET_MINUTES) {
+        double close[];
+        if (CopyClose(Symbol(), PERIOD_H1, 0, SCAN_BARS, close) != SCAN_BARS) {
+            return;
+        }
+        for (int i = 1; i < SCAN_BARS; ++i) {
+            if (close[i + 0] <= close[i - 1]) {
+                return;
+            }
+        }
         if (USE_MM) {
             lots = GetMaxLot(MIN_MARGIN_LEVEL, MAX_LOTS);
         }
