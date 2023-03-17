@@ -287,18 +287,17 @@ void ClosePositionAll() {
         if (OrderMagicNumber() != magic_number) {
             continue;
         }
-        string symbol = OrderSymbol();
-        if (Symbol() != symbol) {
-            continue;
-        }
+
         UpdateSettlementButton();
 
+        string symbol = OrderSymbol();
         int ticket = OrderTicket();
         double lots = OrderLots();
         int type = OrderType();
         double price = MarketInfo(symbol, type == OP_BUY ? MODE_BID : MODE_ASK);
+        color arrow = type == OP_BUY ? clrRed : clrBlue;
         for (int count = 1; count <= ORDER_RETRY_COUNT; ++count) {
-            bool succed = OrderClose(ticket, lots, price, SLIPPAGE, clrNONE);
+            bool succed = OrderClose(ticket, lots, 10, arrow);
             if (succed) {
                 break;
             }
