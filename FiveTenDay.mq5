@@ -12,13 +12,16 @@
 #include "MQL45/MQL45.mqh"
 #include "AutoSummerTime.mqh"
 
-input double ENTRY_OFFSET_HOURS = 9.0; // 仲値決定前の発注時間差分(hour)
-input double EXIT_OFFSET_HOURS = 3.5; // 仲値決定後の決済時間差分(hour)
-input int SCAN_BARS = 4; // エントリー前にトレンド確認するバーの本数(hour))
+input double ENTRY_OFFSET_HOURS = 4.0; // 仲値決定前の発注時間差分(hour)
+input double EXIT_OFFSET_HOURS = 6.0; // 仲値決定後の決済時間差分(hour)
+input int TREND_SCAN_BARS = 2; // トレンド確認するバーの本数(hour)
+input int VOLATILITY_SCAN_BARS = 4; // ボラティリティ確認するバーの本数(hour)
+input double STDDEV_VOLATILITY_RATIO = 1.0; // ストップロスを算出する時の標準偏差に対する係数
 sinput bool USE_MM = true; // 複利運用
 sinput double LOTS = 0.01; // ロット数
+sinput double RISK_RATIO_PERCENTAGE = 25.0; // 許容リスクパーセンテージ(%))
 sinput double MAX_LOTS = 0.0; // 最大ロット数(0.0で自動設定)
-sinput double MIN_MARGIN_LEVEL = 400.0; // 最低証拠金維持率(%)
+sinput double MIN_MARGIN_LEVEL = 150.0; // 最低証拠金維持率(%)
 sinput int SLIPPAGE = 10; // スリッページ
 sinput int MAGIC = 15151515; // マジックナンバー
 
@@ -62,38 +65,59 @@ void OnTick()
     static datetime entrytime = 0;
     if (is_five_ten_day && ticket == 0 && offset_minutes == -ENTRY_OFFSET_MINUTES) {
         double close[];
-        if (CopyClose(Symbol(), PERIOD_H1, 0, SCAN_BARS, close) != SCAN_BARS) {
+        if (CopyClose(Symbol(), PERIOD_H1, 0, TREND_SCAN_BARS, close) != TREND_SCAN_BARS) {
             return;
         }
-        for (int i = 1; i < SCAN_BARS; ++i) {
+        for (int i = 1; i < TREND_SCAN_BARS; ++i) {
             if (close[i + 0] <= close[i - 1]) {
                 return;
             }
         }
+        double SL = 0;
+        double sl = GetStopLoss(SL);
+        if (sl == 0.0) {
+            return;
+        }
         if (USE_MM) {
-            lots = GetMaxLot(MIN_MARGIN_LEVEL, MAX_LOTS);
+            double risk_lots = GrtMaxLotRiskBalance(RISK_RATIO_PERCENTAGE, SL);
+            double margin_level_lots = GetMaxLotMarginLevel(MIN_MARGIN_LEVEL, MAX_LOTS);
+            lots = MathMin(risk_lots, margin_level_lots);
         }
         else {
             lots = LOTS;
         }
-        ticket = OrderSend("USDJPY", OP_BUY, lots, Ask, SLIPPAGE, 0, 0, "", MAGIC, 0, clrBlue);
+        ticket = OrderSend(Symbol(), OP_BUY, lots, Ask, SLIPPAGE, sl, 0, "", MAGIC, 0, clrBlue);
         entrytime = servertime;
         return;
     }
 
+    static double profit;
     if (ticket != 0) {
+        if (!OrderSelect(ticket, SELECT_BY_TICKET)) {
+            printf("#%d: +%.0f", ticket, profit);
+            ticket = 0;
+            return;
+        }
+        profit = OrderProfit() + OrderSwap();
         MqlDateTime current = {};
         TimeToStruct(servertime, current);
         if ((offset_minutes == +EXIT_OFFSET_MINUTES) || (servertime > entrytime + HOLD_MINUTES * 60) || (current.day_of_week == 5 && current.hour == 23 && current.min == 45)) {
             if (!OrderSelect(ticket, SELECT_BY_TICKET)) {
                 return;
             }
-            double profit = OrderProfit() + OrderSwap();
             printf("#%d: +%.0f", ticket, profit);
             if (OrderClose(ticket, lots, Bid, SLIPPAGE, clrRed)) {
                 ticket = 0;
             }
             return;
+        }
+        double SL = 0;
+        double sl = GetStopLoss(SL);
+        if (sl == 0.0) {
+            return;
+        }
+        if (sl > OrderStopLoss() && !OrderModify(ticket, Bid, sl, 0, 0, clrNONE)) {
+            printf("OrderModify() ERROR");
         }
     }
 }
@@ -111,6 +135,19 @@ void OnTimer()
 double OnTester()
 {
     return 0;
+}
+
+//+------------------------------------------------------------------+
+//| ストップロスを返す                                               |
+//+------------------------------------------------------------------+
+double GetStopLoss(double& SL)
+{
+    SL = STDDEV_VOLATILITY_RATIO * iStdDev(Symbol(), PERIOD_H1, VOLATILITY_SCAN_BARS, 0, MODE_SMA, PRICE_CLOSE, 0);
+    if (SL == 0.0) {
+        return 0.0;
+    }
+    double sl = MathFloor(SL * MathPow(10, Digits)) / MathPow(10, Digits);
+    return sl;
 }
 
 //+------------------------------------------------------------------+
@@ -153,6 +190,16 @@ bool IsFiveTenDay(datetime localtime, int& offset_minutes)
 }
 
 //+------------------------------------------------------------------+
+//| 許容リスク額に対するロット数を計算する                           |
+//| 【参考】 https://fxxy.org/23859.html                             |
+//+------------------------------------------------------------------+
+double GrtMaxLotRiskBalance(double risk_percentage, double SL) {
+    double risk_amount = 0.01 * risk_percentage * AccountInfoDouble(ACCOUNT_BALANCE);
+    double risk_lots = MathFloor(((risk_amount / SL) / 100000) * 100) / 100;
+    return risk_lots;
+}
+
+//+------------------------------------------------------------------+
 //|【関数】 証拠金維持率に対してのロット数を取得する
 //| 
 //|【引数】 min_margin_level:証拠金維持率  (200%に設定したい場合、200)
@@ -162,7 +209,7 @@ bool IsFiveTenDay(datetime localtime, int& offset_minutes)
 //|
 //|【参考】 https://fx-prog.com/ea-sorce7/ 
 //+------------------------------------------------------------------+
-double GetMaxLot(double min_margin_level, double max_lot)
+double GetMaxLotMarginLevel(double min_margin_level, double max_lot)
 {
     // 最大ロット数確認
     double broker_max_lot = MarketInfo(Symbol(), MODE_MAXLOT);
