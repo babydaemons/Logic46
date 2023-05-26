@@ -10,6 +10,7 @@
 //+------------------------------------------------------------------+
 double MQL45::MarketInfo(string symbol, int type)
 {
+    double margin = 0;
     switch(type) {
     case 1: // MODE_LOW
         return(SymbolInfoDouble(symbol, SYMBOL_LASTLOW));
@@ -64,7 +65,10 @@ double MQL45::MarketInfo(string symbol, int type)
     case 31: // MODE_MARGINHEDGED
         return(0);
     case 32: // MODE_MARGINREQUIRED
-        return(0);
+        if (!OrderCalcMargin(ORDER_TYPE_BUY, symbol, 1.00, SymbolInfoDouble(symbol, SYMBOL_ASK), margin)) {
+            return 0;
+        }
+        return(margin);
     case 33: // MODE_FREEZELEVEL
         return((double)SymbolInfoInteger(symbol, SYMBOL_TRADE_FREEZE_LEVEL));
     case 34: // MODE_CLOSEBY_ALLOWED
