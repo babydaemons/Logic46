@@ -1,0 +1,351 @@
+//+------------------------------------------------------------------+
+//|                                            CopyPositionSeder.mq4 |
+//|                                          Copyright 2023, YUSUKE. |
+//|                                             https://www.mql5.com |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2023, YUSUKE."
+#property version   "1.00"
+#property strict
+
+#import "kernel32.dll"
+ulong GetTickCount64();
+#import
+
+//--- input parameters
+sinput string  RECIVER_ACCOUNTS = "Tradexfin_Limited+256026988+0.5|Titan_FX+8104608+2.0"; // 送信先「証券会社名+口座番号+ロット比率」を指定("|"区切り)
+sinput int     UPDATE_INTERVAL = 1000; // ポジションコピーを行うインターバル(ミリ秒)
+sinput string  TARGET_MAGIC_NUMBERS = "0,12345678"; // コピーしたいマジックナンバーをカンマ区切りで指定(裁量トレードは0)
+sinput string  SYMBOL_REMOVE_SUFFIX = "."; // ポジションコピー時にシンボル名から削除するサフィックス
+
+#define MAX_POSITION 1024
+
+//+------------------------------------------------------------------+
+//| ポジション操作を表す列挙値です                                   |
+//+------------------------------------------------------------------+
+enum ENUM_POSITION_OPERATION {
+    POSITION_ADD = +1,
+    POSITION_REMOVE = -1,
+    POSITION_MODIFY = 0,
+};
+
+//+------------------------------------------------------------------+
+//| ポジション全体を表す構造体です                                   |
+//+------------------------------------------------------------------+
+struct POSITION_LIST {
+    int Change[MAX_POSITION];
+    int MagicNumber[MAX_POSITION];
+    int EntryType[MAX_POSITION];
+    string SymbolValue[MAX_POSITION];
+    int Tickets[MAX_POSITION];
+    double Lots[MAX_POSITION];
+    double StopLoss[MAX_POSITION];
+    double TakeProfit[MAX_POSITION];
+
+    void Clear() {
+        ArrayFill(Change, 0, MAX_POSITION, 0);
+        ArrayFill(MagicNumber, 0, MAX_POSITION, 0);
+        ArrayFill(EntryType, 0, MAX_POSITION, 0);
+        ArrayFill(Tickets, 0, MAX_POSITION, 0);
+        for (int i = 0; i < MAX_POSITION; ++i) {
+            SymbolValue[i] = "";
+        }
+        ArrayFill(Lots, 0, MAX_POSITION, 0.0);
+        ArrayFill(StopLoss, 0, MAX_POSITION, 0.0);
+        ArrayFill(TakeProfit, 0, MAX_POSITION, 0.0);
+    }
+};
+
+// ポジション全体を表す構造体です
+// 添字0と1で交互に現在と前回のポジションの状況を保持します
+POSITION_LIST Positions[2];
+
+// ポジション全体を表す構造体配列の添字で
+// 0と1のどちらが現在を表すか示すフラグです
+bool CurrentIndex;
+
+// 通信用タブ区切りファイルに書き出す
+// ポジション全体の差分を表す構造体です
+POSITION_LIST Output;
+
+// コピーしたいマジックナンバーの配列です
+int MagicNumbers[];
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // パラメータ UPDATE_INTERVAL で指定されたミリ秒の周期で
+    // ポジションコピーを行います
+    EventSetMillisecondTimer(UPDATE_INTERVAL);
+    
+    // ポジション全体を表す構造体を
+    // 添字0と1の両方(現在と前回の両方)を初期化します
+    for (int i = 0; i < 2; ++i) {
+        Positions[i].Clear();
+    }
+
+    // コピーしたいマジックナンバーの配列を初期化します
+    string magic_numbers[];
+    int magic_number_count = StringSplit(TARGET_MAGIC_NUMBERS, '/', magic_numbers);
+    ArrayResize(MagicNumbers, magic_number_count);
+    for (int i = 0; i < magic_number_count; ++i) {
+        MagicNumbers[i] = (int)StringToInteger(magic_numbers[i]);
+    }
+    ArraySort(MagicNumbers);
+
+    // 添字0を現在のポジション状態にします
+    CurrentIndex = (bool)0;
+
+    // レシーバー側を識別する証券会社名＋口座番号をログ出力します
+    string account_company = AccountInfoString(ACCOUNT_COMPANY);
+    StringReplace(account_company, " ", "_");
+    printf("送信元「証券会社名+口座番号」は「%s+%d」です。", account_company, AccountInfoInteger(ACCOUNT_LOGIN));
+
+    return INIT_SUCCEEDED;
+}
+
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // タイマーを破棄します
+    EventKillTimer();
+}
+
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+    // 気配値が更新されたタイミングで
+    // ポジション全体の差分をタブ区切りファイルに保存します
+    SavePosition();
+}
+
+//+------------------------------------------------------------------+
+//| Timer function                                                   |
+//+------------------------------------------------------------------+
+void OnTimer()
+{
+    // パラメータ UPDATE_INTERVAL で指定されたミリ秒の周期で
+    // ポジション全体の差分をタブ区切りファイルに保存します
+    // OnTick()で十分なはずですが万が一のための保険です
+    SavePosition();
+}
+
+//+------------------------------------------------------------------+
+//| ポジション全体の差分をタブ区切りファイルに保存します             |
+//+------------------------------------------------------------------+
+void SavePosition()
+{
+    // 出力するポジション全体の差分を表す構造体をクリアします
+    Output.Clear();
+
+    // 現在のポジション全体の状態を走査します
+    // 戻り値 position_count は現在のポジションの総数です
+    int current = (int)CurrentIndex;
+    int position_count = ScanCurrentPositions(Positions[current]);
+
+    // ポジションの差分を走査します
+    int previous = (int)!CurrentIndex;
+
+    // 追加されたポジション全体の状態を走査します
+    // 戻り値 change_count は差分の総数です
+    int change_count = ScanAddedPositions(Positions[current], Positions[previous], position_count, 0);
+
+    // 削除されたポジション全体の状態を走査します
+    // 戻り値 change_count は差分の総数です
+    change_count = ScanRemovedPositions(Positions[current], Positions[previous], position_count, change_count);
+
+    // 現在のポジション状態の添字と前回のポジション状態の添字を入れ替えます
+    CurrentIndex = !CurrentIndex;
+
+    // ポジションの差分が0件ならばファイル出力しません
+    if (change_count == 0) {
+        return;
+    }
+
+    // コピーポジション連携用タブ区切りファイルを出力します
+    OutputPositionDeffference(change_count);
+}
+
+//+------------------------------------------------------------------+
+//| 現在のポジション全体の状態を走査します                           |
+//+------------------------------------------------------------------+
+int ScanCurrentPositions(POSITION_LIST& Current)
+{
+    // 現在のポジション状態を取得する前に
+    // 現在の添字が指す配列要素をクリアします
+    Current.Clear();
+
+    // 現在のポジション状態を全て取得します
+    int position_count = 0;
+    for (int i = 0; i < OrdersTotal(); ++i) {
+        // トレード中のポジションを選択します
+        if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) { continue; }
+
+        // コピーしたいマジックナンバーかチェックします
+        int magic_number = OrderMagicNumber();
+        int index = ArrayBsearch(MagicNumbers, magic_number);
+        if (magic_number != MagicNumbers[index]) { continue; }
+
+        int entry_type = 0;
+        switch (OrderType()) {
+        case OP_BUY:
+            entry_type = +1;
+            break;
+        case OP_BUYLIMIT:
+            entry_type = +2;
+            break;
+        case OP_BUYSTOP:
+            entry_type = +3;
+            break;
+        case OP_SELL:
+            entry_type = -1;
+            break;
+        case OP_SELLLIMIT:
+            entry_type = -2;
+            break;
+        case OP_SELLSTOP:
+            entry_type = -3;
+            break;
+        default:
+            continue;
+        }
+
+        Current.Change[position_count] = INT_MAX;
+        Current.EntryType[position_count] = entry_type;
+        Current.SymbolValue[position_count] = OrderSymbol();
+        Current.Tickets[position_count] = OrderTicket();
+        Current.Lots[position_count] = OrderLots();
+        Current.StopLoss[position_count] = OrderStopLoss();
+        Current.TakeProfit[position_count] = OrderTakeProfit();
+        ++position_count;
+    }
+
+    return position_count;
+}
+
+//+------------------------------------------------------------------+
+//| 追加されたポジション全体の状態を走査します                       |
+//+------------------------------------------------------------------+
+int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int change_count)
+{
+    // 外側のカウンタ current のループで現在のポジション全体をスキャンします
+    for (int current = 0; current < position_count; ++current) {
+        bool added = true; // ポジション追加フラグ
+
+        // 内側のカウンタ previous のループで前回のポジション全体をスキャンします
+        for (int previous = 0; Previous.Tickets[previous] != 0 && previous < MAX_POSITION; ++previous) {
+            // チケット番号が一致するとき、
+            if (Previous.Tickets[previous] == Current.Tickets[current]) {
+                // ストップロスまたはテイクプロフィットのいずれかが不一致ならば変化ありです
+                if ((Previous.StopLoss[previous] != Current.StopLoss[current]) ||
+                    (Previous.TakeProfit[previous] != Current.TakeProfit[current])) {
+                    change_count = AppendChangedPosition(Current, POSITION_MODIFY, change_count, current);
+                    break;               
+                }
+                else {
+                    // チケット番号・ストップロス・テイクプロフィットが完全一致なので変化なしです
+                    break;
+                }
+            }
+        }
+
+        // チケット番号が不一致のとき、ポジション追加です
+        if (added) {
+            change_count = AppendChangedPosition(Current, POSITION_ADD, change_count, current);                 
+        }
+    }
+
+    return change_count;
+}
+
+//+------------------------------------------------------------------+
+//| 削除されたポジション全体の状態を走査します                       |
+//+------------------------------------------------------------------+
+int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int change_count)
+{
+    // 外側のカウンタ previous のループで前回のポジション全体をスキャンします
+    for (int previous = 0; Previous.Tickets[previous] != 0 && previous < MAX_POSITION; ++previous) {
+        bool removed = true; // ポジション削除フラグ
+
+        // 内側のカウンタcurrentのループで現在のポジション全体をスキャンします
+        for (int current = 0; current < position_count; ++current) {
+            // チケット番号が一致したらポジションに変化はありません
+            // ポジション修正は ScanAddedPositions() で確認済みです
+            if (Previous.Tickets[previous] == Current.Tickets[current]) {
+                removed = false;
+                break;
+            }
+        }
+
+        // チケット番号が不一致のとき、ポジション削除です
+        if (removed) {
+            change_count = AppendChangedPosition(Current, POSITION_REMOVE, change_count, previous);                 
+        }
+    }
+
+    return change_count;
+}
+
+//+------------------------------------------------------------------+
+//| 出力する差分情報構造体にポジションの要素を追記します             |
+//+------------------------------------------------------------------+
+int AppendChangedPosition(POSITION_LIST& Current, ENUM_POSITION_OPERATION change, int dst, int src)
+{
+    Output.Change[dst] = change;
+    Output.Tickets[dst] = Current.Tickets[src];
+    Output.EntryType[src] = Current.EntryType[src];
+    Output.Lots[src] = Current.Lots[src];
+    Output.StopLoss[src] = Current.StopLoss[src];
+    Output.TakeProfit[src] = Current.TakeProfit[src];
+    return ++dst;
+}
+
+//+------------------------------------------------------------------+
+//| コピーポジション連携用タブ区切りファイルを出力します             |
+//+------------------------------------------------------------------+
+void OutputPositionDeffference(int change_count)
+{
+    // システムが開始されてから経過したミリ秒数を取得します
+    ulong epoch = GetTickCount64();
+
+    // コピーポジション連携用タブ区切りファイルのファイル名
+    string path = StringFormat("CopyPosition-%s-%20u.tsv", "AAAAAAAA", epoch);
+
+    // ファイルをオープンします
+    int file = FileOpen(path, FILE_WRITE | FILE_TXT |FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
+
+    // ファイルのオープンに失敗した場合は、ログを出力して処理を中断します
+    if (file == INVALID_HANDLE) {
+        printf("コピーポジション連携用タブ区切りファイルのオープンに失敗しました: %s", path);
+        return;
+    }
+
+    // ポジションの差分をコピーポジション連携用タブ区切りファイルに出力します
+    for (int i = 0; i < change_count; ++i) {
+        // タブ区切りファイルの仕様
+        // 0列目：+1: ポジション追加 ／ -1: ポジション削除 ／ 0: ポジション修正
+        string line = StringFormat("%+d\t%+.2f\t", Output.Change[i]);
+        // 1列目：マジックナンバー
+        line += StringFormat("%d\t", Output.MagicNumber[i]);
+        // 2列目：エントリー種別
+        line += StringFormat("%d\t", Output.EntryType[i]);
+        // 3列目：シンボル名
+        line += StringFormat("%s\t", Output.SymbolValue[i]);
+        // 4列目：コピー元チケット番号
+        line += StringFormat("%d\t", Output.Tickets[i]);
+        // 5列目：ポジションサイズ
+        line += StringFormat("%.2f\t", Output.Lots[i]);
+        // 6列目：ストップロス
+        line += StringFormat("%.6f\t", Output.StopLoss[i]);
+        // 7列目：テイクプロフィット
+        line += StringFormat("%.6f\t", Output.TakeProfit[i]);
+        FileWrite(file, line);
+    }
+
+    FileClose(file);
+}
