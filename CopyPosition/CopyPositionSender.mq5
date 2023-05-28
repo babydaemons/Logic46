@@ -10,7 +10,11 @@
 #include <Trade/Trade.mqh>
 
 #import "kernel32.dll"
-ulong GetTickCount64();
+uint GetEnvironmentVariableW(
+    string name,
+    string& returnValue,
+    uint bufferSize
+);
 #import
 
 #import "kernel32.dll"
@@ -24,18 +28,11 @@ uint GetPrivateProfileStringW(
 #import
 
 #import "kernel32.dll"
-uint GetEnvironmentVariableW(
-    string name,
-    string& returnValue,
-    uint bufferSize
-);
+ulong GetTickCount64();
 #import
 
-//--- input parameters
-sinput string  RECIVER_ACCOUNTS = "Tradexfin_Limited+256026988+0.5|Titan_FX+8104608+2.0"; // 送信先「証券会社名+口座番号+ロット比率」を指定("|"区切り)
-sinput int     UPDATE_INTERVAL = 1000; // ポジションコピーを行うインターバル(ミリ秒)
-sinput string  TARGET_MAGIC_NUMBERS = "0,12345678"; // コピーしたいマジックナンバーをカンマ区切りで指定(裁量トレードは0)
-sinput string  SYMBOL_REMOVE_SUFFIX = "."; // ポジションコピー時にシンボル名から削除するサフィックス
+int     UPDATE_INTERVAL;      // ポジションコピーを行うインターバル(ミリ秒)
+string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
 
 CTrade Trader;
 
@@ -92,6 +89,12 @@ POSITION_LIST Output;
 // コピーしたいマジックナンバーの配列です
 int MagicNumbers[];
 
+// コピーポジション連携用タブ区切りファイルの個数です
+int CommunacationFileCount = 0;
+
+// コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
+string CommunacationPathPrefix[];
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -112,15 +115,6 @@ int OnInit()
         Positions[i].Clear();
     }
 
-    // コピーしたいマジックナンバーの配列を初期化します
-    string magic_numbers[];
-    int magic_number_count = StringSplit(TARGET_MAGIC_NUMBERS, '/', magic_numbers);
-    ArrayResize(MagicNumbers, magic_number_count);
-    for (int i = 0; i < magic_number_count; ++i) {
-        MagicNumbers[i] = (int)StringToInteger(magic_numbers[i]);
-    }
-    ArraySort(MagicNumbers);
-
     // 添字0を現在のポジション状態にします
     CurrentIndex = (bool)0;
 
@@ -133,25 +127,83 @@ int OnInit()
 bool Initialize()
 {
     // センダー側を識別する証券会社名+口座番号を取得します
-    string account_company = AccountInfoString(ACCOUNT_COMPANY);
-    StringReplace(account_company, " ", "_");
-    string sender_name = StringFormat("%s+%d", account_company, AccountInfoInteger(ACCOUNT_LOGIN));
-    printf("送信元「証券会社名+口座番号」は「%s」です。", sender_name);
+    string sender_name = GetBrokerAccount(AccountInfoString(ACCOUNT_COMPANY), AccountInfoInteger(ACCOUNT_LOGIN));
 
     // Commonデータフォルダのパスを取得します
-    string app_data_dir = "";
-    uint app_data_dir_length = GetEnvironmentVariableW("appdata", app_data_dir, 1024);
-    if (app_data_dir_length == 0) {
+    string appdata_dir = "";
+    uint appdata_dir_length = GetEnvironmentVariableW("appdata", appdata_dir, 1024);
+    if (appdata_dir_length == 0) {
         printf("エラー: 環境変数 appdata の値の取得に失敗しました");
         return false;
     } 
-    string common_data_dir = app_data_dir + "\\MetaQuotes\\Terminal\\Common\\Files";
+    string common_data_dir = appdata_dir + "\\MetaQuotes\\Terminal\\Common\\Files";
 
     // センダー側設定のINIファイルパスをログ出力します
-    string inifile_path = StringFormat("%s\\CopyPositionSender-%s.ini", common_data_dir, sender_name);
-    printf("送信元設定INIファイルは「%s」です。", inifile_path);
+    string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", sender_name);
+    string inifile_path = StringFormat("%s\\%s", common_data_dir, inifile_name);
+    printf("センダー側設定INIファイルは「%s」です。", inifile_path);
+
+    if (!FileIsExist(inifile_name, FILE_COMMON)) {
+        printf("エラー: センダー側設定INIファイル「%s」が見つかりません。", inifile_path);
+        return false;
+    }
+
+    const string NONE = "<NONE>";
+
+    // ポジションコピーを行うインターバル(ミリ秒)
+    string update_interval = "";
+    if (GetPrivateProfileStringW("Sender", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
+        return false;
+    }
+    UPDATE_INTERVAL = (int)StringToInteger(update_interval);
+
+    // ポジションコピー時にシンボル名から削除するサフィックス
+    GetPrivateProfileStringW("Sender", "SYMBOL_REMOVE_SUFFIX", "", SYMBOL_REMOVE_SUFFIX, 1024, inifile_path);
+
+    // コピーしたいマジックナンバーの配列を初期化します
+    string copy_magic_numbers = "";
+    if (GetPrivateProfileStringW("Sender", "COPY_MAGIC_NUMBERS", NONE, copy_magic_numbers, 1024, inifile_path) == 0 || copy_magic_numbers == NONE) {
+        return false;
+    }
+    string magic_numbers[];
+    int magic_number_count = StringSplit(copy_magic_numbers, ',', magic_numbers);
+    ArrayResize(MagicNumbers, magic_number_count);
+    for (int i = 0; i < magic_number_count; ++i) {
+        MagicNumbers[i] = (int)StringToInteger(magic_numbers[i]);
+    }
+    ArraySort(MagicNumbers);
+
+    int i = 0;
+    while (true) {
+        string section_name = StringFormat("Reciever%03d", i + 1);
+        string broker = "";
+        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, broker, 1024, inifile_path) == 0 || broker == NONE) {
+            break;
+        }
+
+        string account = "";
+        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, account, 1024, inifile_path) == 0 || account == NONE) {
+            break;
+        }
+
+        string reciever_name = GetBrokerAccount(broker, StringToInteger(account));
+        ArrayResize(CommunacationPathPrefix, i + 1);
+        CommunacationPathPrefix[i] = StringFormat("CopyPositionEA\\%s\\%s", reciever_name, sender_name);
+        CommunacationFileCount = ++i;
+    }
 
     return true;
+}
+
+//+------------------------------------------------------------------+
+//| 証券会社名と口座番号の組の文字列を返します                       |
+//+------------------------------------------------------------------+
+string GetBrokerAccount(string broker, long account)
+{
+    StringReplace(broker, " ", "_");
+    StringReplace(broker, ",", "");
+    StringReplace(broker, ".", "");
+    return StringFormat("%s-%d", broker, account);
 }
 
 //+------------------------------------------------------------------+
@@ -217,7 +269,9 @@ void SavePosition()
     }
 
     // コピーポジション連携用タブ区切りファイルを出力します
-    OutputPositionDeffference(change_count);
+    for (int i = 0; i < CommunacationFileCount; ++i) {
+        OutputPositionDeffference(CommunacationPathPrefix[i], change_count);
+    }
 }
 
 //+------------------------------------------------------------------+
@@ -391,16 +445,16 @@ int AppendChangedPosition(POSITION_LIST& Current, ENUM_POSITION_OPERATION change
 //+------------------------------------------------------------------+
 //| コピーポジション連携用タブ区切りファイルを出力します             |
 //+------------------------------------------------------------------+
-void OutputPositionDeffference(int change_count)
+void OutputPositionDeffference(string output_path_prefix, int change_count)
 {
     // システムが開始されてから経過したミリ秒数を取得します
     ulong epoch = GetTickCount64();
 
     // コピーポジション連携用タブ区切りファイルのファイル名
-    string path = StringFormat("CopyPosition-%s-%20u.tsv", "AAAAAAAA", epoch);
+    string path = StringFormat("%s-%20u.tsv", output_path_prefix, epoch);
 
     // ファイルをオープンします
-    int file = FileOpen(path, FILE_WRITE | FILE_TXT |FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
+    int file = FileOpen(path, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
 
     // ファイルのオープンに失敗した場合は、ログを出力して処理を中断します
     if (file == INVALID_HANDLE) {
