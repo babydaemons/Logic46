@@ -1,7 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                            CopyPositionSeder.mq4 |
 //|                                          Copyright 2023, YUSUKE. |
-//|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, YUSUKE."
 #property version   "1.00"
@@ -154,7 +153,9 @@ bool Initialize()
     UPDATE_INTERVAL = (int)StringToInteger(update_interval);
 
     // ポジションコピー時にシンボル名から削除するサフィックス
-    GetPrivateProfileStringW("Sender", "SYMBOL_REMOVE_SUFFIX", "", SYMBOL_REMOVE_SUFFIX, 1024, inifile_path);
+    string symbol_remove_suffix = "";
+    GetPrivateProfileStringW("Sender", "SYMBOL_REMOVE_SUFFIX", NONE, symbol_remove_suffix, 1024, inifile_path);
+    SYMBOL_REMOVE_SUFFIX = symbol_remove_suffix == NONE ? "" : symbol_remove_suffix;
 
     // コピーしたいマジックナンバーの配列を初期化します
     string copy_magic_numbers = "";
@@ -184,7 +185,7 @@ bool Initialize()
 
         string reciever_name = GetBrokerAccount(broker, StringToInteger(account));
         ArrayResize(CommunacationPathPrefix, i + 1);
-        CommunacationPathPrefix[i] = StringFormat("CopyPositionEA\\%s\\%s", reciever_name, sender_name);
+        CommunacationPathPrefix[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
         CommunacationFileCount = ++i;
     }
 
@@ -344,10 +345,12 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
                 if ((Previous.StopLoss[previous] != Current.StopLoss[current]) ||
                     (Previous.TakeProfit[previous] != Current.TakeProfit[current])) {
                     change_count = AppendChangedPosition(Current, POSITION_MODIFY, change_count, current);
+                    added = false;
                     break;               
                 }
                 else {
                     // チケット番号・ストップロス・テイクプロフィットが完全一致なので変化なしです
+                    added = false;
                     break;
                 }
             }
@@ -371,7 +374,7 @@ int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int po
     for (int previous = 0; Previous.Tickets[previous] != 0 && previous < MAX_POSITION; ++previous) {
         bool removed = true; // ポジション削除フラグ
 
-        // 内側のカウンタcurrentのループで現在のポジション全体をスキャンします
+        // 内側のカウンタ current のループで現在のポジション全体をスキャンします
         for (int current = 0; current < position_count; ++current) {
             // チケット番号が一致したらポジションに変化はありません
             // ポジション修正は ScanAddedPositions() で確認済みです
@@ -383,7 +386,7 @@ int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int po
 
         // チケット番号が不一致のとき、ポジション削除です
         if (removed) {
-            change_count = AppendChangedPosition(Current, POSITION_REMOVE, change_count, previous);                 
+            change_count = AppendChangedPosition(Previous, POSITION_REMOVE, change_count, previous);                 
         }
     }
 
@@ -397,10 +400,11 @@ int AppendChangedPosition(POSITION_LIST& Current, ENUM_POSITION_OPERATION change
 {
     Output.Change[dst] = change;
     Output.Tickets[dst] = Current.Tickets[src];
-    Output.EntryType[src] = Current.EntryType[src];
-    Output.Lots[src] = Current.Lots[src];
-    Output.StopLoss[src] = Current.StopLoss[src];
-    Output.TakeProfit[src] = Current.TakeProfit[src];
+    Output.EntryType[dst] = Current.EntryType[src];
+    Output.SymbolValue[dst] = Current.SymbolValue[src];
+    Output.Lots[dst] = Current.Lots[src];
+    Output.StopLoss[dst] = Current.StopLoss[src];
+    Output.TakeProfit[dst] = Current.TakeProfit[src];
     return ++dst;
 }
 
@@ -413,7 +417,7 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
     ulong epoch = GetTickCount64();
 
     // コピーポジション連携用タブ区切りファイルのファイル名
-    string path = StringFormat("%s-%20u.tsv", output_path_prefix, epoch);
+    string path = StringFormat("%s\\%020u.tsv", output_path_prefix, epoch);
 
     // ファイルをオープンします
     int file = FileOpen(path, FILE_WRITE | FILE_TXT |FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
@@ -428,7 +432,7 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
     for (int i = 0; i < change_count; ++i) {
         // タブ区切りファイルの仕様
         // 0列目：+1: ポジション追加 ／ -1: ポジション削除 ／ 0: ポジション修正
-        string line = StringFormat("%+d\t%+.2f\t", Output.Change[i]);
+        string line = StringFormat("%+d\t", Output.Change[i]);
         // 1列目：マジックナンバー
         line += StringFormat("%d\t", Output.MagicNumber[i]);
         // 2列目：エントリー種別

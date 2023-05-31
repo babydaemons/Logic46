@@ -1,7 +1,6 @@
 //+------------------------------------------------------------------+
-//|                                            CopyPositionSeder.mq4 |
+//|                                          CopyPositionReciver.mq4 |
 //|                                          Copyright 2023, YUSUKE. |
-//|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, YUSUKE."
 #property version   "1.00"
@@ -25,14 +24,12 @@ uint GetPrivateProfileStringW(
     string iniFilePath);
 #import
 
-#import "kernel32.dll"
-ulong GetTickCount64();
-#import
+#include "ErrorDescriptionMT4.mqh"
 
 int     UPDATE_INTERVAL;      // ポジションコピーを行うインターバル(ミリ秒)
 string  SYMBOL_APPEND_SUFFIX; // ポジションコピー時にシンボル名に追加するサフィックス
-int     RETRY_INTERVAL;       // 発注時・注文修正時のリトライインターバル時間(ミリ秒)
-int     RETRY_COUNT_MAX;      // 発注時・注文修正時の最大リトライ回数
+int     RETRY_INTERVAL_INIT;  // 発注時・ポジション修正時のリトライ時間の初期値(ミリ秒)
+int     RETRY_COUNT_MAX;      // 発注時・ポジション修正時のリトライ最大回数
 int     SLIPPAGE;             // スリッページ(ポイント)
 
 //+------------------------------------------------------------------+
@@ -44,43 +41,6 @@ enum ENUM_POSITION_OPERATION {
     POSITION_MODIFY = 0,
 };
 
-#define MAX_POSITION 1024
-
-//+------------------------------------------------------------------+
-//| ポジション全体を表す構造体です                                   |
-//+------------------------------------------------------------------+
-struct POSITION_LIST {
-    int Change[MAX_POSITION];
-    int MagicNumber[MAX_POSITION];
-    int EntryType[MAX_POSITION];
-    string SymbolValue[MAX_POSITION];
-    int Tickets[MAX_POSITION];
-    double Lots[MAX_POSITION];
-    double StopLoss[MAX_POSITION];
-    double TakeProfit[MAX_POSITION];
-
-    void Clear() {
-        ArrayFill(Change, 0, MAX_POSITION, 0);
-        ArrayFill(MagicNumber, 0, MAX_POSITION, 0);
-        ArrayFill(EntryType, 0, MAX_POSITION, 0);
-        ArrayFill(Tickets, 0, MAX_POSITION, 0);
-        for (int i = 0; i < MAX_POSITION; ++i) {
-            SymbolValue[i] = "";
-        }
-        ArrayFill(Lots, 0, MAX_POSITION, 0.0);
-        ArrayFill(StopLoss, 0, MAX_POSITION, 0.0);
-        ArrayFill(TakeProfit, 0, MAX_POSITION, 0.0);
-    }
-};
-
-// ポジション全体を表す構造体配列の添字で
-// 0と1のどちらが現在を表すか示すフラグです
-bool CurrentIndex;
-
-// 通信用タブ区切りファイルに書き出す
-// ポジション全体の差分を表す構造体です
-POSITION_LIST Output;
-
 // コピーしたいマジックナンバーの配列です
 int MagicNumbers[];
 
@@ -88,7 +48,7 @@ int MagicNumbers[];
 int CommunacationFileCount = 0;
 
 // コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
-string CommunacationPathPattern[];
+string CommunacationPathDir[];
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -104,8 +64,7 @@ int OnInit()
     // ポジションコピーを行います
     EventSetMillisecondTimer(UPDATE_INTERVAL);
     
-    // 添字0を現在のポジション状態にします
-    CurrentIndex = (bool)0;
+    printf("コピーポジションの受信監視を開始しました。");
 
     return INIT_SUCCEEDED;
 }
@@ -142,12 +101,29 @@ bool Initialize()
     // ポジションコピーを行うインターバル(ミリ秒)
     string update_interval = "";
     if (GetPrivateProfileStringW("Reciever", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
+        printf("エラー: セクション[Reciever]のキー\"UPDATE_INTERVAL\"が見つかりません。");
         return false;
     }
     UPDATE_INTERVAL = (int)StringToInteger(update_interval);
 
+    string retry_interval_init = "";
+    if (GetPrivateProfileStringW("Reciever", "RETRY_INTERVAL_INIT", NONE, retry_interval_init, 1024, inifile_path) == 0 || retry_interval_init == NONE) {
+        printf("エラー: セクション[Reciever]のキー\"RETRY_INTERVAL_INIT\"が見つかりません。");
+        return false;
+    }
+    RETRY_INTERVAL_INIT = (int)StringToInteger(retry_interval_init);
+
+    string retry_count_max = "";
+    if (GetPrivateProfileStringW("Reciever", "RETRY_COUNT_MAX", NONE, retry_count_max, 1024, inifile_path) == 0 || retry_count_max == NONE) {
+        printf("エラー: セクション[Reciever]のキー\"RETRY_COUNT_MAX\"が見つかりません。");
+        return false;
+    }
+    RETRY_COUNT_MAX = (int)StringToInteger(retry_count_max);
+
     // ポジションコピー時にシンボル名に追加するサフィックス
-    GetPrivateProfileStringW("Reciever", "SYMBOL_APPEND_SUFFIX", "", SYMBOL_APPEND_SUFFIX, 1024, inifile_path);
+    string symbol_append_suffix = "";
+    GetPrivateProfileStringW("Reciever", "SYMBOL_APPEND_SUFFIX", NONE, symbol_append_suffix, 1024, inifile_path);
+    SYMBOL_APPEND_SUFFIX = symbol_append_suffix == NONE ? "" : symbol_append_suffix;
 
     int i = 0;
     while (true) {
@@ -163,9 +139,11 @@ bool Initialize()
         }
 
         string sender_name = GetBrokerAccount(broker, StringToInteger(account));
-        ArrayResize(CommunacationPathPattern, i + 1);
-        CommunacationPathPattern[i] = StringFormat("CopyPositionEA\\%s\\%s-*.tsv", reciever_name, sender_name);
+        ArrayResize(CommunacationPathDir, i + 1);
+        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
         CommunacationFileCount = ++i;
+
+        printf("コピーポジションを右記から受信します → 証券会社: \"%s\" / 口座番号: \"%s\"", broker, account);
     }
 
     return true;
@@ -218,22 +196,23 @@ void OnTimer()
 void LoadPositions()
 {
     for (int i = 0; i < CommunacationFileCount; ++i) {
-        LoadPosition(CommunacationPathPattern[i]);
+        LoadPosition(CommunacationPathDir[i]);
     }
 }
 
 //+------------------------------------------------------------------+
 //| ポジション全体の差分をタブ区切りファイルから読みだします         |
 //+------------------------------------------------------------------+
-void LoadPosition(string path_prefix)
+void LoadPosition(string communication_dir)
 {
-    string path;
-    long search_handle = FileFindFirst(path_prefix, path, FILE_COMMON);
+    string file_name;
+    long search_handle = FileFindFirst(communication_dir + "*.tsv", file_name, FILE_COMMON);
     if (search_handle == INVALID_HANDLE) {
         return;
     }
 
     do {
+        string path = communication_dir + file_name;
         int file = FileOpen(path, FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
         if (file == INVALID_HANDLE) {
             continue;
@@ -251,7 +230,7 @@ void LoadPosition(string path_prefix)
             // 2列目：エントリー種別
             int entry_type = (int)StringToInteger(field[2]);
             // 3列目：シンボル名
-            string symbol = field[3];
+            string symbol = field[3] + SYMBOL_APPEND_SUFFIX;
             // 4列目：コピー元チケット番号
             int ticket = (int)StringToInteger(field[4]);
             // 5列目：ポジションサイズ
@@ -275,7 +254,7 @@ void LoadPosition(string path_prefix)
 
         FileClose(file);
         FileDelete(path, FILE_COMMON);
-    } while (FileFindNext(search_handle, path));
+    } while (FileFindNext(search_handle, file_name));
 
     FileFindClose(search_handle);
 }
@@ -286,7 +265,7 @@ void LoadPosition(string path_prefix)
 void Entry(int magic_number, int entry_type, string symbol, int ticket, double lots, double stoploss, double takrprofit)
 {
     int cmd = 0;
-    switch (OrderType()) {
+    switch (entry_type) {
     case +1:
         cmd = OP_BUY;
         break;
@@ -313,7 +292,7 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
 
     double price = 0;
     color arrow = clrNONE;
-    if (cmd > 0) {
+    if (entry_type > 0) {
         price = Ask;
         arrow = clrBlue;
     } else {
@@ -323,9 +302,10 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
 
     string comment = StringFormat("#%d", ticket);
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-        int order_ticket = OrderSend(Symbol(), cmd, lots, price, SLIPPAGE, 0, 0, comment, magic_number, 0, arrow);
+        int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, 0, 0, comment, magic_number, 0, arrow);
         if (order_ticket == -1) {
-            Sleep(RETRY_INTERVAL << times);
+            printf("エラー: %s", ErrorDescription());
+            Sleep(RETRY_INTERVAL_INIT << times);
         } else {
             return;
         }
@@ -339,7 +319,7 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
 //+------------------------------------------------------------------+
 //| コピーしたポジションを決済します                                 |
 //+------------------------------------------------------------------+
-void Exit(int magic_number, int entry_type, string symbol, int ticket, double lots, double stoploss, double takrprofit)
+void Exit(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
 {
     lots = NormalizeDouble(lots, 2);
 
@@ -353,7 +333,7 @@ void Exit(int magic_number, int entry_type, string symbol, int ticket, double lo
         arrow = clrRed;
     }
 
-    string comment = StringFormat("#%d", ticket);
+    string comment = StringFormat("#%d", sender_ticket);
     for (int i = 0; i < OrdersTotal(); ++i) {
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
             break;
@@ -361,10 +341,12 @@ void Exit(int magic_number, int entry_type, string symbol, int ticket, double lo
         if (OrderComment() != comment) {
             continue;
         }
+        int ticket = OrderTicket();
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
             bool result = OrderClose(ticket, lots, price, SLIPPAGE, arrow);
             if (!result) {
-                Sleep(RETRY_INTERVAL << times);
+                printf("エラー: %s", ErrorDescription());
+                Sleep(RETRY_INTERVAL_INIT << times);
             } else {
                 return;
             }
@@ -378,7 +360,7 @@ void Exit(int magic_number, int entry_type, string symbol, int ticket, double lo
 //+------------------------------------------------------------------+
 //| コピーしたポジションを修正します                                 |
 //+------------------------------------------------------------------+
-void Modify(int magic_number, int entry_type, string symbol, int ticket, double lots, double stoploss, double takrprofit)
+void Modify(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
 {
     lots = NormalizeDouble(lots, 2);
 
@@ -389,7 +371,7 @@ void Modify(int magic_number, int entry_type, string symbol, int ticket, double 
         price = Ask;
     }
 
-    string comment = StringFormat("#%d", ticket);
+    string comment = StringFormat("#%d", sender_ticket);
     for (int i = 0; i < OrdersTotal(); ++i) {
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
             break;
@@ -397,10 +379,12 @@ void Modify(int magic_number, int entry_type, string symbol, int ticket, double 
         if (OrderComment() != comment) {
             continue;
         }
+        int ticket = OrderTicket();
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
             bool result = OrderModify(ticket, price, stoploss, takrprofit, 0);
             if (!result) {
-                Sleep(RETRY_INTERVAL << times);
+                printf("エラー: %s", ErrorDescription());
+                Sleep(RETRY_INTERVAL_INIT << times);
             } else {
                 return;
             }
