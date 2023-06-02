@@ -28,6 +28,8 @@ uint GetPrivateProfileStringW(
 ulong GetTickCount64();
 #import
 
+const string NONE = "<NONE>";
+
 int     UPDATE_INTERVAL;      // ポジションコピーを行うインターバル(ミリ秒)
 string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
 double  LOTS_MULTIPLY;        // ポジションコピー時のロット数の係数
@@ -91,6 +93,14 @@ int CommunacationFileCount = 0;
 // コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
 string CommunacationPathPrefix[];
 
+// シンボル名の変換("変換前シンボル名|変換後シンボル名"のカンマ区切り)
+struct SYMBOL_CONVERSION {
+    string SymbolBefore;
+    string SymbolAfter;
+};
+SYMBOL_CONVERSION SymbolConversion[];
+int SymbolConversionCount;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -144,8 +154,6 @@ bool Initialize()
         return false;
     }
 
-    const string NONE = "<NONE>";
-
     // ポジションコピーを行うインターバル(ミリ秒)
     string update_interval = "";
     if (GetPrivateProfileStringW("Sender", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
@@ -176,6 +184,11 @@ bool Initialize()
         MagicNumbers[i] = (int)StringToInteger(magic_numbers[i]);
     }
     ArraySort(MagicNumbers);
+
+    // シンボル名の変換("変換前シンボル名|変換後シンボル名"のカンマ区切り)
+    string symbol_conversion_list = "";
+    GetPrivateProfileStringW("Sender", "SYMBOL_CONVERSION", NONE, symbol_conversion_list, 1024, inifile_path);
+    SymbolConversionCount = InitializeSymbolConversion(symbol_conversion_list);
 
     int i = 0;
     while (true) {
@@ -211,6 +224,42 @@ string GetBrokerAccount(string broker, long account)
     StringReplace(broker, ",", "");
     StringReplace(broker, ".", "");
     return StringFormat("%s-%d", broker, account);
+}
+
+//+------------------------------------------------------------------+
+//| シンボル名の変換情報を初期化します                               |
+//+------------------------------------------------------------------+
+int InitializeSymbolConversion(string symbol_conversion_list)
+{
+    if (symbol_conversion_list == NONE) {
+        return 0;
+    }
+
+    string symbol_conversion[];
+    int conversion_count = StringSplit(symbol_conversion_list, ',', symbol_conversion);
+    ArrayResize(SymbolConversion, conversion_count);
+    for (int i = 0; i < conversion_count; ++i) {
+        string conversion[];
+        StringSplit(symbol_conversion[i], '|', conversion);
+        SymbolConversion[i].SymbolBefore = conversion[0];
+        SymbolConversion[i].SymbolAfter = conversion[1];
+    }
+    
+    return conversion_count;
+}
+
+//+------------------------------------------------------------------+
+//| シンボル名の変換を行います                                       |
+//+------------------------------------------------------------------+
+string ConvertSymbol(string symbol_before)
+{
+    for (int i = 0; i < SymbolConversionCount; ++i) {
+        if (SymbolConversion[i].SymbolBefore == symbol_before) {
+            return SymbolConversion[i].SymbolAfter;
+        }
+    }
+
+    return symbol_before;
 }
 
 //+------------------------------------------------------------------+
@@ -450,7 +499,7 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         // 2列目：エントリー種別
         line += StringFormat("%d\t", Output.EntryType[i]);
         // 3列目：シンボル名
-        line += StringFormat("%s\t", symbol);
+        line += StringFormat("%s\t", ConvertSymbol(symbol));
         // 4列目：コピー元チケット番号
         line += StringFormat("%d\t", Output.Tickets[i]);
         // 5列目：ポジションサイズ
