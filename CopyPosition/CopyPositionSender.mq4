@@ -88,10 +88,10 @@ POSITION_LIST Output;
 int MagicNumbers[];
 
 // コピーポジション連携用タブ区切りファイルの個数です
-int CommunacationFileCount = 0;
+int CommunacationDirCount = 0;
 
 // コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
-string CommunacationPathPrefix[];
+string CommunacationPathDir[];
 
 // シンボル名の変換("変換前シンボル名|変換後シンボル名"のカンマ区切り)
 struct SYMBOL_CONVERSION {
@@ -206,10 +206,10 @@ bool Initialize()
         printf("レシーバー側[%03d]の口座番号は「%s」です。", i + 1, reciever_account);
 
         string reciever_name = GetBrokerAccount(reciever_broker, StringToInteger(reciever_account));
-        ArrayResize(CommunacationPathPrefix, i + 1);
-        CommunacationPathPrefix[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
-        FolderCreate(CommunacationPathPrefix[i], true);
-        CommunacationFileCount = ++i;
+        ArrayResize(CommunacationPathDir, i + 1);
+        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
+        FolderCreate(CommunacationPathDir[i], true);
+        CommunacationDirCount = ++i;
     }
 
     return true;
@@ -325,8 +325,8 @@ void SavePosition()
     }
 
     // コピーポジション連携用タブ区切りファイルを出力します
-    for (int i = 0; i < CommunacationFileCount; ++i) {
-        OutputPositionDeffference(CommunacationPathPrefix[i], change_count);
+    for (int i = 0; i < CommunacationDirCount; ++i) {
+        OutputPositionDeffference(CommunacationPathDir[i], change_count);
     }
 }
 
