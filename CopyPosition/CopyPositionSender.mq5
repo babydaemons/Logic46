@@ -7,30 +7,7 @@
 #property strict
 
 #include <Trade/Trade.mqh>
-
-#import "kernel32.dll"
-uint GetEnvironmentVariableW(
-    string name,
-    string& returnValue,
-    uint bufferSize
-);
-#import
-
-#import "kernel32.dll"
-uint GetPrivateProfileStringW(
-    string sectionName,
-    string keyName,
-    string defaultValue,
-    string& returnValue,
-    uint bufferSize,
-    string iniFilePath);
-#import
-
-#import "kernel32.dll"
-ulong GetTickCount64();
-#import
-
-const string NONE = "<NONE>";
+#include "WindowsAPI.mqh"
 
 int     UPDATE_INTERVAL;      // ポジションコピーを行うインターバル(ミリ秒)
 string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
@@ -141,7 +118,7 @@ bool Initialize()
 
     // Commonデータフォルダのパスを取得します
     string appdata_dir = "";
-    uint appdata_dir_length = GetEnvironmentVariableW("appdata", appdata_dir, 1024);
+    uint appdata_dir_length = GetEnvironmentVariable("appdata", appdata_dir, 1024);
     if (appdata_dir_length == 0) {
         printf("エラー: 環境変数 appdata の値の取得に失敗しました");
         return false;
@@ -160,7 +137,7 @@ bool Initialize()
 
     // ポジションコピーを行うインターバル(ミリ秒)
     string update_interval = "";
-    if (GetPrivateProfileStringW("Sender", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
+    if (GetPrivateProfileString("Sender", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
         printf("エラー: セクション[Sender]のキー\"UPDATE_INTERVAL\"が見つかりません。");
         return false;
     }
@@ -168,17 +145,17 @@ bool Initialize()
 
     // ポジションコピー時にシンボル名から削除するサフィックス
     string symbol_remove_suffix = "";
-    GetPrivateProfileStringW("Sender", "SYMBOL_REMOVE_SUFFIX", NONE, symbol_remove_suffix, 1024, inifile_path);
+    GetPrivateProfileString("Sender", "SYMBOL_REMOVE_SUFFIX", NONE, symbol_remove_suffix, 1024, inifile_path);
     SYMBOL_REMOVE_SUFFIX = symbol_remove_suffix == NONE ? "" : symbol_remove_suffix;
 
     // ポジションコピー時のロット数の係数
     string lots_multiply = "";
-    GetPrivateProfileStringW("Sender", "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
+    GetPrivateProfileString("Sender", "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
     LOTS_MULTIPLY = lots_multiply == NONE ? 1.0 : StringToDouble(lots_multiply);
 
     // コピーしたいマジックナンバーの配列を初期化します
     string copy_magic_numbers = "";
-    if (GetPrivateProfileStringW("Sender", "COPY_MAGIC_NUMBERS", NONE, copy_magic_numbers, 1024, inifile_path) == 0 || copy_magic_numbers == NONE) {
+    if (GetPrivateProfileString("Sender", "COPY_MAGIC_NUMBERS", NONE, copy_magic_numbers, 1024, inifile_path) == 0 || copy_magic_numbers == NONE) {
         return false;
     }
     string magic_numbers[];
@@ -191,20 +168,20 @@ bool Initialize()
 
     // シンボル名の変換("変換前シンボル名|変換後シンボル名"のカンマ区切り)
     string symbol_conversion_list = "";
-    GetPrivateProfileStringW("Sender", "SYMBOL_CONVERSION", NONE, symbol_conversion_list, 1024, inifile_path);
+    GetPrivateProfileString("Sender", "SYMBOL_CONVERSION", NONE, symbol_conversion_list, 1024, inifile_path);
     SymbolConversionCount = InitializeSymbolConversion(symbol_conversion_list);
 
     int i = 0;
     while (true) {
         string section_name = StringFormat("Reciever%03d", i + 1);
         string reciever_broker = "";
-        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, reciever_broker, 1024, inifile_path) == 0 || reciever_broker == NONE) {
+        if (GetPrivateProfileString(section_name, "BROKER", NONE, reciever_broker, 1024, inifile_path) == 0 || reciever_broker == NONE) {
             break;
         }
         printf("レシーバー側[%03d]の証券会社は「%s」です。", i + 1, reciever_broker);
 
         string reciever_account = "";
-        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, reciever_account, 1024, inifile_path) == 0 || reciever_account == NONE) {
+        if (GetPrivateProfileString(section_name, "ACCOUNT", NONE, reciever_account, 1024, inifile_path) == 0 || reciever_account == NONE) {
             break;
         }
         printf("レシーバー側[%03d]の口座番号は「%s」です。", i + 1, reciever_account);

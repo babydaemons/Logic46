@@ -6,24 +6,7 @@
 #property version   "1.00"
 #property strict
 
-#import "kernel32.dll"
-uint GetEnvironmentVariableW(
-    string name,
-    string& returnValue,
-    uint bufferSize
-);
-#import
-
-#import "kernel32.dll"
-uint GetPrivateProfileStringW(
-    string sectionName,
-    string keyName,
-    string defaultValue,
-    string& returnValue,
-    uint bufferSize,
-    string iniFilePath);
-#import
-
+#include "WindowsAPI.mqh"
 #include "ErrorDescriptionMT4.mqh"
 
 int     UPDATE_INTERVAL;      // ポジションコピーを行うインターバル(ミリ秒)
@@ -45,7 +28,7 @@ enum ENUM_POSITION_OPERATION {
 int MagicNumbers[];
 
 // コピーポジション連携用タブ区切りファイルの個数です
-int CommunacationDirCount = 0;
+int CommunacationFileCount = 0;
 
 // コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
 string CommunacationPathDir[];
@@ -82,7 +65,7 @@ bool Initialize()
 
     // Commonデータフォルダのパスを取得します
     string appdata_dir = "";
-    uint appdata_dir_length = GetEnvironmentVariableW("appdata", appdata_dir, 1024);
+    uint appdata_dir_length = GetEnvironmentVariable("appdata", appdata_dir, 1024);
     if (appdata_dir_length == 0) {
         printf("エラー: 環境変数 appdata の値の取得に失敗しました");
         return false;
@@ -99,25 +82,23 @@ bool Initialize()
         return false;
     }
 
-    const string NONE = "<NONE>";
-
     // ポジションコピーを行うインターバル(ミリ秒)
     string update_interval = "";
-    if (GetPrivateProfileStringW("Reciever", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
+    if (GetPrivateProfileString("Reciever", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
         printf("エラー: セクション[Reciever]のキー\"UPDATE_INTERVAL\"が見つかりません。");
         return false;
     }
     UPDATE_INTERVAL = (int)StringToInteger(update_interval);
 
     string retry_interval_init = "";
-    if (GetPrivateProfileStringW("Reciever", "RETRY_INTERVAL_INIT", NONE, retry_interval_init, 1024, inifile_path) == 0 || retry_interval_init == NONE) {
+    if (GetPrivateProfileString("Reciever", "RETRY_INTERVAL_INIT", NONE, retry_interval_init, 1024, inifile_path) == 0 || retry_interval_init == NONE) {
         printf("エラー: セクション[Reciever]のキー\"RETRY_INTERVAL_INIT\"が見つかりません。");
         return false;
     }
     RETRY_INTERVAL_INIT = (int)StringToInteger(retry_interval_init);
 
     string retry_count_max = "";
-    if (GetPrivateProfileStringW("Reciever", "RETRY_COUNT_MAX", NONE, retry_count_max, 1024, inifile_path) == 0 || retry_count_max == NONE) {
+    if (GetPrivateProfileString("Reciever", "RETRY_COUNT_MAX", NONE, retry_count_max, 1024, inifile_path) == 0 || retry_count_max == NONE) {
         printf("エラー: セクション[Reciever]のキー\"RETRY_COUNT_MAX\"が見つかりません。");
         return false;
     }
@@ -125,38 +106,37 @@ bool Initialize()
 
     // ポジションコピー時にシンボル名に追加するサフィックス
     string symbol_append_suffix = "";
-    GetPrivateProfileStringW("Reciever", "SYMBOL_APPEND_SUFFIX", NONE, symbol_append_suffix, 1024, inifile_path);
+    GetPrivateProfileString("Reciever", "SYMBOL_APPEND_SUFFIX", NONE, symbol_append_suffix, 1024, inifile_path);
     SYMBOL_APPEND_SUFFIX = symbol_append_suffix == NONE ? "" : symbol_append_suffix;
 
     int i = 0;
     while (true) {
         string section_name = StringFormat("Sender%03d", i + 1);
         string sender_broker = "";
-        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, sender_broker, 1024, inifile_path) == 0 || sender_broker == NONE) {
+        if (GetPrivateProfileString(section_name, "BROKER", NONE, sender_broker, 1024, inifile_path) == 0 || sender_broker == NONE) {
             break;
         }
 
         string sender_account = "";
-        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, sender_account, 1024, inifile_path) == 0 || sender_account == NONE) {
+        if (GetPrivateProfileString(section_name, "ACCOUNT", NONE, sender_account, 1024, inifile_path) == 0 || sender_account == NONE) {
             break;
         }
 
         // ポジションコピー時のロット数の係数
         string lots_multiply = "";
-        GetPrivateProfileStringW(section_name, "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
+        GetPrivateProfileString(section_name, "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
         ArrayResize(LotsMultiply, i + 1);
         LotsMultiply[i] = lots_multiply == NONE ? 1.0 : StringToDouble(lots_multiply);
 
         string sender_name = GetBrokerAccount(sender_broker, StringToInteger(sender_account));
         ArrayResize(CommunacationPathDir, i + 1);
         CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
-        FolderCreate(CommunacationPathDir[i], true);
 
         printf("[%03d]センダー側の証券会社は「%s」です。", i + 1, sender_broker);
         printf("[%03d]センダー側の口座番号は「%s」です。", i + 1, sender_account);
         printf("[%03d]センダー側からのポジションコピー時のロット係数は「%.3f」です。", i + 1, LotsMultiply[i]);
 
-        CommunacationDirCount = ++i;
+        CommunacationFileCount = ++i;
     }
 
     return true;
@@ -208,7 +188,7 @@ void OnTimer()
 //+------------------------------------------------------------------+
 void LoadPositions()
 {
-    for (int i = 0; i < CommunacationDirCount; ++i) {
+    for (int i = 0; i < CommunacationFileCount; ++i) {
         LoadPosition(CommunacationPathDir[i], LotsMultiply[i]);
     }
 }
@@ -275,7 +255,7 @@ void LoadPosition(string communication_dir, double lots_multiply)
 //+------------------------------------------------------------------+
 //| コピーするポジションを発注します                                 |
 //+------------------------------------------------------------------+
-void Entry(int magic_number, int entry_type, string symbol, int ticket, double lots, double stoploss, double takeprofit)
+void Entry(int magic_number, int entry_type, string symbol, int ticket, double lots, double stoploss, double takrprofit)
 {
     int cmd = 0;
     switch (entry_type) {
@@ -306,16 +286,16 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
     double price = 0;
     color arrow = clrNONE;
     if (entry_type > 0) {
-        price = SymbolInfoDouble(symbol, SYMBOL_ASK);
+        price = Ask;
         arrow = clrBlue;
     } else {
-        price = SymbolInfoDouble(symbol, SYMBOL_BID);
+        price = Bid;
         arrow = clrRed;
     }
 
     string comment = StringFormat("#%d", ticket);
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-        int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, stoploss, takeprofit, comment, magic_number, 0, arrow);
+        int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, 0, 0, comment, magic_number, 0, arrow);
         if (order_ticket == -1) {
             printf("エラー: %s", ErrorDescription());
             Sleep(RETRY_INTERVAL_INIT << times);
@@ -332,17 +312,17 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
 //+------------------------------------------------------------------+
 //| コピーしたポジションを決済します                                 |
 //+------------------------------------------------------------------+
-void Exit(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
+void Exit(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
 {
     lots = NormalizeDouble(lots, 2);
 
     double price = 0;
     color arrow = clrNONE;
     if (lots > 0) {
-        price = SymbolInfoDouble(symbol, SYMBOL_BID);
+        price = Bid;
         arrow = clrBlue;
     } else {
-        price = SymbolInfoDouble(symbol, SYMBOL_BID);
+        price = Ask;
         arrow = clrRed;
     }
 
@@ -373,7 +353,7 @@ void Exit(int magic_number, int entry_type, string symbol, int sender_ticket, do
 //+------------------------------------------------------------------+
 //| コピーしたポジションを修正します                                 |
 //+------------------------------------------------------------------+
-void Modify(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
+void Modify(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
 {
     lots = NormalizeDouble(lots, 2);
 
@@ -394,7 +374,7 @@ void Modify(int magic_number, int entry_type, string symbol, int sender_ticket, 
         }
         int ticket = OrderTicket();
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = OrderModify(ticket, price, stoploss, takeprofit, 0);
+            bool result = OrderModify(ticket, price, stoploss, takrprofit, 0);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);

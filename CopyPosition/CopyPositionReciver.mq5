@@ -7,24 +7,7 @@
 #property strict
 
 #include <Trade/Trade.mqh>
-
-#import "kernel32.dll"
-uint GetEnvironmentVariableW(
-    string name,
-    string& returnValue,
-    uint bufferSize
-);
-#import
-
-#import "kernel32.dll"
-uint GetPrivateProfileStringW(
-    string sectionName,
-    string keyName,
-    string defaultValue,
-    string& returnValue,
-    uint bufferSize,
-    string iniFilePath);
-#import
+#include "WindowsAPI.mqh"
 
 #include "ErrorDescriptionMT5.mqh"
 
@@ -86,7 +69,7 @@ bool Initialize()
 
     // Commonデータフォルダのパスを取得します
     string appdata_dir = "";
-    uint appdata_dir_length = GetEnvironmentVariableW("appdata", appdata_dir, 1024);
+    uint appdata_dir_length = GetEnvironmentVariable("appdata", appdata_dir, 1024);
     if (appdata_dir_length == 0) {
         printf("エラー: 環境変数 appdata の値の取得に失敗しました");
         return false;
@@ -103,25 +86,23 @@ bool Initialize()
         return false;
     }
 
-    const string NONE = "<NONE>";
-
     // ポジションコピーを行うインターバル(ミリ秒)
     string update_interval = "";
-    if (GetPrivateProfileStringW("Reciever", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
+    if (GetPrivateProfileString("Reciever", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
         printf("エラー: セクション[Reciever]のキー\"UPDATE_INTERVAL\"が見つかりません。");
         return false;
     }
     UPDATE_INTERVAL = (int)StringToInteger(update_interval);
 
     string retry_interval_init = "";
-    if (GetPrivateProfileStringW("Reciever", "RETRY_INTERVAL_INIT", NONE, retry_interval_init, 1024, inifile_path) == 0 || retry_interval_init == NONE) {
+    if (GetPrivateProfileString("Reciever", "RETRY_INTERVAL_INIT", NONE, retry_interval_init, 1024, inifile_path) == 0 || retry_interval_init == NONE) {
         printf("エラー: セクション[Reciever]のキー\"RETRY_INTERVAL_INIT\"が見つかりません。");
         return false;
     }
     RETRY_INTERVAL_INIT = (int)StringToInteger(retry_interval_init);
 
     string retry_count_max = "";
-    if (GetPrivateProfileStringW("Reciever", "RETRY_COUNT_MAX", NONE, retry_count_max, 1024, inifile_path) == 0 || retry_count_max == NONE) {
+    if (GetPrivateProfileString("Reciever", "RETRY_COUNT_MAX", NONE, retry_count_max, 1024, inifile_path) == 0 || retry_count_max == NONE) {
         printf("エラー: セクション[Reciever]のキー\"RETRY_COUNT_MAX\"が見つかりません。");
         return false;
     }
@@ -129,25 +110,25 @@ bool Initialize()
 
     // ポジションコピー時にシンボル名に追加するサフィックス
     string symbol_append_suffix = "";
-    GetPrivateProfileStringW("Reciever", "SYMBOL_APPEND_SUFFIX", NONE, symbol_append_suffix, 1024, inifile_path);
+    GetPrivateProfileString("Reciever", "SYMBOL_APPEND_SUFFIX", NONE, symbol_append_suffix, 1024, inifile_path);
     SYMBOL_APPEND_SUFFIX = symbol_append_suffix == NONE ? "" : symbol_append_suffix;
 
     int i = 0;
     while (true) {
         string section_name = StringFormat("Sender%03d", i + 1);
         string sender_broker = "";
-        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, sender_broker, 1024, inifile_path) == 0 || sender_broker == NONE) {
+        if (GetPrivateProfileString(section_name, "BROKER", NONE, sender_broker, 1024, inifile_path) == 0 || sender_broker == NONE) {
             break;
         }
 
         string sender_account = "";
-        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, sender_account, 1024, inifile_path) == 0 || sender_account == NONE) {
+        if (GetPrivateProfileString(section_name, "ACCOUNT", NONE, sender_account, 1024, inifile_path) == 0 || sender_account == NONE) {
             break;
         }
 
         // ポジションコピー時のロット数の係数
         string lots_multiply = "";
-        GetPrivateProfileStringW(section_name, "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
+        GetPrivateProfileString(section_name, "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
         ArrayResize(LotsMultiply, i + 1);
         LotsMultiply[i] = lots_multiply == NONE ? 1.0 : StringToDouble(lots_multiply);
 
