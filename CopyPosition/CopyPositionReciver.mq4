@@ -50,6 +50,9 @@ int CommunacationFileCount = 0;
 // コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
 string CommunacationPathDir[];
 
+// ポジションコピー時のロット数の係数の配列です
+double LotsMultiply[];
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -128,22 +131,31 @@ bool Initialize()
     int i = 0;
     while (true) {
         string section_name = StringFormat("Sender%03d", i + 1);
-        string broker = "";
-        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, broker, 1024, inifile_path) == 0 || broker == NONE) {
+        string sender_broker = "";
+        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, sender_broker, 1024, inifile_path) == 0 || sender_broker == NONE) {
             break;
         }
 
-        string account = "";
-        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, account, 1024, inifile_path) == 0 || account == NONE) {
+        string sender_account = "";
+        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, sender_account, 1024, inifile_path) == 0 || sender_account == NONE) {
             break;
         }
 
-        string sender_name = GetBrokerAccount(broker, StringToInteger(account));
+        // ポジションコピー時のロット数の係数
+        string lots_multiply = "";
+        GetPrivateProfileStringW(section_name, "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
+        ArrayResize(LotsMultiply, i + 1);
+        LotsMultiply[i] = lots_multiply == NONE ? 1.0 : StringToDouble(lots_multiply);
+
+        string sender_name = GetBrokerAccount(sender_broker, StringToInteger(sender_account));
         ArrayResize(CommunacationPathDir, i + 1);
         CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
-        CommunacationFileCount = ++i;
 
-        printf("コピーポジションを右記から受信します → 証券会社: \"%s\" / 口座番号: \"%s\"", broker, account);
+        printf("[%03d]センダー側の証券会社は「%s」です。", i + 1, sender_broker);
+        printf("[%03d]センダー側の口座番号は「%s」です。", i + 1, sender_account);
+        printf("[%03d]センダー側からのポジションコピー時のロット係数は「%.3f」です。", i + 1, LotsMultiply[i]);
+
+        CommunacationFileCount = ++i;
     }
 
     return true;
@@ -196,14 +208,14 @@ void OnTimer()
 void LoadPositions()
 {
     for (int i = 0; i < CommunacationFileCount; ++i) {
-        LoadPosition(CommunacationPathDir[i]);
+        LoadPosition(CommunacationPathDir[i], LotsMultiply[i]);
     }
 }
 
 //+------------------------------------------------------------------+
 //| ポジション全体の差分をタブ区切りファイルから読みだします         |
 //+------------------------------------------------------------------+
-void LoadPosition(string communication_dir)
+void LoadPosition(string communication_dir, double lots_multiply)
 {
     string file_name;
     long search_handle = FileFindFirst(communication_dir + "*.tsv", file_name, FILE_COMMON);
@@ -234,7 +246,7 @@ void LoadPosition(string communication_dir)
             // 4列目：コピー元チケット番号
             int ticket = (int)StringToInteger(field[4]);
             // 5列目：ポジションサイズ
-            double lots = StringToDouble(field[5]);
+            double lots = StringToDouble(field[5]) * lots_multiply;
             // 6列目：ストップロス
             double stoploss = StringToDouble(field[6]);
             // 7列目：テイクプロフィット

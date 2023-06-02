@@ -30,6 +30,7 @@ ulong GetTickCount64();
 
 int     UPDATE_INTERVAL;      // ポジションコピーを行うインターバル(ミリ秒)
 string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
+double  LOTS_MULTIPLY;        // ポジションコピー時のロット数の係数
 
 //+------------------------------------------------------------------+
 //| ポジション操作を表す列挙値です                                   |
@@ -148,6 +149,7 @@ bool Initialize()
     // ポジションコピーを行うインターバル(ミリ秒)
     string update_interval = "";
     if (GetPrivateProfileStringW("Sender", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
+        printf("エラー: セクション[Sender]のキー\"UPDATE_INTERVAL\"が見つかりません。");
         return false;
     }
     UPDATE_INTERVAL = (int)StringToInteger(update_interval);
@@ -156,6 +158,11 @@ bool Initialize()
     string symbol_remove_suffix = "";
     GetPrivateProfileStringW("Sender", "SYMBOL_REMOVE_SUFFIX", NONE, symbol_remove_suffix, 1024, inifile_path);
     SYMBOL_REMOVE_SUFFIX = symbol_remove_suffix == NONE ? "" : symbol_remove_suffix;
+
+    // ポジションコピー時のロット数の係数
+    string lots_multiply = "";
+    GetPrivateProfileStringW("Sender", "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
+    LOTS_MULTIPLY = lots_multiply == NONE ? 1.0 : StringToDouble(lots_multiply);
 
     // コピーしたいマジックナンバーの配列を初期化します
     string copy_magic_numbers = "";
@@ -173,19 +180,22 @@ bool Initialize()
     int i = 0;
     while (true) {
         string section_name = StringFormat("Reciever%03d", i + 1);
-        string broker = "";
-        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, broker, 1024, inifile_path) == 0 || broker == NONE) {
+        string reciever_broker = "";
+        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, reciever_broker, 1024, inifile_path) == 0 || reciever_broker == NONE) {
             break;
         }
+        printf("レシーバー側[%03d]の証券会社は「%s」です。", i + 1, reciever_broker);
 
-        string account = "";
-        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, account, 1024, inifile_path) == 0 || account == NONE) {
+        string reciever_account = "";
+        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, reciever_account, 1024, inifile_path) == 0 || reciever_account == NONE) {
             break;
         }
+        printf("レシーバー側[%03d]の口座番号は「%s」です。", i + 1, reciever_account);
 
-        string reciever_name = GetBrokerAccount(broker, StringToInteger(account));
+        string reciever_name = GetBrokerAccount(reciever_broker, StringToInteger(reciever_account));
         ArrayResize(CommunacationPathPrefix, i + 1);
         CommunacationPathPrefix[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
+        FolderCreate(CommunacationPathPrefix[i], true);
         CommunacationFileCount = ++i;
     }
 
@@ -430,6 +440,8 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
 
     // ポジションの差分をコピーポジション連携用タブ区切りファイルに出力します
     for (int i = 0; i < change_count; ++i) {
+        string symbol = Output.SymbolValue[i];
+        StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
         // タブ区切りファイルの仕様
         // 0列目：+1: ポジション追加 ／ -1: ポジション削除 ／ 0: ポジション修正
         string line = StringFormat("%+d\t", Output.Change[i]);
@@ -438,11 +450,11 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         // 2列目：エントリー種別
         line += StringFormat("%d\t", Output.EntryType[i]);
         // 3列目：シンボル名
-        line += StringFormat("%s\t", Output.SymbolValue[i]);
+        line += StringFormat("%s\t", symbol);
         // 4列目：コピー元チケット番号
         line += StringFormat("%d\t", Output.Tickets[i]);
         // 5列目：ポジションサイズ
-        line += StringFormat("%.2f\t", Output.Lots[i]);
+        line += StringFormat("%.2f\t", LOTS_MULTIPLY * Output.Lots[i]);
         // 6列目：ストップロス
         line += StringFormat("%.6f\t", Output.StopLoss[i]);
         // 7列目：テイクプロフィット
