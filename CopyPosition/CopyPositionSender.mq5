@@ -1,7 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                            CopyPositionSeder.mq5 |
 //|                                          Copyright 2023, YUSUKE. |
-//|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, YUSUKE."
 #property version   "1.00"
@@ -31,8 +30,11 @@ uint GetPrivateProfileStringW(
 ulong GetTickCount64();
 #import
 
+const string NONE = "<NONE>";
+
 int     UPDATE_INTERVAL;      // ポジションコピーを行うインターバル(ミリ秒)
 string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
+double  LOTS_MULTIPLY;        // ポジションコピー時のロット数の係数
 
 CTrade Trader;
 
@@ -95,6 +97,14 @@ int CommunacationFileCount = 0;
 // コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
 string CommunacationPathPrefix[];
 
+// シンボル名の変換("変換前シンボル名|変換後シンボル名"のカンマ区切り)
+struct SYMBOL_CONVERSION {
+    string SymbolBefore;
+    string SymbolAfter;
+};
+SYMBOL_CONVERSION SymbolConversion[];
+int SymbolConversionCount;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -148,17 +158,23 @@ bool Initialize()
         return false;
     }
 
-    const string NONE = "<NONE>";
-
     // ポジションコピーを行うインターバル(ミリ秒)
     string update_interval = "";
     if (GetPrivateProfileStringW("Sender", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
+        printf("エラー: セクション[Sender]のキー\"UPDATE_INTERVAL\"が見つかりません。");
         return false;
     }
     UPDATE_INTERVAL = (int)StringToInteger(update_interval);
 
     // ポジションコピー時にシンボル名から削除するサフィックス
-    GetPrivateProfileStringW("Sender", "SYMBOL_REMOVE_SUFFIX", "", SYMBOL_REMOVE_SUFFIX, 1024, inifile_path);
+    string symbol_remove_suffix = "";
+    GetPrivateProfileStringW("Sender", "SYMBOL_REMOVE_SUFFIX", NONE, symbol_remove_suffix, 1024, inifile_path);
+    SYMBOL_REMOVE_SUFFIX = symbol_remove_suffix == NONE ? "" : symbol_remove_suffix;
+
+    // ポジションコピー時のロット数の係数
+    string lots_multiply = "";
+    GetPrivateProfileStringW("Sender", "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
+    LOTS_MULTIPLY = lots_multiply == NONE ? 1.0 : StringToDouble(lots_multiply);
 
     // コピーしたいマジックナンバーの配列を初期化します
     string copy_magic_numbers = "";
@@ -173,22 +189,30 @@ bool Initialize()
     }
     ArraySort(MagicNumbers);
 
+    // シンボル名の変換("変換前シンボル名|変換後シンボル名"のカンマ区切り)
+    string symbol_conversion_list = "";
+    GetPrivateProfileStringW("Sender", "SYMBOL_CONVERSION", NONE, symbol_conversion_list, 1024, inifile_path);
+    SymbolConversionCount = InitializeSymbolConversion(symbol_conversion_list);
+
     int i = 0;
     while (true) {
         string section_name = StringFormat("Reciever%03d", i + 1);
-        string broker = "";
-        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, broker, 1024, inifile_path) == 0 || broker == NONE) {
+        string reciever_broker = "";
+        if (GetPrivateProfileStringW(section_name, "BROKER", NONE, reciever_broker, 1024, inifile_path) == 0 || reciever_broker == NONE) {
             break;
         }
+        printf("レシーバー側[%03d]の証券会社は「%s」です。", i + 1, reciever_broker);
 
-        string account = "";
-        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, account, 1024, inifile_path) == 0 || account == NONE) {
+        string reciever_account = "";
+        if (GetPrivateProfileStringW(section_name, "ACCOUNT", NONE, reciever_account, 1024, inifile_path) == 0 || reciever_account == NONE) {
             break;
         }
+        printf("レシーバー側[%03d]の口座番号は「%s」です。", i + 1, reciever_account);
 
-        string reciever_name = GetBrokerAccount(broker, StringToInteger(account));
+        string reciever_name = GetBrokerAccount(reciever_broker, StringToInteger(reciever_account));
         ArrayResize(CommunacationPathPrefix, i + 1);
-        CommunacationPathPrefix[i] = StringFormat("CopyPositionEA\\%s\\%s", reciever_name, sender_name);
+        CommunacationPathPrefix[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
+        FolderCreate(CommunacationPathPrefix[i], true);
         CommunacationFileCount = ++i;
     }
 
@@ -204,6 +228,42 @@ string GetBrokerAccount(string broker, long account)
     StringReplace(broker, ",", "");
     StringReplace(broker, ".", "");
     return StringFormat("%s-%d", broker, account);
+}
+
+//+------------------------------------------------------------------+
+//| シンボル名の変換情報を初期化します                               |
+//+------------------------------------------------------------------+
+int InitializeSymbolConversion(string symbol_conversion_list)
+{
+    if (symbol_conversion_list == NONE) {
+        return 0;
+    }
+
+    string symbol_conversion[];
+    int conversion_count = StringSplit(symbol_conversion_list, ',', symbol_conversion);
+    ArrayResize(SymbolConversion, conversion_count);
+    for (int i = 0; i < conversion_count; ++i) {
+        string conversion[];
+        StringSplit(symbol_conversion[i], '|', conversion);
+        SymbolConversion[i].SymbolBefore = conversion[0];
+        SymbolConversion[i].SymbolAfter = conversion[1];
+    }
+    
+    return conversion_count;
+}
+
+//+------------------------------------------------------------------+
+//| シンボル名の変換を行います                                       |
+//+------------------------------------------------------------------+
+string ConvertSymbol(string symbol_before)
+{
+    for (int i = 0; i < SymbolConversionCount; ++i) {
+        if (SymbolConversion[i].SymbolBefore == symbol_before) {
+            return SymbolConversion[i].SymbolAfter;
+        }
+    }
+
+    return symbol_before;
 }
 
 //+------------------------------------------------------------------+
@@ -287,7 +347,7 @@ int ScanCurrentPositions(POSITION_LIST& Current)
     int position_count = 0;
     for (int i = 0; i < PositionsTotal(); ++i) {
         // トレード中のポジションを選択します
-        ulong ticket = PositionGetTicket(POSITION_TICKET);
+        ulong ticket = PositionGetTicket(i);
         if (ticket == 0) { continue; }
 
         // コピーしたいマジックナンバーかチェックします
@@ -320,7 +380,7 @@ int ScanCurrentPositions(POSITION_LIST& Current)
     // 現在の待機中オーダー状態を全て取得します
     for (int i = 0; i < OrdersTotal(); ++i) {
         // トレード中のポジションを選択します
-        ulong ticket = OrderGetTicket(ORDER_TICKET);
+        ulong ticket = OrderGetTicket(i);
         if (ticket == 0) { continue; }
 
         // コピーしたいマジックナンバーかチェックします
@@ -382,10 +442,12 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
                 if ((Previous.StopLoss[previous] != Current.StopLoss[current]) ||
                     (Previous.TakeProfit[previous] != Current.TakeProfit[current])) {
                     change_count = AppendChangedPosition(Current, POSITION_MODIFY, change_count, current);
+                    added = false;
                     break;               
                 }
                 else {
                     // チケット番号・ストップロス・テイクプロフィットが完全一致なので変化なしです
+                    added = false;
                     break;
                 }
             }
@@ -421,7 +483,7 @@ int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int po
 
         // チケット番号が不一致のとき、ポジション削除です
         if (removed) {
-            change_count = AppendChangedPosition(Current, POSITION_REMOVE, change_count, previous);                 
+            change_count = AppendChangedPosition(Previous, POSITION_REMOVE, change_count, previous);                 
         }
     }
 
@@ -435,10 +497,11 @@ int AppendChangedPosition(POSITION_LIST& Current, ENUM_POSITION_OPERATION change
 {
     Output.Change[dst] = change;
     Output.Tickets[dst] = Current.Tickets[src];
-    Output.EntryType[src] = Current.EntryType[src];
-    Output.Lots[src] = Current.Lots[src];
-    Output.StopLoss[src] = Current.StopLoss[src];
-    Output.TakeProfit[src] = Current.TakeProfit[src];
+    Output.EntryType[dst] = Current.EntryType[src];
+    Output.SymbolValue[dst] = Current.SymbolValue[src];
+    Output.Lots[dst] = Current.Lots[src];
+    Output.StopLoss[dst] = Current.StopLoss[src];
+    Output.TakeProfit[dst] = Current.TakeProfit[src];
     return ++dst;
 }
 
@@ -451,7 +514,7 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
     ulong epoch = GetTickCount64();
 
     // コピーポジション連携用タブ区切りファイルのファイル名
-    string path = StringFormat("%s-%20u.tsv", output_path_prefix, epoch);
+    string path = StringFormat("%s\\%020u.tsv", output_path_prefix, epoch);
 
     // ファイルをオープンします
     int file = FileOpen(path, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
@@ -464,19 +527,21 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
 
     // ポジションの差分をコピーポジション連携用タブ区切りファイルに出力します
     for (int i = 0; i < change_count; ++i) {
+        string symbol = Output.SymbolValue[i];
+        StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
         // タブ区切りファイルの仕様
         // 0列目：+1: ポジション追加 ／ -1: ポジション削除 ／ 0: ポジション修正
-        string line = StringFormat("%+d\t%+.2f\t", Output.Change[i]);
+        string line = StringFormat("%+d\t", Output.Change[i]);
         // 1列目：マジックナンバー
         line += StringFormat("%d\t", Output.MagicNumber[i]);
         // 2列目：エントリー種別
         line += StringFormat("%d\t", Output.EntryType[i]);
         // 3列目：シンボル名
-        line += StringFormat("%s\t", Output.SymbolValue[i]);
+        line += StringFormat("%s\t", ConvertSymbol(symbol));
         // 4列目：コピー元チケット番号
         line += StringFormat("%d\t", Output.Tickets[i]);
         // 5列目：ポジションサイズ
-        line += StringFormat("%.2f\t", Output.Lots[i]);
+        line += StringFormat("%.2f\t", LOTS_MULTIPLY * Output.Lots[i]);
         // 6列目：ストップロス
         line += StringFormat("%.6f\t", Output.StopLoss[i]);
         // 7列目：テイクプロフィット
