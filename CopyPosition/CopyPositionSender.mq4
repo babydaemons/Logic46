@@ -30,6 +30,7 @@ struct POSITION_LIST {
     int Change[MAX_POSITION];
     int MagicNumber[MAX_POSITION];
     int EntryType[MAX_POSITION];
+    double EntryPrice[MAX_POSITION];
     string SymbolValue[MAX_POSITION];
     int Tickets[MAX_POSITION];
     double Lots[MAX_POSITION];
@@ -40,6 +41,7 @@ struct POSITION_LIST {
         ArrayFill(Change, 0, MAX_POSITION, 0);
         ArrayFill(MagicNumber, 0, MAX_POSITION, 0);
         ArrayFill(EntryType, 0, MAX_POSITION, 0);
+        ArrayFill(EntryPrice, 0, MAX_POSITION, 0);
         ArrayFill(Tickets, 0, MAX_POSITION, 0);
         for (int i = 0; i < MAX_POSITION; ++i) {
             SymbolValue[i] = "";
@@ -354,6 +356,7 @@ int ScanCurrentPositions(POSITION_LIST& Current)
 
         Current.Change[position_count] = INT_MAX;
         Current.EntryType[position_count] = entry_type;
+        Current.EntryPrice[position_count] = OrderOpenPrice();
         Current.SymbolValue[position_count] = OrderSymbol();
         Current.Tickets[position_count] = OrderTicket();
         Current.Lots[position_count] = OrderLots();
@@ -378,8 +381,9 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
         for (int previous = 0; Previous.Tickets[previous] != 0 && previous < MAX_POSITION; ++previous) {
             // チケット番号が一致するとき、
             if (Previous.Tickets[previous] == Current.Tickets[current]) {
-                // ストップロスまたはテイクプロフィットのいずれかが不一致ならば変化ありです
-                if ((Previous.StopLoss[previous] != Current.StopLoss[current]) ||
+                // エントリー価格またはストップロスまたはテイクプロフィットのいずれかが不一致ならば変化ありです
+                if ((Previous.EntryPrice[previous] != Current.EntryPrice[current]) ||
+                    (Previous.StopLoss[previous] != Current.StopLoss[current]) ||
                     (Previous.TakeProfit[previous] != Current.TakeProfit[current])) {
                     change_count = AppendChangedPosition(Current, POSITION_MODIFY, change_count, current);
                     added = false;
@@ -438,6 +442,7 @@ int AppendChangedPosition(POSITION_LIST& Current, ENUM_POSITION_OPERATION change
     Output.Change[dst] = change;
     Output.Tickets[dst] = Current.Tickets[src];
     Output.EntryType[dst] = Current.EntryType[src];
+    Output.EntryPrice[dst] = Current.EntryPrice[src];
     Output.SymbolValue[dst] = Current.SymbolValue[src];
     Output.Lots[dst] = Current.Lots[src];
     Output.StopLoss[dst] = Current.StopLoss[src];
@@ -476,15 +481,17 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         line += StringFormat("%d\t", Output.MagicNumber[i]);
         // 2列目：エントリー種別
         line += StringFormat("%d\t", Output.EntryType[i]);
-        // 3列目：シンボル名
+        // 3列目：エントリー価格
+        line += StringFormat("%.6f\t", Output.EntryPrice[i]);
+        // 4列目：シンボル名
         line += StringFormat("%s\t", ConvertSymbol(symbol));
-        // 4列目：コピー元チケット番号
+        // 5列目：コピー元チケット番号
         line += StringFormat("%d\t", Output.Tickets[i]);
-        // 5列目：ポジションサイズ
+        // 6列目：ポジションサイズ
         line += StringFormat("%.2f\t", LOTS_MULTIPLY * Output.Lots[i]);
-        // 6列目：ストップロス
+        // 7列目：ストップロス
         line += StringFormat("%.6f\t", Output.StopLoss[i]);
-        // 7列目：テイクプロフィット
+        // 8列目：テイクプロフィット
         line += StringFormat("%.6f\t", Output.TakeProfit[i]);
         FileWrite(file, line);
     }

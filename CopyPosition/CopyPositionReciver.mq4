@@ -222,26 +222,27 @@ void LoadPosition(string communication_dir, double lots_multiply)
             int magic_number = (int)StringToInteger(field[1]);
             // 2列目：エントリー種別
             int entry_type = (int)StringToInteger(field[2]);
-            // 3列目：シンボル名
-            string symbol = field[3] + SYMBOL_APPEND_SUFFIX;
-            // 4列目：コピー元チケット番号
-            int ticket = (int)StringToInteger(field[4]);
-            // 5列目：ポジションサイズ
-            double lots = StringToDouble(field[5]) * lots_multiply;
-            // 6列目：ストップロス
-            double stoploss = StringToDouble(field[6]);
-            // 7列目：テイクプロフィット
-            double takeprofit = StringToDouble(field[7]);
-            Sleep(10);
+            // 3列目：エントリー種別
+            double entry_price = StringToDouble(field[3]);
+            // 4列目：シンボル名
+            string symbol = field[4] + SYMBOL_APPEND_SUFFIX;
+            // 5列目：コピー元チケット番号
+            int ticket = (int)StringToInteger(field[5]);
+            // 6列目：ポジションサイズ
+            double lots = StringToDouble(field[6]) * lots_multiply;
+            // 7列目：ストップロス
+            double stoploss = StringToDouble(field[7]);
+            // 8列目：テイクプロフィット
+            double takeprofit = StringToDouble(field[8]);
 
             if (change == +1) {
-                Entry(magic_number, entry_type, symbol, ticket, lots, stoploss, takeprofit);
+                Entry(magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
             }
             else if (change == -1) {
-                Exit(magic_number, entry_type, symbol, ticket, lots, stoploss, takeprofit);
+                Exit(magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
             }
             else {
-                Modify(magic_number, entry_type, symbol, ticket, lots, stoploss, takeprofit);
+                Modify(magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
             }
         }
 
@@ -255,8 +256,18 @@ void LoadPosition(string communication_dir, double lots_multiply)
 //+------------------------------------------------------------------+
 //| コピーするポジションを発注します                                 |
 //+------------------------------------------------------------------+
-void Entry(int magic_number, int entry_type, string symbol, int ticket, double lots, double stoploss, double takrprofit)
+void Entry(int magic_number, int entry_type, double entry_price, string symbol, int ticket, double lots, double stoploss, double takrprofit)
 {
+    double price = 0;
+    color arrow = clrNONE;
+    if (entry_type > 0) {
+        price = SymbolInfoDouble(symbol, SYMBOL_ASK);
+        arrow = clrBlue;
+    } else {
+        price = SymbolInfoDouble(symbol, SYMBOL_BID);
+        arrow = clrRed;
+    }
+
     int cmd = 0;
     switch (entry_type) {
     case +1:
@@ -264,34 +275,28 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
         break;
     case +2:
         cmd = OP_BUYLIMIT;
+        price = entry_price;
         break;
     case +3:
         cmd = OP_BUYSTOP;
+        price = entry_price;
         break;
     case -1:
         cmd = OP_SELL;
         break;
     case -2:
         cmd = OP_SELLLIMIT;
+        price = entry_price;
         break;
     case -3:
         cmd = OP_SELLSTOP;
+        price = entry_price;
         break;
     default:
         return;
     }
 
     lots = NormalizeDouble(lots, 2);
-
-    double price = 0;
-    color arrow = clrNONE;
-    if (entry_type > 0) {
-        price = Ask;
-        arrow = clrBlue;
-    } else {
-        price = Bid;
-        arrow = clrRed;
-    }
 
     string comment = StringFormat("#%d", ticket);
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
@@ -312,17 +317,17 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
 //+------------------------------------------------------------------+
 //| コピーしたポジションを決済します                                 |
 //+------------------------------------------------------------------+
-void Exit(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
+void Exit(int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
 {
     lots = NormalizeDouble(lots, 2);
 
     double price = 0;
     color arrow = clrNONE;
     if (lots > 0) {
-        price = Bid;
+        price = SymbolInfoDouble(symbol, SYMBOL_BID);
         arrow = clrBlue;
     } else {
-        price = Ask;
+        price = SymbolInfoDouble(symbol, SYMBOL_ASK);
         arrow = clrRed;
     }
 
@@ -335,8 +340,11 @@ void Exit(int magic_number, int entry_type, string symbol, int sender_ticket, do
             continue;
         }
         int ticket = OrderTicket();
+        int order_type = OrderType();
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = OrderClose(ticket, lots, price, SLIPPAGE, arrow);
+            bool result = (order_type == OP_BUY || order_type == OP_SELL) ?
+                            OrderClose(ticket, lots, price, SLIPPAGE, arrow) :
+                            OrderDelete(ticket, arrow);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);
@@ -353,16 +361,9 @@ void Exit(int magic_number, int entry_type, string symbol, int sender_ticket, do
 //+------------------------------------------------------------------+
 //| コピーしたポジションを修正します                                 |
 //+------------------------------------------------------------------+
-void Modify(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
+void Modify(int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
 {
     lots = NormalizeDouble(lots, 2);
-
-    double price = 0;
-    if (lots > 0) {
-        price = Bid;
-    } else {
-        price = Ask;
-    }
 
     string comment = StringFormat("#%d", sender_ticket);
     for (int i = 0; i < OrdersTotal(); ++i) {
@@ -374,7 +375,7 @@ void Modify(int magic_number, int entry_type, string symbol, int sender_ticket, 
         }
         int ticket = OrderTicket();
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = OrderModify(ticket, price, stoploss, takrprofit, 0);
+            bool result = OrderModify(ticket, entry_type, stoploss, takrprofit, 0);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);
