@@ -227,26 +227,27 @@ void LoadPosition(string communication_dir, double lots_multiply)
             int magic_number = (int)StringToInteger(field[1]);
             // 2列目：エントリー種別
             int entry_type = (int)StringToInteger(field[2]);
-            // 3列目：シンボル名
-            string symbol = field[3] + SYMBOL_APPEND_SUFFIX;
-            // 4列目：コピー元チケット番号
-            int ticket = (int)StringToInteger(field[4]);
-            // 5列目：ポジションサイズ
-            double lots = StringToDouble(field[5]) * lots_multiply;
-            // 6列目：ストップロス
-            double stoploss = StringToDouble(field[6]);
-            // 7列目：テイクプロフィット
-            double takeprofit = StringToDouble(field[7]);
-            Sleep(10);
+            // 3列目：エントリー価格
+            double entry_price = StringToDouble(field[3]);
+            // 4列目：シンボル名
+            string symbol = field[4] + SYMBOL_APPEND_SUFFIX;
+            // 5列目：コピー元チケット番号
+            int ticket = (int)StringToInteger(field[5]);
+            // 6列目：ポジションサイズ
+            double lots = StringToDouble(field[6]) * lots_multiply;
+            // 7列目：ストップロス
+            double stoploss = StringToDouble(field[7]);
+            // 8列目：テイクプロフィット
+            double takeprofit = StringToDouble(field[8]);
 
             if (change == +1) {
-                Entry(magic_number, entry_type, symbol, ticket, lots, stoploss, takeprofit);
+                Entry(magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
             }
             else if (change == -1) {
-                Exit(magic_number, entry_type, symbol, ticket, lots, stoploss, takeprofit);
+                Exit(magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
             }
             else {
-                Modify(magic_number, entry_type, symbol, ticket, lots, stoploss, takeprofit);
+                Modify(magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
             }
         }
 
@@ -260,7 +261,7 @@ void LoadPosition(string communication_dir, double lots_multiply)
 //+------------------------------------------------------------------+
 //| コピーするポジションを発注します                                 |
 //+------------------------------------------------------------------+
-void Entry(int magic_number, int entry_type, string symbol, int ticket, double lots, double stoploss, double takeprofit)
+void Entry(int magic_number, int entry_type, double entry_price, string symbol, int ticket, double lots, double stoploss, double takeprofit)
 {
     lots = NormalizeDouble(lots, 2);
 
@@ -275,7 +276,7 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
 
     if (entry_type == +1) {
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.Buy(lots, symbol, price, stoploss, takeprofit);
+            bool result = Trader.Buy(lots, symbol, price, stoploss, takeprofit, comment);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);
@@ -286,7 +287,7 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
     }
     else if (entry_type == -1) {
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.Sell(lots, symbol, price, stoploss, takeprofit);
+            bool result = Trader.Sell(lots, symbol, price, stoploss, takeprofit, comment);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);
@@ -297,7 +298,7 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
     }
     else if (entry_type == +2) {
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.BuyLimit(lots, price, symbol, stoploss, takeprofit);
+            bool result = Trader.BuyLimit(lots, entry_price, symbol, stoploss, takeprofit, ORDER_TIME_GTC, 0, comment);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);
@@ -308,7 +309,7 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
     }
     else if (entry_type == -2) {
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.SellLimit(lots, price, symbol, stoploss, takeprofit);
+            bool result = Trader.SellLimit(lots, entry_price, symbol, stoploss, takeprofit, ORDER_TIME_GTC, 0, comment);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);
@@ -319,7 +320,7 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
     }
     else if (entry_type == +3) {
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.BuyStop(lots, price, symbol, stoploss, takeprofit);
+            bool result = Trader.BuyStop(lots, entry_price, symbol, stoploss, takeprofit, ORDER_TIME_GTC, 0, comment);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);
@@ -330,7 +331,7 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
     }
     else if (entry_type == -3) {
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.SellStop(lots, price, symbol, stoploss, takeprofit);
+            bool result = Trader.SellStop(lots, entry_price, symbol, stoploss, takeprofit, ORDER_TIME_GTC, 0, comment);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);
@@ -348,7 +349,7 @@ void Entry(int magic_number, int entry_type, string symbol, int ticket, double l
 //+------------------------------------------------------------------+
 //| コピーしたポジションを決済します                                 |
 //+------------------------------------------------------------------+
-void Exit(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
+void Exit(int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takrprofit)
 {
     lots = NormalizeDouble(lots, 2);
 
@@ -403,16 +404,9 @@ void Exit(int magic_number, int entry_type, string symbol, int sender_ticket, do
 //+------------------------------------------------------------------+
 //| コピーしたポジションを修正します                                 |
 //+------------------------------------------------------------------+
-void Modify(int magic_number, int entry_type, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
+void Modify(int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
 {
     lots = NormalizeDouble(lots, 2);
-
-    double price = 0;
-    if (lots > 0) {
-        price = SymbolInfoDouble(symbol, SYMBOL_BID);
-    } else {
-        price = SymbolInfoDouble(symbol, SYMBOL_ASK);
-    }
 
     string comment = StringFormat("#%d", sender_ticket);
     for (int i = 0; i < PositionsTotal(); ++i) {
@@ -440,7 +434,7 @@ void Modify(int magic_number, int entry_type, string symbol, int sender_ticket, 
             continue;
         }
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.OrderModify(ticket, price, stoploss, takeprofit, ORDER_TIME_GTC, 0);
+            bool result = Trader.OrderModify(ticket, entry_price, stoploss, takeprofit, ORDER_TIME_GTC, 0);
             if (!result) {
                 printf("エラー: %s", ErrorDescription());
                 Sleep(RETRY_INTERVAL_INIT << times);
@@ -448,7 +442,7 @@ void Modify(int magic_number, int entry_type, string symbol, int sender_ticket, 
                 return;
             }
         }
-        string error = StringFormat("Trader.OrderDelete() Failed %d", GetLastError());
+        string error = StringFormat("Trader.OrderModify() Failed %d", GetLastError());
         Print(error);
         Alert(error);
         return;
