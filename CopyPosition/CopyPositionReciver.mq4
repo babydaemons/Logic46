@@ -28,7 +28,7 @@ enum ENUM_POSITION_OPERATION {
 int MagicNumbers[];
 
 // コピーポジション連携用タブ区切りファイルの個数です
-int CommunacationFileCount = 0;
+int CommunacationDirCount = 0;
 
 // コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
 string CommunacationPathDir[];
@@ -131,12 +131,13 @@ bool Initialize()
         string sender_name = GetBrokerAccount(sender_broker, StringToInteger(sender_account));
         ArrayResize(CommunacationPathDir, i + 1);
         CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
+        FolderCreate(CommunacationPathDir[i], true);
 
         printf("[%03d]センダー側の証券会社は「%s」です。", i + 1, sender_broker);
         printf("[%03d]センダー側の口座番号は「%s」です。", i + 1, sender_account);
         printf("[%03d]センダー側からのポジションコピー時のロット係数は「%.3f」です。", i + 1, LotsMultiply[i]);
 
-        CommunacationFileCount = ++i;
+        CommunacationDirCount = ++i;
     }
 
     return true;
@@ -188,7 +189,7 @@ void OnTimer()
 //+------------------------------------------------------------------+
 void LoadPositions()
 {
-    for (int i = 0; i < CommunacationFileCount; ++i) {
+    for (int i = 0; i < CommunacationDirCount; ++i) {
         LoadPosition(CommunacationPathDir[i], LotsMultiply[i]);
     }
 }
@@ -222,7 +223,7 @@ void LoadPosition(string communication_dir, double lots_multiply)
             int magic_number = (int)StringToInteger(field[1]);
             // 2列目：エントリー種別
             int entry_type = (int)StringToInteger(field[2]);
-            // 3列目：エントリー種別
+            // 3列目：エントリー価格
             double entry_price = StringToDouble(field[3]);
             // 4列目：シンボル名
             string symbol = field[4] + SYMBOL_APPEND_SUFFIX;
