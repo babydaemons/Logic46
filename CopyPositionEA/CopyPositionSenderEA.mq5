@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                            CopyPositionSeder.mq5 |
+//|                                          CopyPositionSederEA.mq5 |
 //|                                          Copyright 2023, YUSUKE. |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, YUSUKE."
@@ -130,17 +130,29 @@ bool Initialize()
     // センダー側設定のINIファイルパスをログ出力します
     string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", sender_name);
     string inifile_path = StringFormat("%s\\%s", common_data_dir, inifile_name);
-    printf("センダー側設定INIファイルは「%s」です。", inifile_path);
+    printf("●センダー側設定INIファイルは「%s」です。", inifile_path);
+
+    string sender_broker = "";
+    if (GetPrivateProfileString("Sender", "BROKER", NONE, sender_broker, 1024, inifile_path) == 0 || sender_broker == NONE || AccountInfoString(ACCOUNT_COMPANY) != sender_broker) {
+        printf("※センダー側証券会社名が一致しません: セクション[Sender]のキー\"BROKER\"を見直してください。");
+        return false;
+    }
+
+    string sender_account = "";
+    if (GetPrivateProfileString("Sender", "ACCOUNT", NONE, sender_account, 1024, inifile_path) == 0 || sender_account == NONE || AccountInfoInteger(ACCOUNT_LOGIN) != StringToInteger(sender_account)) {
+        printf("※センダー側証券会社名が一致しません: セクション[Sender]のキー\"ACCOUNT\"を見直してください。");
+        return false;
+    }
 
     if (!FileIsExist(inifile_name, FILE_COMMON)) {
-        printf("エラー: センダー側設定INIファイル「%s」が見つかりません。", inifile_path);
+        printf("※エラー: センダー側設定INIファイル「%s」が見つかりません。", inifile_path);
         return false;
     }
 
     // ポジションコピーを行うインターバル(ミリ秒)
     string update_interval = "";
     if (GetPrivateProfileString("Sender", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
-        printf("エラー: セクション[Sender]のキー\"UPDATE_INTERVAL\"が見つかりません。");
+        printf("※エラー: セクション[Sender]のキー\"UPDATE_INTERVAL\"が見つかりません。");
         return false;
     }
     UPDATE_INTERVAL = (int)StringToInteger(update_interval);
@@ -158,6 +170,7 @@ bool Initialize()
     // コピーしたいマジックナンバーの配列を初期化します
     string copy_magic_numbers = "";
     if (GetPrivateProfileString("Sender", "COPY_MAGIC_NUMBERS", NONE, copy_magic_numbers, 1024, inifile_path) == 0 || copy_magic_numbers == NONE) {
+        printf("※エラー: セクション[Sender]のキー\"COPY_MAGIC_NUMBERS\"が見つかりません。");
         return false;
     }
     string magic_numbers[];
@@ -173,28 +186,38 @@ bool Initialize()
     GetPrivateProfileString("Sender", "SYMBOL_CONVERSION", NONE, symbol_conversion_list, 1024, inifile_path);
     SymbolConversionCount = InitializeSymbolConversion(symbol_conversion_list);
 
-    int i = 0;
-    while (true) {
+    // レシーバー側の設定個数を取得
+    string reciever_count = "";
+    if (GetPrivateProfileString("Sender", "RECIEVER_COUNT", NONE, reciever_count, 1024, inifile_path) == 0 || reciever_count == NONE) {
+        printf("※エラー: セクション[Sender]のキー\"RECIEVER_COUNT\"が見つかりません。");
+        return false;
+    }
+    CommunacationDirCount = (int)StringToInteger(reciever_count);
+    printf("●%d個のレシーバー側にポジションをコピーします。", CommunacationDirCount);
+
+    for (int i = 0; i < CommunacationDirCount; ++i) {
         string section_name = StringFormat("Reciever%03d", i + 1);
         string reciever_broker = "";
         if (GetPrivateProfileString(section_name, "BROKER", NONE, reciever_broker, 1024, inifile_path) == 0 || reciever_broker == NONE) {
-            break;
+            printf("※エラー: セクション[%s]のキー\"BROKER\"が見つかりません。", section_name);
+            return false;
         }
-        printf("レシーバー側[%03d]の証券会社は「%s」です。", i + 1, reciever_broker);
+        printf("○レシーバー側[%03d]の証券会社は「%s」です。", i + 1, reciever_broker);
 
         string reciever_account = "";
         if (GetPrivateProfileString(section_name, "ACCOUNT", NONE, reciever_account, 1024, inifile_path) == 0 || reciever_account == NONE) {
-            break;
+            printf("※エラー: セクション[%s]のキー\"ACCOUNT\"が見つかりません。", section_name);
+            return false;
         }
-        printf("レシーバー側[%03d]の口座番号は「%s」です。", i + 1, reciever_account);
+        printf("○レシーバー側[%03d]の口座番号は「%s」です。", i + 1, reciever_account);
 
         string reciever_name = GetBrokerAccount(reciever_broker, StringToInteger(reciever_account));
         ArrayResize(CommunacationPathDir, i + 1);
         CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
         FolderCreate(CommunacationPathDir[i], true);
-        CommunacationDirCount = ++i;
     }
 
+    printf("●コピーポジションの送信監視を開始します。");
     return true;
 }
 
