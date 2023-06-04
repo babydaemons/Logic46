@@ -266,7 +266,7 @@ void LoadPosition(string communication_dir, double lots_multiply)
 //+------------------------------------------------------------------+
 void Entry(int magic_number, int entry_type, double entry_price, string symbol, int ticket, double lots, double stoploss, double takeprofit)
 {
-    lots = NormalizeDouble(lots, 2);
+    lots = RoundLots(symbol, lots);
 
     double price = 0;
     color arrow = clrNONE;
@@ -320,6 +320,25 @@ void Entry(int magic_number, int entry_type, double entry_price, string symbol, 
     }
 
     Alert(error_message);
+}
+
+//+------------------------------------------------------------------+
+//| ロット数を口座の上限・下限に丸めます                             |
+//+------------------------------------------------------------------+
+double RoundLots(string symbol, double lots)
+{
+    double rounded_lots = lots;
+    double max_lots = MarketInfo(symbol, MODE_MAXLOT);
+    if (lots > max_lots) {
+        rounded_lots = max_lots;
+    }
+    double min_lots = MarketInfo(symbol, MODE_MINLOT);
+    if (lots < min_lots) {
+        rounded_lots = min_lots;
+    }
+    double lots_step = MarketInfo(symbol, MODE_LOTSTEP);
+    double lots_qty = NormalizeDouble(rounded_lots / lots_step, 0);
+    return lots_qty * lots_step;
 }
 
 //+------------------------------------------------------------------+
