@@ -307,19 +307,19 @@ void Entry(int magic_number, int entry_type, double entry_price, string symbol, 
     }
 
     string comment = StringFormat("#%d", ticket);
+    string error_message = "";
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
         int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, 0, 0, comment, magic_number, 0, arrow);
         if (order_ticket == -1) {
-            printf("エラー: %s", ErrorDescription());
+            error_message = ErrorDescription();
+            printf("※エラー: %s", error_message);
             Sleep(RETRY_INTERVAL_INIT << times);
         } else {
             return;
         }
     }
 
-    string error = StringFormat("OrderSend() Failed %d", GetLastError());
-    Print(error);
-    Alert(error);
+    Alert(error_message);
 }
 
 //+------------------------------------------------------------------+
@@ -340,6 +340,7 @@ void Exit(int magic_number, int entry_type, double entry_price, string symbol, i
     }
 
     string comment = StringFormat("#%d", sender_ticket);
+    string error_message = "";
     for (int i = 0; i < OrdersTotal(); ++i) {
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
             break;
@@ -354,15 +355,16 @@ void Exit(int magic_number, int entry_type, double entry_price, string symbol, i
                             OrderClose(ticket, lots, price, SLIPPAGE, arrow) :
                             OrderDelete(ticket, arrow);
             if (!result) {
-                printf("エラー: %s", ErrorDescription());
+            error_message = ErrorDescription();
+            printf("※エラー: %s", error_message);
                 Sleep(RETRY_INTERVAL_INIT << times);
             } else {
                 return;
             }
         }
-        string error = StringFormat("OrderClose() Failed %d", GetLastError());
-        Print(error);
-        Alert(error);
+
+        Alert(error_message);
+        return;
     }
 }
 
@@ -374,6 +376,7 @@ void Modify(int magic_number, int entry_type, double entry_price, string symbol,
     lots = NormalizeDouble(lots, 2);
 
     string comment = StringFormat("#%d", sender_ticket);
+    string error_message = "";
     for (int i = 0; i < OrdersTotal(); ++i) {
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
             break;
@@ -385,14 +388,15 @@ void Modify(int magic_number, int entry_type, double entry_price, string symbol,
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
             bool result = OrderModify(ticket, entry_price, stoploss, takeprofit, 0);
             if (!result) {
-                printf("エラー: %s", ErrorDescription());
+                error_message = ErrorDescription();
+                printf("※エラー: %s", error_message);
                 Sleep(RETRY_INTERVAL_INIT << times);
             } else {
                 return;
             }
         }
-        string error = StringFormat("OrderModify() Failed %d", GetLastError());
-        Print(error);
-        Alert(error);
+
+        Alert(error_message);
+        return;
     }
 }
