@@ -84,6 +84,9 @@ struct SYMBOL_CONVERSION {
 SYMBOL_CONVERSION SymbolConversion[];
 int SymbolConversionCount;
 
+// 送信元「証券会社名＋口座番号」です
+string SenderName;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -116,19 +119,19 @@ int OnInit()
 bool Initialize()
 {
     // センダー側を識別する証券会社名+口座番号を取得します
-    string sender_name = GetBrokerAccount(AccountInfoString(ACCOUNT_COMPANY), AccountInfoInteger(ACCOUNT_LOGIN));
+    SenderName = GetBrokerAccount(AccountInfoString(ACCOUNT_COMPANY), AccountInfoInteger(ACCOUNT_LOGIN));
 
     // Commonデータフォルダのパスを取得します
     string appdata_dir = "";
     uint appdata_dir_length = GetEnvironmentVariable("appdata", appdata_dir, 1024);
     if (appdata_dir_length == 0) {
-        printf("エラー: 環境変数 appdata の値の取得に失敗しました");
+        printf("※エラー: 環境変数 appdata の値の取得に失敗しました");
         return false;
     } 
     string common_data_dir = appdata_dir + "\\MetaQuotes\\Terminal\\Common\\Files";
 
     // センダー側設定のINIファイルパスをログ出力します
-    string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", sender_name);
+    string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", SenderName);
     string inifile_path = StringFormat("%s\\%s", common_data_dir, inifile_name);
     printf("●センダー側設定INIファイルは「%s」です。", inifile_path);
 
@@ -202,18 +205,19 @@ bool Initialize()
             printf("※エラー: セクション[%s]のキー\"BROKER\"が見つかりません。", section_name);
             return false;
         }
-        printf("○レシーバー側[%03d]の証券会社は「%s」です。", i + 1, reciever_broker);
 
         string reciever_account = "";
         if (GetPrivateProfileString(section_name, "ACCOUNT", NONE, reciever_account, 1024, inifile_path) == 0 || reciever_account == NONE) {
             printf("※エラー: セクション[%s]のキー\"ACCOUNT\"が見つかりません。", section_name);
             return false;
         }
+
+        printf("○レシーバー側[%03d]の証券会社は「%s」です。", i + 1, reciever_broker);
         printf("○レシーバー側[%03d]の口座番号は「%s」です。", i + 1, reciever_account);
 
         string reciever_name = GetBrokerAccount(reciever_broker, StringToInteger(reciever_account));
         ArrayResize(CommunacationPathDir, i + 1);
-        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
+        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", SenderName, reciever_name);
         FolderCreate(CommunacationPathDir[i], true);
     }
 
@@ -536,23 +540,25 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         string symbol = Output.SymbolValue[i];
         StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
         // タブ区切りファイルの仕様
-        // 0列目：+1: ポジション追加 ／ -1: ポジション削除 ／ 0: ポジション修正
-        string line = StringFormat("%+d\t", Output.Change[i]);
-        // 1列目：マジックナンバー
+        // 0列目：送信元「証券会社名＋口座番号」
+        string line = SenderName + "\t";
+        // 1列目：+1: ポジション追加 ／ -1: ポジション削除 ／ 0: ポジション修正
+        line += StringFormat("%+d\t", Output.Change[i]);
+        // 2列目：マジックナンバー
         line += StringFormat("%d\t", Output.MagicNumber[i]);
-        // 2列目：エントリー種別
+        // 3列目：エントリー種別
         line += StringFormat("%d\t", Output.EntryType[i]);
-        // 3列目：エントリー価格
+        // 4列目：エントリー価格
         line += StringFormat("%.6f\t", Output.EntryPrice[i]);
-        // 4列目：シンボル名
+        // 5列目：シンボル名
         line += StringFormat("%s\t", ConvertSymbol(symbol));
-        // 5列目：コピー元チケット番号
+        // 6列目：コピー元チケット番号
         line += StringFormat("%d\t", Output.Tickets[i]);
-        // 6列目：ポジションサイズ
+        // 7列目：ポジションサイズ
         line += StringFormat("%.2f\t", LOTS_MULTIPLY * Output.Lots[i]);
-        // 7列目：ストップロス
+        // 8列目：ストップロス
         line += StringFormat("%.6f\t", Output.StopLoss[i]);
-        // 8列目：テイクプロフィット
+        // 9列目：テイクプロフィット
         line += StringFormat("%.6f\t", Output.TakeProfit[i]);
         FileWrite(file, line);
     }
