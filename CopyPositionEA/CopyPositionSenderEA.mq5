@@ -84,8 +84,8 @@ struct SYMBOL_CONVERSION {
 SYMBOL_CONVERSION SymbolConversion[];
 int SymbolConversionCount;
 
-// 送信元「証券会社名＋口座番号」です
-string SenderName;
+// 送信元証券会社名です
+string SenderBroker;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -119,7 +119,8 @@ int OnInit()
 bool Initialize()
 {
     // センダー側を識別する証券会社名+口座番号を取得します
-    SenderName = GetBrokerAccount(AccountInfoString(ACCOUNT_COMPANY), AccountInfoInteger(ACCOUNT_LOGIN));
+    SenderBroker = AccountInfoString(ACCOUNT_COMPANY);
+    string sender_name = GetBrokerAccount(SenderBroker, AccountInfoInteger(ACCOUNT_LOGIN));
 
     // Commonデータフォルダのパスを取得します
     string appdata_dir = "";
@@ -131,7 +132,7 @@ bool Initialize()
     string common_data_dir = appdata_dir + "\\MetaQuotes\\Terminal\\Common\\Files";
 
     // センダー側設定のINIファイルパスをログ出力します
-    string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", SenderName);
+    string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", sender_name);
     string inifile_path = StringFormat("%s\\%s", common_data_dir, inifile_name);
     printf("●センダー側設定INIファイルは「%s」です。", inifile_path);
 
@@ -217,7 +218,7 @@ bool Initialize()
 
         string reciever_name = GetBrokerAccount(reciever_broker, StringToInteger(reciever_account));
         ArrayResize(CommunacationPathDir, i + 1);
-        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", SenderName, reciever_name);
+        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
         FolderCreate(CommunacationPathDir[i], true);
     }
 
@@ -228,7 +229,7 @@ bool Initialize()
 //+------------------------------------------------------------------+
 //| 証券会社名と口座番号の組の文字列を返します                       |
 //+------------------------------------------------------------------+
-string GetBrokerAccount(string broker, long account)
+string GetBrokerAccount(string& broker, long account)
 {
     StringReplace(broker, " ", "_");
     StringReplace(broker, ",", "");
@@ -540,8 +541,8 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         string symbol = Output.SymbolValue[i];
         StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
         // タブ区切りファイルの仕様
-        // 0列目：送信元「証券会社名＋口座番号」
-        string line = SenderName + "\t";
+        // 0列目：送信元証券会社名
+        string line = SenderBroker + "\t";
         // 1列目：+1: ポジション追加 ／ -1: ポジション削除 ／ 0: ポジション修正
         line += StringFormat("%+d\t", Output.Change[i]);
         // 2列目：マジックナンバー
@@ -559,7 +560,7 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         // 8列目：ストップロス
         line += StringFormat("%.6f\t", Output.StopLoss[i]);
         // 9列目：テイクプロフィット
-        line += StringFormat("%.6f\t", Output.TakeProfit[i]);
+        line += StringFormat("%.6f", Output.TakeProfit[i]);
         FileWrite(file, line);
     }
 

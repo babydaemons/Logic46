@@ -224,8 +224,8 @@ void LoadPosition(string communication_dir, double lots_multiply)
             string field[];
             StringSplit(line, '\t', field);
             // タブ区切りファイルの仕様
-            // 0列目：送信元「証券会社名＋口座番号」
-            string sender_name = field[0];
+            // 0列目：送信元証券会社名
+            string sender_broker = field[0];
             // 1列目：+1: ポジション追加 ／ -1: ポジション削除 ／ 0: ポジション修正
             int change = (int)StringToInteger(field[1]);
             // 2列目：マジックナンバー
@@ -246,13 +246,13 @@ void LoadPosition(string communication_dir, double lots_multiply)
             double takeprofit = StringToDouble(field[9]);
 
             if (change == +1) {
-                Entry(sender_name, magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
+                Entry(sender_broker, magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
             }
             else if (change == -1) {
-                Exit(sender_name, magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
+                Exit(sender_broker, magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
             }
             else {
-                Modify(sender_name, magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
+                Modify(sender_broker, magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
             }
         }
 
@@ -266,7 +266,7 @@ void LoadPosition(string communication_dir, double lots_multiply)
 //+------------------------------------------------------------------+
 //| コピーするポジションを発注します                                 |
 //+------------------------------------------------------------------+
-void Entry(string sender_name, int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
+void Entry(string sender_broker, int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
 {
     lots = RoundLots(symbol, lots);
 
@@ -308,7 +308,7 @@ void Entry(string sender_name, int magic_number, int entry_type, double entry_pr
         return;
     }
 
-    string comment = StringFormat("%s-#%d", sender_name, sender_ticket);
+    string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
     string error_message = "";
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
         int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, 0, 0, comment, magic_number, 0, arrow);
@@ -346,7 +346,7 @@ double RoundLots(string symbol, double lots)
 //+------------------------------------------------------------------+
 //| コピーしたポジションを決済します                                 |
 //+------------------------------------------------------------------+
-void Exit(string sender_name, int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
+void Exit(string sender_broker, int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
 {
     lots = NormalizeDouble(lots, 2);
 
@@ -360,7 +360,7 @@ void Exit(string sender_name, int magic_number, int entry_type, double entry_pri
         arrow = clrRed;
     }
 
-    string comment = StringFormat("%s-#%d", sender_name, sender_ticket);
+    string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
     string error_message = "";
     for (int i = 0; i < OrdersTotal(); ++i) {
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
@@ -392,11 +392,11 @@ void Exit(string sender_name, int magic_number, int entry_type, double entry_pri
 //+------------------------------------------------------------------+
 //| コピーしたポジションを修正します                                 |
 //+------------------------------------------------------------------+
-void Modify(string sender_name, int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
+void Modify(string sender_broker, int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
 {
     lots = NormalizeDouble(lots, 2);
 
-    string comment = StringFormat("%s-#%d", sender_name, sender_ticket);
+    string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
     string error_message = "";
     for (int i = 0; i < OrdersTotal(); ++i) {
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
