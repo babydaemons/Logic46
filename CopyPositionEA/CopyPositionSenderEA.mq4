@@ -147,9 +147,13 @@ bool Initialize()
     string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", sender_name);
     inifile_path = StringFormat("%s\\%s", common_data_dir, inifile_name);
     printf("●センダー側設定INIファイルは「%s」です。", inifile_path);
+    printf("●センダー側証券会社名は「%s」です。", AccountInfoString(ACCOUNT_COMPANY));
+    printf("●センダー側口座番号は「%d」です。", AccountInfoInteger(ACCOUNT_LOGIN));
 
     if (!FileIsExist(inifile_name, FILE_COMMON)) {
-        string error_message = "※エラー: センダー側設定INIファイルが見つかりません。";
+        string error_message = "※エラー: センダー側設定INIファイルが見つかりません。\n" +
+                               StringFormat("●センダー側証券会社名は「%s」です。\n", AccountInfoString(ACCOUNT_COMPANY)) +
+                               StringFormat("●センダー側口座番号は「%d」です。", AccountInfoInteger(ACCOUNT_LOGIN));
         ERROR(error_message);
         return false;
     }

@@ -93,9 +93,13 @@ bool Initialize()
     string inifile_name = StringFormat("CopyPositionEA\\Reciever-%s.ini", reciever_name);
     inifile_path = StringFormat("%s\\%s", common_data_dir, inifile_name);
     printf("●レシーバー側設定INIファイルは「%s」です。", inifile_path);
+    printf("●レシーバー側証券会社名は「%s」です。", AccountInfoString(ACCOUNT_COMPANY));
+    printf("●レシーバー側口座番号は「%d」です。", AccountInfoInteger(ACCOUNT_LOGIN));
 
     if (!FileIsExist(inifile_name, FILE_COMMON)) {
-        string error_message = "※エラー: レシーバー側設定INIファイルが見つかりません。";
+        string error_message = "※エラー: レシーバー側設定INIファイルが見つかりません。\n" +
+                               StringFormat("●レシーバー側証券会社名は「%s」です。\n", AccountInfoString(ACCOUNT_COMPANY)) +
+                               StringFormat("●レシーバー側口座番号は「%d」です。", AccountInfoInteger(ACCOUNT_LOGIN));
         ERROR(error_message);
         return false;
     }
