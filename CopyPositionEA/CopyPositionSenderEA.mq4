@@ -84,6 +84,19 @@ int SymbolConversionCount;
 // 送信元証券会社名です
 string SenderBroker;
 
+// 設定INIファイルパスです
+string inifile_path;
+
+//+------------------------------------------------------------------+
+//| エラー表示します                                                 |
+//+------------------------------------------------------------------+
+void ERROR(string error_message)
+{
+    MessageBox(error_message + "\n\n※INIファイルパス:\n" + inifile_path, "エラー", MB_ICONERROR);
+    printf(error_message);
+    printf("※INIファイルパス: " + inifile_path);
+}
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -123,37 +136,43 @@ bool Initialize()
     string appdata_dir = "";
     uint appdata_dir_length = GetEnvironmentVariable("appdata", appdata_dir, 1024);
     if (appdata_dir_length == 0) {
-        printf("※エラー: 環境変数 appdata の値の取得に失敗しました");
+        string error_message = "※エラー: 環境変数 appdata の値の取得に失敗しました";
+        printf(error_message);
+        MessageBox(error_message, "エラー", MB_ICONERROR);
         return false;
     } 
     string common_data_dir = appdata_dir + "\\MetaQuotes\\Terminal\\Common\\Files";
 
     // センダー側設定のINIファイルパスをログ出力します
     string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", sender_name);
-    string inifile_path = StringFormat("%s\\%s", common_data_dir, inifile_name);
+    inifile_path = StringFormat("%s\\%s", common_data_dir, inifile_name);
     printf("●センダー側設定INIファイルは「%s」です。", inifile_path);
+
+    if (!FileIsExist(inifile_name, FILE_COMMON)) {
+        string error_message = "※エラー: センダー側設定INIファイルが見つかりません。";
+        ERROR(error_message);
+        return false;
+    }
 
     string sender_broker = "";
     if (GetPrivateProfileString("Sender", "BROKER", NONE, sender_broker, 1024, inifile_path) == 0 || sender_broker == NONE || AccountInfoString(ACCOUNT_COMPANY) != sender_broker) {
-        printf("※センダー側証券会社名が一致しません: セクション[Sender]のキー\"BROKER\"を見直してください。");
+        string error_message = "※センダー側証券会社名が一致しません: セクション[Sender]のキー\"BROKER\"を見直してください。";
+        ERROR(error_message);
         return false;
     }
 
     string sender_account = "";
     if (GetPrivateProfileString("Sender", "ACCOUNT", NONE, sender_account, 1024, inifile_path) == 0 || sender_account == NONE || AccountInfoInteger(ACCOUNT_LOGIN) != StringToInteger(sender_account)) {
-        printf("※センダー側証券会社名が一致しません: セクション[Sender]のキー\"ACCOUNT\"を見直してください。");
-        return false;
-    }
-
-    if (!FileIsExist(inifile_name, FILE_COMMON)) {
-        printf("※エラー: センダー側設定INIファイル「%s」が見つかりません。", inifile_path);
+        string error_message = "※センダー側証券会社名が一致しません: セクション[Sender]のキー\"ACCOUNT\"を見直してください。";
+        ERROR(error_message);
         return false;
     }
 
     // ポジションコピーを行うインターバル(ミリ秒)
     string update_interval = "";
     if (GetPrivateProfileString("Sender", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
-        printf("※エラー: セクション[Sender]のキー\"UPDATE_INTERVAL\"が見つかりません。");
+        string error_message = "※エラー: セクション[Sender]のキー\"UPDATE_INTERVAL\"が見つかりません。";
+        ERROR(error_message);
         return false;
     }
     UPDATE_INTERVAL = (int)StringToInteger(update_interval);
@@ -171,7 +190,8 @@ bool Initialize()
     // コピーしたいマジックナンバーの配列を初期化します
     string copy_magic_numbers = "";
     if (GetPrivateProfileString("Sender", "COPY_MAGIC_NUMBERS", NONE, copy_magic_numbers, 1024, inifile_path) == 0 || copy_magic_numbers == NONE) {
-        printf("※エラー: セクション[Sender]のキー\"COPY_MAGIC_NUMBERS\"が見つかりません。");
+        string error_message = "※エラー: セクション[Sender]のキー\"COPY_MAGIC_NUMBERS\"が見つかりません。";        printf(error_message);
+        ERROR(error_message);
         return false;
     }
     string magic_numbers[];
@@ -190,7 +210,8 @@ bool Initialize()
     // レシーバー側の設定個数を取得
     string reciever_count = "";
     if (GetPrivateProfileString("Sender", "RECIEVER_COUNT", NONE, reciever_count, 1024, inifile_path) == 0 || reciever_count == NONE) {
-        printf("※エラー: セクション[Sender]のキー\"RECIEVER_COUNT\"が見つかりません。");
+        string error_message = "※エラー: セクション[Sender]のキー\"RECIEVER_COUNT\"が見つかりません。";
+        ERROR(error_message);
         return false;
     }
     CommunacationDirCount = (int)StringToInteger(reciever_count);
@@ -200,13 +221,15 @@ bool Initialize()
         string section_name = StringFormat("Reciever%03d", i + 1);
         string reciever_broker = "";
         if (GetPrivateProfileString(section_name, "BROKER", NONE, reciever_broker, 1024, inifile_path) == 0 || reciever_broker == NONE) {
-            printf("※エラー: セクション[%s]のキー\"BROKER\"が見つかりません。", section_name);
+            string error_message = StringFormat("※エラー: セクション[%s]のキー\"BROKER\"が見つかりません。", section_name);
+            ERROR(error_message);
             return false;
         }
 
         string reciever_account = "";
         if (GetPrivateProfileString(section_name, "ACCOUNT", NONE, reciever_account, 1024, inifile_path) == 0 || reciever_account == NONE) {
-            printf("※エラー: セクション[%s]のキー\"ACCOUNT\"が見つかりません。", section_name);
+            string error_message = StringFormat("※エラー: セクション[%s]のキー\"ACCOUNT\"が見つかりません。", section_name);
+            ERROR(error_message);
             return false;
         }
 
@@ -494,7 +517,7 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
 
     // ファイルのオープンに失敗した場合は、ログを出力して処理を中断します
     if (file == INVALID_HANDLE) {
-        printf("コピーポジション連携用タブ区切りファイルのオープンに失敗しました: %s", path);
+        printf("※コピーポジション連携用タブ区切りファイルのオープンに失敗しました: %s", path);
         return;
     }
 

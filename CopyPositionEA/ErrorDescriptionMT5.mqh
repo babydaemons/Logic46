@@ -69,9 +69,11 @@ string ErrorDescription(int error_code) {
     case ERR_RESOURCE_NOT_FOUND:
         error_string = "この名称のリソースがEX5で見つかりません。";
         break;
+/*
     case ERR_RESOURCE_UNSUPPOTED_TYPE:
         error_string = "リソースタイプがサポートされていないかサイズが 16 MB を超えます。";
         break;
+*/
     case ERR_RESOURCE_NAME_IS_TOO_LONG:
         error_string = "リソース名が 63 字を超えます。";
         break;
@@ -636,7 +638,7 @@ string ErrorDescription(int error_code) {
     case ERR_CALENDAR_NO_DATA:
         error_string = "国が見つかりません";
         break;
-    case ERR_DATABASE_ERROR  :
+    case ERR_DATABASE_ERROR  :
         error_string = "一般的なエラー";
         break;
     case ERR_DATABASE_ABORT:
@@ -646,7 +648,7 @@ string ErrorDescription(int error_code) {
         error_string = "データベースファイルがロックされています";
         break;
     case ERR_DATABASE_LOCKED:
-        error_string = "データベーステーブルがロックされています<分節 2781";
+        error_string = "データベーステーブルがロックされています<分節 2781";
         break;
     case ERR_DATABASE_NOMEM:
         error_string = "操作を完了するためのメモリが不足しています";
