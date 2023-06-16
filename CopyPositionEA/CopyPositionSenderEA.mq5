@@ -9,7 +9,6 @@
 #include <Trade/Trade.mqh>
 #include "WindowsAPI.mqh"
 
-int     UPDATE_INTERVAL;      // ポジションコピーを行うインターバル(ミリ秒)
 string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
 double  LOTS_MULTIPLY;        // ポジションコピー時のロット数の係数
 
@@ -110,9 +109,8 @@ int OnInit()
         return INIT_FAILED;
     }
 
-    // パラメータ UPDATE_INTERVAL で指定されたミリ秒の周期で
-    // ポジションコピーを行います
-    EventSetMillisecondTimer(UPDATE_INTERVAL);
+    // 100ミリ秒の周期でポジションコピーを行います
+    EventSetMillisecondTimer(100);
     
     // ポジション全体を表す構造体を
     // 添字0と1の両方(現在と前回の両方)を初期化します
@@ -174,15 +172,6 @@ bool Initialize()
         ERROR(error_message);
         return false;
     }
-
-    // ポジションコピーを行うインターバル(ミリ秒)
-    string update_interval = "";
-    if (GetPrivateProfileString("Sender", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
-        string error_message = "※エラー: セクション[Sender]のキー\"UPDATE_INTERVAL\"が見つかりません。";
-        ERROR(error_message);
-        return false;
-    }
-    UPDATE_INTERVAL = (int)StringToInteger(update_interval);
 
     // ポジションコピー時にシンボル名から削除するサフィックス
     string symbol_remove_suffix = "";
@@ -310,23 +299,11 @@ void OnDeinit(const int reason)
 }
 
 //+------------------------------------------------------------------+
-//| Expert tick function                                             |
-//+------------------------------------------------------------------+
-void OnTick()
-{
-    // 気配値が更新されたタイミングで
-    // ポジション全体の差分をタブ区切りファイルに保存します
-    SavePosition();
-}
-
-//+------------------------------------------------------------------+
 //| Timer function                                                   |
 //+------------------------------------------------------------------+
 void OnTimer()
 {
-    // パラメータ UPDATE_INTERVAL で指定されたミリ秒の周期で
-    // ポジション全体の差分をタブ区切りファイルに保存します
-    // OnTick()で十分なはずですが万が一のための保険です
+    // 100ミリ秒の周期でポジション全体の差分をタブ区切りファイルに保存します
     SavePosition();
 }
 
@@ -592,4 +569,7 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
     }
 
     FileClose(file);
+
+    // 出力したコピーポジション連携用タブ区切りファイルのファイル名をログ出力します
+    printf("⇒連携ファイル: \"%s\"", path);
 }

@@ -10,7 +10,6 @@
 #include "WindowsAPI.mqh"
 #include "ErrorDescriptionMT5.mqh"
 
-int     UPDATE_INTERVAL;      // ポジションコピーを行うインターバル(ミリ秒)
 string  SYMBOL_APPEND_SUFFIX; // ポジションコピー時にシンボル名に追加するサフィックス
 int     RETRY_INTERVAL_INIT;  // 発注時・ポジション修正時のリトライ時間の初期値(ミリ秒)
 int     RETRY_COUNT_MAX;      // 発注時・ポジション修正時のリトライ最大回数
@@ -63,9 +62,8 @@ int OnInit()
         return INIT_FAILED;
     }
 
-    // パラメータ UPDATE_INTERVAL で指定されたミリ秒の周期で
-    // ポジションコピーを行います
-    EventSetMillisecondTimer(UPDATE_INTERVAL);
+    // 100ミリ秒の周期でポジションコピーを行います
+    EventSetMillisecondTimer(100);
     
     return INIT_SUCCEEDED;
 }
@@ -117,15 +115,6 @@ bool Initialize()
         ERROR(error_message);
         return false;
     }
-
-    // ポジションコピーを行うインターバル(ミリ秒)
-    string update_interval = "";
-    if (GetPrivateProfileString("Reciever", "UPDATE_INTERVAL", NONE, update_interval, 1024, inifile_path) == 0 || update_interval == NONE) {
-        string error_message = "※エラー: セクション[Reciever]のキー\"UPDATE_INTERVAL\"が見つかりません。";
-        ERROR(error_message);
-        return false;
-    }
-    UPDATE_INTERVAL = (int)StringToInteger(update_interval);
 
     string retry_interval_init = "";
     if (GetPrivateProfileString("Reciever", "RETRY_INTERVAL_INIT", NONE, retry_interval_init, 1024, inifile_path) == 0 || retry_interval_init == NONE) {
@@ -215,23 +204,11 @@ void OnDeinit(const int reason)
 }
 
 //+------------------------------------------------------------------+
-//| Expert tick function                                             |
-//+------------------------------------------------------------------+
-void OnTick()
-{
-    // 気配値が更新されたタイミングで
-    // ポジション全体の差分をタブ区切りファイルから読みだします
-    LoadPositions();
-}
-
-//+------------------------------------------------------------------+
 //| Timer function                                                   |
 //+------------------------------------------------------------------+
 void OnTimer()
 {
-    // パラメータ UPDATE_INTERVAL で指定されたミリ秒の周期で
-    // ポジション全体の差分をタブ区切りファイルから読みだします
-    // OnTick()で十分なはずですが万が一のための保険です
+    // 100ミリ秒の周期でポジション全体の差分をタブ区切りファイルから読みだします
     LoadPositions();
 }
 
@@ -262,6 +239,9 @@ void LoadPosition(string communication_dir, double lots_multiply)
         if (file == INVALID_HANDLE) {
             continue;
         }
+
+        // 見つかったコピーポジション連携用タブ区切りファイルのファイル名をログ出力します
+        printf("⇒連携ファイル: \"%s\"", path);
 
         string line;
         while ((line = FileReadString(file)) != "") {
