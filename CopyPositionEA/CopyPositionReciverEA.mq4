@@ -364,6 +364,9 @@ double RoundLots(string symbol, double lots)
         rounded_lots = min_lots;
     }
     double lots_step = MarketInfo(symbol, MODE_LOTSTEP);
+    if (lots_step == 0.0) {
+        lots_step = 0.01;
+    }
     double lots_qty = NormalizeDouble(rounded_lots / lots_step, 0);
     return lots_qty * lots_step;
 }
