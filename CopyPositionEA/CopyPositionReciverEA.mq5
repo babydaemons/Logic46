@@ -26,9 +26,6 @@ enum ENUM_POSITION_OPERATION {
     POSITION_MODIFY = 0,
 };
 
-// コピーしたいマジックナンバーの配列です
-int MagicNumbers[];
-
 // コピーポジション連携用タブ区切りファイルの個数です
 int CommunacationDirCount = 0;
 

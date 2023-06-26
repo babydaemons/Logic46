@@ -63,9 +63,6 @@ bool CurrentIndex;
 // ポジション全体の差分を表す構造体です
 POSITION_LIST Output;
 
-// コピーしたいマジックナンバーの配列です
-int MagicNumbers[];
-
 // コピーポジション連携用タブ区切りファイルの個数です
 int CommunacationDirCount = 0;
 
@@ -179,21 +176,6 @@ bool Initialize()
     string lots_multiply = "";
     GetPrivateProfileString("Sender", "LOTS_MULTIPLY", NONE, lots_multiply, 1024, inifile_path);
     LOTS_MULTIPLY = lots_multiply == NONE ? 1.0 : StringToDouble(lots_multiply);
-
-    // コピーしたいマジックナンバーの配列を初期化します
-    string copy_magic_numbers = "";
-    if (GetPrivateProfileString("Sender", "COPY_MAGIC_NUMBERS", NONE, copy_magic_numbers, 1024, inifile_path) == 0 || copy_magic_numbers == NONE) {
-        string error_message = "※エラー: セクション[Sender]のキー\"COPY_MAGIC_NUMBERS\"が見つかりません。";        printf(error_message);
-        ERROR(error_message);
-        return false;
-    }
-    string magic_numbers[];
-    int magic_number_count = StringSplit(copy_magic_numbers, ',', magic_numbers);
-    ArrayResize(MagicNumbers, magic_number_count);
-    for (int i = 0; i < magic_number_count; ++i) {
-        MagicNumbers[i] = (int)StringToInteger(magic_numbers[i]);
-    }
-    ArraySort(MagicNumbers);
 
     // シンボル名の変換("変換前シンボル名|変換後シンボル名"のカンマ区切り)
     string symbol_conversion_list = "";
@@ -356,11 +338,6 @@ int ScanCurrentPositions(POSITION_LIST& Current)
     for (int i = 0; i < OrdersTotal(); ++i) {
         // トレード中のポジションを選択します
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) { continue; }
-
-        // コピーしたいマジックナンバーかチェックします
-        int magic_number = OrderMagicNumber();
-        int index = ArrayBsearch(MagicNumbers, magic_number);
-        if (magic_number != MagicNumbers[index]) { continue; }
 
         int entry_type = 0;
         switch (OrderType()) {
