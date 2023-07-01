@@ -1,4 +1,3 @@
-//TradingViewインジケーター「FlowVisualizer」  
 //@version=5
 
 indicator(title="FlowVisualizer", overlay=false, max_lines_count = 500)
@@ -261,14 +260,28 @@ color col_wma_l = na
 // rsi>50なら上、<50なら下、ema>50なら緑、<50なら赤
 if not c_res_b
     if rsi_ov_ema_ov
-        if rsi == max and rsilower
+        if rsi == max and rsi<upper
+            col_rsi_u := col_over
+        if ema == max and ema<upper
+            col_ema_u := col_over
+        if wma == max and wma<upper
+            col_wma_u := col_over
+    if rsi_un_ema_ov
+        if rsi == min and rsi>lower
             col_rsi_l := col_over
         if ema == min and ema>lower
             col_ema_l := col_over
         if wma == min and wma>lower
             col_wma_l := col_over
     if rsi_ov_ema_un
-        if rsi == max and rsilower
+        if rsi == max and rsi<upper
+            col_rsi_u := col_under
+        if ema == max and ema<upper
+            col_ema_u := col_under
+        if wma == max and wma<upper
+            col_wma_u := col_under
+    if rsi_un_ema_un
+        if rsi == min and rsi>lower
             col_rsi_l := col_under
         if ema == min and ema>lower
             col_ema_l := col_under
@@ -284,14 +297,28 @@ rsi_un_ema_un_x = rsix<50 and emax<50
 // rsi>50なら上、<50なら下、ema>50なら緑、<50なら赤
 if not c_res_b
     if rsi_ov_ema_ov_x
-        if rsix == maxx and rsixlower
+        if rsix == maxx and rsix<upper
+            col_rsi_u := col_over
+        if emax == maxx and emax<upper
+            col_ema_u := col_over
+        if wmax == maxx and wmax<upper
+            col_wma_u := col_over
+    if rsi_un_ema_ov_x
+        if rsix == minx and rsix>lower
             col_rsi_l := col_over
         if emax == minx and emax>lower
             col_ema_l := col_over
         if wmax == minx and wmax>lower
             col_wma_l := col_over
     if rsi_ov_ema_un_x
-        if rsix == maxx and rsixlower
+        if rsix == maxx and rsix<upper
+            col_rsi_u := col_under
+        if emax == maxx and emax<upper
+            col_ema_u := col_under
+        if wmax == maxx and wmax<upper
+            col_wma_u := col_under
+    if rsi_un_ema_un_x
+        if rsix == minx and rsix>lower
             col_rsi_l := col_under
         if emax == minx and emax>lower
             col_ema_l := col_under
@@ -322,7 +349,110 @@ fill(plot1 = center_plot, plot2 = emax_plot, color = col_ema_center)
 fill(plot1 = center_plot, plot2 = wmax_plot, color = col_wma_center)
 
 // ema, wmaの上下、rsi, emaの上下関係による塗りつぶし
-fill(plot1 = ema_plot, plot2 = wma_plot, color = c_res_b? na: ema= HAopen2
+fill(plot1 = ema_plot, plot2 = wma_plot, color = c_res_b? na: ema<wma? col_ema_crossdown_wma: col_ema_crossup_wma)
+fill(plot1 = emax_plot, plot2 = wmax_plot, color = c_res_b? na: emax<wmax? col_ema_crossdown_wma: col_ema_crossup_wma)
+fill(plot1 = rsi_plot, plot2 = ema_plot, color = c_res_b? na: rsi<ema? col_rsi_crossdown_ema: col_rsi_crossup_ema)
+fill(plot1 = rsix_plot, plot2 = emax_plot, color = c_res_b? na: rsix<emax? col_rsi_crossdown_ema: col_rsi_crossup_ema)
+
+    
+// alert
+alertcondition(ta.cross(ema2, ema_p2), 'EMA direction change')
+alertcondition(ta.cross(wma2, wma_p2), 'WMA direction change')
+
+// end of FlowVisualizer
+
+timeframe_factor = timeframe.isminutes? 60: timeframe.isseconds? 1: na
+col0 = #00000000
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// SuperTrend Oscillator MTF ////////////////////////////////////////////////////////////////////////////////////////
+//Inputs 
+ST = '/////////////  Super Trend Oscillator /////////////'
+ures=input(false,title="Use Custom Resolution?", inline = 'c', group = ST)
+resST=input.timeframe(defval="60", title = '', inline = 'c', group = ST)
+len=input.int(14,title="Length", group = ST)
+mult=input.int(1,title="Multiple", group = ST)
+colup=input.color(color.green, 'Up', inline = 'col', group = ST)
+coldn=input.color(color.red  , 'Down', inline = 'col', group = ST)
+mark_pos_ST = input.price(80, 'Mark Position')
+
+//SuperTrend
+[stc, tdc] = ta.supertrend(mult, len)
+[stu, tdu, starttime_ST, endtime_ST] =
+ request.security(syminfo.tickerid,resST,[stc, tdc, time, time_close], barmerge.gaps_off, barmerge.lookahead_on)
+new_ses = ta.change(starttime_ST)
+
+td = ures? tdu: tdc
+col_ST = td<0? colup: coldn
+
+var line ST_line = na
+var line ST_line_0 = na
+var bool exist_ST_line_0 = false
+var line last_ST_line = na
+var color last_ST_col = na
+
+if barstate.isrealtime and ures
+    // 上位足確定までの下位足本数
+    bar_left_ST = math.floor((endtime_ST - time_close)/1000/(timeframe.multiplier*timeframe_factor))+1
+    bl_ST_text = str.tostring(bar_left_ST)
+    var la_bar_left_ST = label.new(bar_index, mark_pos_ST, bl_ST_text, color = col0, 
+      style = label.style_label_left, textcolor = color.yellow, size = size.normal)
+    label.set_x(la_bar_left_ST, bar_index)
+    label.set_text(la_bar_left_ST, bl_ST_text)
+
+    // リアルタイム動作時のライン色変更(lineで描画)
+    if new_ses
+        if last_ST_col == col_ST[1]
+            if not na(last_ST_line)
+                line.set_x2(last_ST_line, bar_index)
+            else
+                last_ST_line := line.copy(ST_line)
+        else
+            line.copy(last_ST_line)
+            last_ST_line := na
+
+        ST_line := line.new(bar_index[1], mark_pos_ST, bar_index, mark_pos_ST, color = col_ST, width = 4)
+        last_ST_col := col_ST[1]
+        exist_ST_line_0 := true
+    
+    else
+        if not exist_ST_line_0 // 上位足の途中でリアルタイムが始まった場合の、その時点から次の上位足開始までの線
+            ST_line_0 := line.new(bar_index[1], mark_pos_ST, bar_index, mark_pos_ST, color = col_ST, width = 4)
+            line.set_x2(ST_line_0, bar_index)
+            line.set_color(ST_line_0, col_ST)
+        
+        line.set_x2(ST_line, bar_index)
+        line.set_color(ST_line, col_ST)
+
+    mark_pos_ST:=na
+
+
+//Plot
+// SuperTrend color
+plot(mark_pos_ST, title="SuperTrend color", color=col_ST, linewidth = 4)
+
+// end of SuperTrend Oscillator MTF
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// HeikinAshi ////////////////////////////////////////////////////////////////////////////////////////
+// inputs
+HA = '/////////////  Heikinashi Colors  /////////////'
+useMTFRes = input.bool(false, title="Use custom Resolution", inline = 'mtf', group = HA)
+resCustom = input.timeframe(title="", defval="60", inline = 'mtf', group = HA)
+resH = useMTFRes? resCustom: timeframe.period
+upColor = input.color(color.lime, 'Up', inline = 'l', group = HA)
+dnColor = input.color(color.red, 'Down', inline = 'l', group = HA)
+
+// HA start/end time
+[HAstart, HAend] = request.security(syminfo.tickerid, resH,
+  [time, time_close], 
+  barmerge.gaps_off, barmerge.lookahead_on)
+
+newSessionH = ta.change(HAstart)
+
+[HAopen2, HAclose2] = request.security(ticker.heikinashi(syminfo.tickerid),
+  resH, [open, close], barmerge.gaps_off, barmerge.lookahead_on)
+hU = HAclose2 >= HAopen2
 var int bar_count = na
 col_HA = hU? color.new(upColor, 0): color.new(dnColor, 0)
 var arrla = array.new_label(100, na)

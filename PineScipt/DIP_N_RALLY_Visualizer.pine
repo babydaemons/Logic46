@@ -1,4 +1,3 @@
-//TradingViewインジケーター「DIP N RALLY Visualizer」
 //@version=5
 indicator(title="DIP N RALLY Visualizer",overlay=false)
 
@@ -97,7 +96,8 @@ lvlup=tdc==-1?lvl:na
 lvldn=tdc==1?lvl:na
 tdup=(tdc==-1)and(tdc[1]==1)
 tddn=(tdc==1)and(tdc[1]==-1)
-lvlwup=(lvlup-matr)and(cls>cls[1])
+lvlwup=(lvlup<matr)and(cls<cls[1])
+lvlwdn=(lvldn>-matr)and(cls>cls[1])
 color col = na
 color col2 = na
 col:=lvl>0?colup:na(lvl)? col[1]: coldn
@@ -113,7 +113,8 @@ lvlupu=tdu==-1?lvlu:na
 lvldnu=tdu==1?lvlu:na
 tdupu=(tdu==-1)and(tdu[1]==1)
 tddnu=(tdu==1)and(tdu[1]==-1)
-lvlwupu=(lvlupu-matru)and(clsu>clsu[1])
+lvlwupu=(lvlupu<matru)and(clsu<clsu[1])
+lvlwdnu=(lvldnu>-matru)and(clsu>clsu[1])
 color colu = na
 color colufill = na
 color colu0 = na
@@ -131,7 +132,8 @@ lvlupu2=tdu2==-1?lvlu2:na
 lvldnu2=tdu2==1?lvlu2:na
 tdupu2=(tdu2==-1)and(tdu2[1]==1)
 tddnu2=(tdu2==1)and(tdu2[1]==-1)
-lvlwupu2=(lvlupu2-matru2)and(clsu2>clsu2[1])
+lvlwupu2=(lvlupu2<matru2)and(clsu2<clsu2[1])
+lvlwdnu2=(lvldnu2>-matru2)and(clsu2>clsu2[1])
 color colu2 = na
 color colu2fill = na
 color colu02 = na
