@@ -1,0 +1,381 @@
+//TradingViewインジケーター「FlowVisualizer」  
+//@version=5
+
+indicator(title="FlowVisualizer", overlay=false, max_lines_count = 500)
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// WMA EMA RSI //////////////////////////////////////////////////////////////////////////////////////////////////////
+// inputs
+wer = '/////////////  WMA EMA RSI  /////////////'
+c_res_b = input.bool(false, 'Use Custom Resolution?', inline = '1', group = wer)
+c_res = input.timeframe('60', '', inline = '1', group = wer)
+src = input.source(close, title="Source", group = wer)
+rsi_len = input.int(14, title="RSI length ", inline ='r', group = wer)
+ema_len = input.int(9,  title="EMA length",  inline ='e', group = wer)
+wma_len = input.int(45, title="WMA length",  inline ='w', group = wer)
+col_rsi = input.color(color.new(color.white, 0), '     ', inline ='r', group = wer)
+col_ema_up = input.color(color.new(color.lime, 0), '', inline ='e', group = wer)
+col_ema_dn = input.color(color.new(color.yellow, 0), '', inline ='e', group = wer)
+col_wma_up = input.color(color.new(color.aqua, 0), '', inline ='w', group = wer)
+col_wma_dn = input.color(color.new(color.purple, 0), '', inline ='w', group = wer)
+wdt_rsi    = input.int(1, 'width', inline='r', group = wer)
+wdt_ema    = input.int(2, 'width', inline='e', group = wer)
+wdt_wma    = input.int(2, 'width', inline='w', group = wer)
+res = c_res_b? c_res: timeframe.period
+col_rsi_crossdown_ema = input.color(color.red, 'RSI-EMA, cross down', inline ='rsi ema', group = wer)
+col_rsi_crossup_ema = input.color(color.blue, 'cross up', inline ='rsi ema', group = wer)
+col_ema_crossdown_wma = input.color(color.fuchsia, 'EMA-WMA, cross down', inline ='ema wma', group = wer)
+col_ema_crossup_wma = input.color(color.aqua, 'cross up', inline ='ema wma', group = wer)
+col_under = input.color(color.new(color.maroon, 0), 'EMA<50', inline ='ema 50', group = wer)
+col_over  = input.color(color.new(color.teal, 50), 'EMA>50', inline ='ema 50', group = wer)
+
+wma_s = 'WMA smoothing'
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+wma_smoothing = input.bool(true, '', inline = wma_s, group = wer)
+typeMA = input.string(title = "WMA smoothing", defval = "SMA", 
+  options=["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], inline = wma_s, group = wer)
+smoothingLength = input.int(title = "Length", defval = 5, minval = 1, maxval = 100, inline = wma_s, group = wer)
+smoothing(source) =>
+  ma(source, smoothingLength, typeMA)
+
+[rsi, ema, wma, wmas] = 
+  request.security(syminfo.tickerid, res, 
+  [ta.rsi(src, rsi_len), 
+  ta.ema(ta.rsi(src, rsi_len), ema_len), 
+  ta.wma(ta.rsi(src, rsi_len), wma_len),
+  smoothing(ta.wma(ta.rsi(src, rsi_len), wma_len))], 
+  barmerge.gaps_on, barmerge.lookahead_off)
+
+[rsi2, ema2, wma2, wmas2, starttime] = 
+  request.security(syminfo.tickerid, res, 
+  [ta.rsi(src, rsi_len), 
+  ta.ema(ta.rsi(src, rsi_len), ema_len), 
+  ta.wma(ta.rsi(src, rsi_len), wma_len),
+  smoothing(ta.wma(ta.rsi(src, rsi_len), wma_len)),
+  time], 
+  barmerge.gaps_off, barmerge.lookahead_on)
+
+wma := wma_smoothing? wmas: wma
+wma2 := wma_smoothing? wmas2: wma2
+
+newSession = ta.change(starttime)
+
+var float rsix = na
+var float emax = na
+var float wmax = na
+
+var float rsi_p = na
+var float ema_p = na
+var float wma_p = na
+
+var float rsi_p2 = na
+var float ema_p2 = na
+var float wma_p2 = na
+
+var int time_p = na
+
+var bool rsi_first_point = false
+var bool rsi_first_plot_point = false
+var bool ema_first_point = false
+var bool ema_first_plot_point = false
+var bool wma_first_point = false
+var bool wma_first_plot_point = false
+
+var line first_rsi_line = line.new(na, na, na, na, 
+  xloc.bar_index, extend.none, color = col_rsi, width = wdt_rsi)
+var line rsi_line = line.new(na, na, na, na, 
+  xloc.bar_index, extend.none, color = col_rsi, width = wdt_rsi)
+var line first_ema_line = line.new(na, na, na, na, 
+  xloc.bar_index, extend.none, color = na, width = wdt_ema)
+var line ema_line = line.new(na, na, na, na, 
+  xloc.bar_index, extend.none, color = na, width = wdt_ema)
+var line first_wma_line = line.new(na, na, na, na, 
+  xloc.bar_index, extend.none, color = na, width = wdt_wma)
+var line wma_line = line.new(na, na, na, na, 
+  xloc.bar_index, extend.none, color = na, width = wdt_wma)
+
+if newSession
+    rsi_p2 := rsi_p
+    ema_p2 := ema_p
+    wma_p2 := wma_p
+    rsi_p := rsi2[1]
+    ema_p := ema2[1]
+    wma_p := wma2[1]
+    time_p := bar_index[1]
+
+col_ema = ema2>=ema_p2? col_ema_up: col_ema_dn
+col_wma = wma2>=wma_p2? col_wma_up: col_wma_dn
+
+if barstate.isrealtime
+// rsi
+    if not rsi_first_point
+        line.set_xy1(first_rsi_line, time_p, rsi_p)
+        line.set_xy2(first_rsi_line, bar_index[1], rsi2[1])
+        rsi_first_point := true
+    if newSession
+        rsix := rsi2[1]
+        rsi := na
+        line.set_xy1(rsi_line, time_p, rsi_p)
+        line.set_xy2(rsi_line, bar_index, rsi2)
+        if not rsi_first_plot_point
+            line.set_xy2(first_rsi_line, bar_index[1], rsi2[1])
+            rsi_first_plot_point := true
+    else
+        line.set_xy2(rsi_line, bar_index, rsi2)
+        if not rsi_first_plot_point
+            line.set_xy2(first_rsi_line, bar_index, rsi2)
+            line.set_xy1(rsi_line, time_p, rsi_p)
+        rsix := na
+        rsi := na
+// ema
+    
+    if not ema_first_point
+        line.set_xy1(first_ema_line, time_p, ema_p)
+        line.set_xy2(first_ema_line, bar_index[1], ema2[1])
+        line.set_color(first_ema_line, col_ema)
+        ema_first_point := true
+    if newSession
+        emax := ema2[1]
+        ema := na
+        line.set_xy1(ema_line, time_p, ema_p)
+        line.set_xy2(ema_line, bar_index, ema2)
+        line.set_color(ema_line, col_ema)
+        if not ema_first_plot_point
+            line.set_xy2(first_ema_line, bar_index[1], ema2[1])
+            line.set_color(first_ema_line, col_ema)
+            ema_first_plot_point := true
+    else
+        line.set_xy2(ema_line, bar_index, ema2)
+        if not ema_first_plot_point
+            line.set_xy2(first_ema_line, bar_index, ema2)
+            line.set_xy1(ema_line, time_p, ema_p)
+            line.set_color(first_ema_line, col_ema)
+            line.set_color(ema_line, col_ema)
+        emax := na
+        ema := na
+// wma    
+    if not wma_first_point
+        line.set_xy1(first_wma_line, time_p, wma_p)
+        line.set_xy2(first_wma_line, bar_index[1], wma2[1])
+        line.set_color(first_wma_line, col_wma)
+        wma_first_point := true
+    if newSession
+        wmax := wma2[1]
+        wma := na
+        line.set_xy1(wma_line, time_p, wma_p)
+        line.set_xy2(wma_line, bar_index, wma2)
+        line.set_color(wma_line, col_wma)
+        if not wma_first_plot_point
+            line.set_xy2(first_wma_line, bar_index[1], wma2[1])
+            line.set_color(first_wma_line, col_wma)
+            wma_first_plot_point := true
+    else
+        line.set_xy2(wma_line, bar_index, wma2)
+        if not wma_first_plot_point
+            line.set_xy2(first_wma_line, bar_index, wma2)
+            line.set_xy1(wma_line, time_p, wma_p)
+            line.set_color(first_wma_line, col_wma)
+            line.set_color(wma_line, col_wma)
+        wmax := na
+        wma := na
+
+// plot
+ull = 'Upper/Lower Line'
+upper = input(70, title="Upper line", inline = 'hline', group = wer)
+lower = input(30, title="Lower line", inline = 'hline', group = wer)
+u=hline(upper, 'upper line')
+l=hline(lower, 'lower line')
+fill(u,l, color=color.new(color.purple, 97))
+hline(50, 'center line')
+
+rsi_plot  = plot(rsi, color= col_rsi, linewidth = wdt_rsi, offset = 0)
+rsix_plot = plot(rsix, color= col_rsi, linewidth = wdt_rsi, offset = -1)
+
+ema_plot  = plot(ema, color= col_ema, linewidth = wdt_ema, offset = 0)
+emax_plot = plot(emax, color= col_ema, linewidth = wdt_ema, offset = -1)
+
+wma_plot  = plot(wma, color= col_wma, linewidth = wdt_wma, offset = 0)
+wmax_plot = plot(wmax, color= col_wma, linewidth = wdt_wma, offset = -1)
+
+color col_rsi_center = na
+color col_ema_center = na
+color col_wma_center = na
+min = math.min(rsi, ema, wma)
+max = math.max(rsi, ema, wma)
+if rsi>50 and ema>50 and wma>50
+    if rsi == min
+        col_rsi_center := col_over
+    if ema == min
+        col_ema_center := col_over
+    if wma == min
+        col_wma_center := col_over
+if rsi<50 and ema<50 and wma<50
+    if rsi == max
+        col_rsi_center := col_under
+    if ema == max
+        col_ema_center := col_under
+    if wma == max
+        col_wma_center := col_under
+
+minx = math.min(rsix, emax, wmax)
+maxx = math.max(rsix, emax, wmax)
+if c_res_b
+    if rsix>50 and emax>50 and wmax>50
+        if rsix == minx
+            col_rsi_center := col_over
+        if emax == minx
+            col_ema_center := col_over
+        if wmax == minx
+            col_wma_center := col_over
+    if rsix<50 and emax<50 and wmax<50
+        if rsix == maxx
+            col_rsi_center := col_under
+        if emax == maxx
+            col_ema_center := col_under
+        if wmax == maxx
+            col_wma_center := col_under
+
+center_plot = plot(50, 'center line', color.new(color.white, 80))
+upper_plot  = plot(upper, 'upper line', color.new(color.white, 80))
+lower_plot  = plot(lower, 'lower line', color.new(color.white, 80))
+
+// RSI, EMA 50ラインとの上下関係による塗りつぶし
+// history chart
+rsi_ov_ema_ov = rsi>50 and ema>50
+rsi_un_ema_un = rsi<50 and ema<50
+rsi_ov_ema_un = rsi>50 and ema<50
+rsi_un_ema_ov = rsi<50 and ema>50
+color col_rsi_u = na
+color col_ema_u = na
+color col_wma_u = na
+color col_rsi_l = na
+color col_ema_l = na
+color col_wma_l = na
+
+// rsi>50なら上、<50なら下、ema>50なら緑、<50なら赤
+if not c_res_b
+    if rsi_ov_ema_ov
+        if rsi == max and rsilower
+            col_rsi_l := col_over
+        if ema == min and ema>lower
+            col_ema_l := col_over
+        if wma == min and wma>lower
+            col_wma_l := col_over
+    if rsi_ov_ema_un
+        if rsi == max and rsilower
+            col_rsi_l := col_under
+        if ema == min and ema>lower
+            col_ema_l := col_under
+        if wma == min and wma>lower
+            col_wma_l := col_under
+
+// live chart
+rsi_ov_ema_ov_x = rsix>50 and emax>50
+rsi_un_ema_ov_x = rsix<50 and emax>50
+rsi_ov_ema_un_x = rsix>50 and emax<50
+rsi_un_ema_un_x = rsix<50 and emax<50
+
+// rsi>50なら上、<50なら下、ema>50なら緑、<50なら赤
+if not c_res_b
+    if rsi_ov_ema_ov_x
+        if rsix == maxx and rsixlower
+            col_rsi_l := col_over
+        if emax == minx and emax>lower
+            col_ema_l := col_over
+        if wmax == minx and wmax>lower
+            col_wma_l := col_over
+    if rsi_ov_ema_un_x
+        if rsix == maxx and rsixlower
+            col_rsi_l := col_under
+        if emax == minx and emax>lower
+            col_ema_l := col_under
+        if wmax == minx and wmax>lower
+            col_wma_l := col_under
+
+// rsi ema と50との関係による塗りつぶし
+fill(plot1 = upper_plot, plot2 = rsi_plot, color = col_rsi_u)
+fill(plot1 = upper_plot, plot2 = ema_plot, color = col_ema_u)
+fill(plot1 = upper_plot, plot2 = wma_plot, color = col_wma_u)
+fill(plot1 = lower_plot, plot2 = rsi_plot, color = col_rsi_l)
+fill(plot1 = lower_plot, plot2 = ema_plot, color = col_ema_l)
+fill(plot1 = lower_plot, plot2 = wma_plot, color = col_wma_l)
+
+fill(plot1 = upper_plot, plot2 = rsix_plot, color = col_rsi_u)
+fill(plot1 = upper_plot, plot2 = emax_plot, color = col_ema_u)
+fill(plot1 = upper_plot, plot2 = wmax_plot, color = col_wma_u)
+fill(plot1 = lower_plot, plot2 = rsix_plot, color = col_rsi_l)
+fill(plot1 = lower_plot, plot2 = emax_plot, color = col_ema_l)
+fill(plot1 = lower_plot, plot2 = wmax_plot, color = col_wma_l)
+
+// [rsi, ema, wma] > 50, <50　の塗りつぶし
+fill(plot1 = center_plot, plot2 = rsi_plot, color = col_rsi_center)
+fill(plot1 = center_plot, plot2 = ema_plot, color = col_ema_center)
+fill(plot1 = center_plot, plot2 = wma_plot, color = col_wma_center)
+fill(plot1 = center_plot, plot2 = rsix_plot, color = col_rsi_center)
+fill(plot1 = center_plot, plot2 = emax_plot, color = col_ema_center)
+fill(plot1 = center_plot, plot2 = wmax_plot, color = col_wma_center)
+
+// ema, wmaの上下、rsi, emaの上下関係による塗りつぶし
+fill(plot1 = ema_plot, plot2 = wma_plot, color = c_res_b? na: ema= HAopen2
+var int bar_count = na
+col_HA = hU? color.new(upColor, 0): color.new(dnColor, 0)
+var arrla = array.new_label(100, na)
+mark_pos_HA = input.price(20, 'mark_position')
+
+var line HA_line = na
+var line HA_line_0 = na
+var bool exist_HA_line_0 = false
+var line last_HA_line = na
+var color last_HA_col = na
+
+if barstate.isrealtime and useMTFRes
+    // 上位足確定までの下位足本数
+    bar_left_HA = math.floor((HAend - time_close)/1000/(timeframe.multiplier*timeframe_factor))+1
+    bl_HA_text = str.tostring(bar_left_HA)
+    var la_bar_left_HA = label.new(bar_index[1], mark_pos_HA, bl_HA_text, color = col0, 
+      style = label.style_label_left, textcolor = color.yellow, size = size.normal)
+    label.set_x(la_bar_left_HA, bar_index)
+    label.set_text(la_bar_left_HA, bl_HA_text)
+
+    // リアルタイム動作時のライン色変更(lineで描画)
+    if newSessionH
+        if last_HA_col == col_HA[1]
+            if not na(last_HA_line)
+                line.set_x2(last_HA_line, bar_index)
+            else
+                last_HA_line := line.copy(HA_line)
+        else
+            line.copy(last_HA_line)
+            last_HA_line := na
+
+        HA_line := line.new(bar_index[1], mark_pos_HA, bar_index, mark_pos_HA, color = col_HA, width = 4)
+        last_HA_col := col_HA[1]
+        exist_HA_line_0 := true
+    
+    else
+        if not exist_HA_line_0 // 上位足の途中でリアルタイムが始まった場合の、その時点から次の上位足開始までの線
+            HA_line_0 := line.new(bar_index[1], mark_pos_HA, bar_index, mark_pos_HA, color = col_HA, width = 4)
+            line.set_x2(HA_line_0, bar_index)
+            line.set_color(HA_line_0, col_HA)
+        
+        line.set_x2(HA_line, bar_index)
+        line.set_color(HA_line, col_HA)
+
+    mark_pos_HA:=na
+
+// plot　chart resの場合と、MTF res.の場合のチャート適用時点までの線はplotで描画
+plot(mark_pos_HA, 'HA color', col_HA, linewidth = 4)
+
+// buy/sell aleart
+trend_change = ta.change(hU)
+buy = trend_change and hU
+sel = trend_change and not hU
+alertcondition(buy or sel, 'HA color change', 'HA color change')
+
+// end of Heikinashi

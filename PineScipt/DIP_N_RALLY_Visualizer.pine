@@ -1,0 +1,230 @@
+//TradingViewインジケーター「DIP N RALLY Visualizer」
+//@version=5
+indicator(title="DIP N RALLY Visualizer",overlay=false)
+
+//Inputs
+////////////////////////////  Find DIP and RALLY  ////////////////////////////
+ST = 'Find TREND on chart'
+lenw=input.int(100,title="Extent of Caution Zone", group = ST)
+len=input.int(7,title="OnCart Trend Length", group = ST, inline = 'l')
+mult=input.int(1,title="Factor", group = ST, inline = 'l')
+colup=input.color(color.lime, 'Up', group = ST, inline = 'c')
+coldn=input.color(color.red, 'Down', group = ST, inline = 'c')
+width = input.int(1, 'line width', group = ST)
+adjust_factor = input.float(0, 'scale adjust factor (F1)', group = ST, tooltip = '画面左下F1の数値を参考に入力（小数点可）,　0なら自動')
+
+STM = 'Find TREND on MTF'
+ures=input(true,title="Show Cutsom Resolution DR Visualizer", inline = 'r', group = STM)
+res=input.timeframe(defval="60", title = '', inline = 'r', group = STM)
+lenw_m=input.int(100,title="Extent of Caution Zone", group = STM)
+len_m=input.int(7,title="MTF Trend Length", group = STM, inline = 'l')
+mult_m=input.int(1,title="Factor", group = STM, inline = 'l')
+colup_m=input.color(color.green, 'Up', group = STM, inline = 'c')
+coldn_m=input.color(color.maroon, 'Down', group = STM, inline = 'c')
+width_m = input.int(2, 'line width', group = STM, inline = 'w')
+mid_line_width = input.int(3, 'mid line width', group = STM, inline = 'w')
+adjust_factor_m = input.float(0, 'scale adjust factor (F2)', group = STM, tooltip = '画面左下F2の数値を参考に入力（小数点可）,　0なら自動')
+
+////////////////////////////  Find SMALL WAVES  ////////////////////////////
+gr_wt = 'Find Small Waves'
+n1 = input(5, "Length, Channel:", group = gr_wt, inline = 'l')
+n2 = input(10, "Average:", group = gr_wt, inline = 'l')
+col_wt = input.color(color.blue, 'color', group = gr_wt)
+obLevel1 = input(60, "Over Bought Level 1", group = gr_wt, inline = 'b')
+obLevel2 = input(53, " Level 2", group = gr_wt, inline = 'b')
+osLevel1 = input(-60, "Over Sold Level 1", group = gr_wt, inline = 's')
+osLevel2 = input(-53, " Level 2", group = gr_wt, inline = 's')
+ap = hlc3 
+esa = ta.ema(ap, n1)
+d = ta.ema(math.abs(ap - esa), n1)
+ci = (ap - esa) / (0.015 * d)
+tci = ta.ema(ci, n2)
+wt1 = tci
+wt2 = ta.sma(wt1,4)
+wt = wt1 - wt2
+
+//////////////  Find DIP and RALLY   ////////////////////////////////////////////////////////////////////////////
+
+[stc, tdc] = ta.supertrend(mult, len)
+
+[stm, tdm] = ta.supertrend(mult_m, len_m)
+[stu, tdu, clsu] = request.security(syminfo.tickerid,res,[stm, tdm, close], barmerge.gaps_on, barmerge.lookahead_off)
+[stu2, tdu2, clsu2] = request.security(syminfo.tickerid,res,[stm, tdm, close], barmerge.gaps_off, barmerge.lookahead_on)
+
+cls= close
+lvl  = cls - stc
+lvlu = clsu - stu
+lvlu2 = clsu2 - stu2
+
+lvlu := ures? lvlu: na
+lvlu2 := ures? lvlu2: na
+
+starttime = request.security(syminfo.tickerid, res, time, barmerge.gaps_off, barmerge.lookahead_on)
+new_ses = ta.change(starttime)
+
+var float f1 = na
+var float f2 = na
+
+wt_h = ta.highest(wt, 500)
+lvl_h = ta.highest(lvl, 500)
+lvlu_h = ta.highest(lvlu2, 500)
+f1 := ta.highest(math.abs(wt_h/lvl_h), 500)*1.5
+f2 := ta.highest(math.abs(wt_h/lvlu_h), 500)*1.75
+f1 := math.floor(math.round(f1/50)) *50/100
+f2 := math.floor(math.round(f2/50)) *50/100
+var tbl = table.new(position.bottom_left, 2, 1)
+
+var adjust_factor_x = adjust_factor
+var adjust_factor_m_x = adjust_factor_m
+
+if bar_index < 10000 and not na(lvlu2)
+    if adjust_factor == 0
+        adjust_factor_x := f1
+    if adjust_factor_m == 0
+        adjust_factor_m_x := f2
+if barstate.islast
+    table.cell(tbl, 0, 0, 'F1: ' + str.tostring(adjust_factor_x, '#.#'), tooltip = 'Scale adjust factor (F1) の計算値（設定値0の場合） or 設定値')
+    table.cell(tbl, 1, 0, 'F2: ' + str.tostring(adjust_factor_m_x, '#.#'), tooltip = 'Scale adjust factor (F2) の計算値（設定値0の場合） or 設定値')
+
+lvl  := lvl   * adjust_factor_x *100
+lvlu := lvlu  * adjust_factor_m_x *100
+lvlu2:= lvlu2 * adjust_factor_m_x *100
+
+// color, supertrend
+// chart res
+matr=ta.sma(math.abs(lvl),lenw)
+lvlup=tdc==-1?lvl:na
+lvldn=tdc==1?lvl:na
+tdup=(tdc==-1)and(tdc[1]==1)
+tddn=(tdc==1)and(tdc[1]==-1)
+lvlwup=(lvlup-matr)and(cls>cls[1])
+color col = na
+color col2 = na
+col:=lvl>0?colup:na(lvl)? col[1]: coldn
+t_c = ta.cross(lvl, 0)
+col0 = #00000000
+colbar=(tdc==-1)and(lvlwup)?#A7D1AA:(tdc==1)and(lvlwdn)?#D1A7AE:tdc==-1?colup:coldn
+colhst=tdup?colup:tddn?coldn:lvlwdn?colup:lvlwup?coldn:na
+
+// MTF res 1 (history)
+matr_m=ta.sma(math.abs(lvl),lenw_m)
+matru=request.security(syminfo.tickerid, res, matr_m, barmerge.gaps_off, barmerge.lookahead_on)
+lvlupu=tdu==-1?lvlu:na
+lvldnu=tdu==1?lvlu:na
+tdupu=(tdu==-1)and(tdu[1]==1)
+tddnu=(tdu==1)and(tdu[1]==-1)
+lvlwupu=(lvlupu-matru)and(clsu>clsu[1])
+color colu = na
+color colufill = na
+color colu0 = na
+colu:=lvlu>0?colup_m:na(lvlu)? colu[1]: coldn_m
+t_cu = ta.cross(lvlu, 0)
+t_cu_o = ta.crossover(lvlu, 0)
+t_cu_u = ta.crossunder(lvlu, 0)
+colu0 := lvlu > 0 ? colup_m :na(lvlu) ? colu0[1]: coldn_m
+colu := lvlu > 0 ? colup_m :na(lvlu)? colu[1]: coldn_m 
+colufill := lvlu > 0 ? colup_m :na(lvlu)? colu[1]: coldn_m 
+
+// MTF res 1 (live)
+matru2=request.security(syminfo.tickerid, res, matr, barmerge.gaps_off, barmerge.lookahead_on)
+lvlupu2=tdu2==-1?lvlu2:na
+lvldnu2=tdu2==1?lvlu2:na
+tdupu2=(tdu2==-1)and(tdu2[1]==1)
+tddnu2=(tdu2==1)and(tdu2[1]==-1)
+lvlwupu2=(lvlupu2-matru2)and(clsu2>clsu2[1])
+color colu2 = na
+color colu2fill = na
+color colu02 = na
+colu2:=lvlu2>0?colup_m:na(lvlu2)? colu2[1]: coldn_m
+t_cu2 = ta.cross(lvlu2, 0)
+t_cu2_o = ta.crossover(lvlu2, 0)
+t_cu2_u = ta.crossunder(lvlu2, 0)
+colu02 := lvlu2 > 0 ? colup_m :na(lvlu2) ? colu02[1]: coldn_m 
+colu2 := lvlu2 > 0 ? colup_m :na(lvlu2)? colu2[1]: coldn_m
+colu2fill := lvlu2 > 0 ? colup_m :na(lvlu2)? colu2[1]: coldn_m
+colbaru2=(tdu2==-1)and(lvlwupu2)?#A7D1AA:(tdu2==1)and(lvlwdnu2)?#D1A7AE:tdu2==-1?colup_m:coldn_m
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// plot
+// wave trend
+
+plot(wt, 'Wave Trend', color=col_wt, style=plot.style_area)
+
+// STO chart res
+p0=plot(0,color=col,style=plot.style_line,linewidth=1,title="Midline")
+p1=plot(lvlup,color=colup,style=plot.style_linebr,title="Uptrend Line", linewidth = width)
+p2=plot(lvldn,color=coldn,style=plot.style_linebr,title="Downtrend Line", linewidth = width)
+plot(lvl,color=colhst,style=plot.style_histogram,linewidth=width,title="Trend Change")
+plot(lvl,color=colhst,style=plot.style_circles,linewidth=width,title="Trend Change")
+fill(p0, p1, color = color.new(colup, 50))
+fill(p0, p2, color = color.new(coldn, 50))
+
+// STO MTF res
+// インジ適用まではlvlをplotで表示し、それ以降はlineで表示する方針、WMA-EMA-RSIの方式
+// MTF
+var float lvlx = na
+var float lvl_p = na
+var float lvl_p2 = na
+var float x0 = na
+var int time_p = na
+var bool lvl_first_point = false
+var bool lvl_first_plot_point = false
+
+u0 = 0
+if new_ses
+    lvl_p2 := lvl_p
+    lvl_p := lvlu2[1]
+    time_p := bar_index[1]
+
+if barstate.isrealtime
+    var line first_lvl_line = line.new(na, na, na, na, xloc.bar_index, extend.none, color = colu2, width = width_m)
+    var line lvl_line = line.new(na, na, na, na, xloc.bar_index, extend.none, color = colu2, width = width_m)
+    var line first_0_line = line.new(na, 0, na, 0, xloc.bar_index, extend.none, color = colu2, width = width_m)
+    var line x0_line = line.new(bar_index, 0, bar_index, 0, xloc.bar_index, extend.none, color = colu2, width = width_m)
+
+// lvl
+    if not lvl_first_point
+        line.set_xy1(first_lvl_line, time_p, lvl_p)
+        line.set_xy2(first_lvl_line, bar_index[1], lvlu2[1])
+        line.set_color(first_lvl_line, colu2[1])
+        line.set_x1(first_0_line, time_p)
+        line.set_x2(first_0_line, bar_index[1])
+        line.set_color(first_0_line, colu2[1])
+        lvl_first_point := true
+    
+    if new_ses
+        lvlx := lvlu2[1]
+        x0 := 0
+        line.set_xy1(lvl_line, time_p, lvl_p)
+        line.set_xy2(lvl_line, bar_index, lvlu2[1])
+        line.set_color(lvl_line, colu2[1])
+        line.set_x1(x0_line, time_p)
+        line.set_x2(x0_line, bar_index)
+        line.set_color(x0_line, colu2[1])
+        if not lvl_first_plot_point
+            line.set_xy2(first_lvl_line, bar_index[1], lvlu2[1])
+            line.set_color(first_lvl_line, colu2[1])
+            line.set_x2(first_0_line, bar_index[1])
+            line.set_color(first_0_line, colu2[1])
+            lvl_first_plot_point := true
+    else
+        line.set_xy2(lvl_line, bar_index, lvlu2[1])
+        line.set_color(lvl_line, colu2[1])
+        line.set_x2(x0_line, bar_index)
+        line.set_color(x0_line, colu2[1])
+        if not lvl_first_plot_point
+            line.set_xy2(first_lvl_line, bar_index[1], lvlu2[1])
+            line.set_color(first_lvl_line, colu2[1])
+            line.set_x2(first_0_line, bar_index[1])
+            line.set_color(first_0_line, colu2[1])
+        lvlx := na
+        x0 := na
+    lvlu := na
+    u0 := na
+
+pu0=plot(u0,color=colufill,style=plot.style_line,linewidth=mid_line_width,title="Midline")
+pu=plot(lvlu,color=colu,style=plot.style_line, linewidth = width_m, offset = 0)
+pu02=plot(x0,color=colu2fill,style=plot.style_line, linewidth = width_m,title="Midline", offset = -1)
+px=plot(lvlx,color=colu2,style=plot.style_line, linewidth = width_m, offset = -1)
+
+// end of script
