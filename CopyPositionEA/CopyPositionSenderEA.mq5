@@ -38,6 +38,7 @@ struct POSITION_LIST {
     double Lots[MAX_POSITION];
     double StopLoss[MAX_POSITION];
     double TakeProfit[MAX_POSITION];
+    datetime OpenTime[MAX_POSITION];
 
     void Clear() {
         ArrayFill(Change, 0, MAX_POSITION, 0);
@@ -51,6 +52,7 @@ struct POSITION_LIST {
         ArrayFill(Lots, 0, MAX_POSITION, 0.0);
         ArrayFill(StopLoss, 0, MAX_POSITION, 0.0);
         ArrayFill(TakeProfit, 0, MAX_POSITION, 0.0);
+        ArrayFill(OpenTime, 0, MAX_POSITION, 0);
     }
 };
 
@@ -86,6 +88,9 @@ string SenderBroker;
 // 設定INIファイルパスです
 string inifile_path;
 
+// EA開始時刻です
+datetime StartServerTimeEA;
+
 //+------------------------------------------------------------------+
 //| エラー表示します                                                 |
 //+------------------------------------------------------------------+
@@ -101,6 +106,9 @@ void ERROR(string error_message)
 //+------------------------------------------------------------------+
 int OnInit()
 {
+    // EA開始時刻です
+    StartServerTimeEA = TimeCurrent();
+    
     // INIファイルより設定値を初期化します
     if (!Initialize()) {
         return INIT_FAILED;
@@ -343,6 +351,9 @@ int ScanCurrentPositions(POSITION_LIST& Current)
         ulong ticket = PositionGetTicket(i);
         if (ticket == 0) { continue; }
 
+        // EA起動時よりも過去に建てられたポジションはコピー対象外です
+        if ((datetime)PositionGetInteger(POSITION_TIME) <= StartServerTimeEA) { continue;}
+
         int entry_type = 0;
         switch ((int)PositionGetInteger(POSITION_TYPE)) {
         case POSITION_TYPE_BUY:
@@ -371,6 +382,9 @@ int ScanCurrentPositions(POSITION_LIST& Current)
         // トレード中のポジションを選択します
         ulong ticket = OrderGetTicket(i);
         if (ticket == 0) { continue; }
+
+        // EA起動時よりも過去に建てられたポジションはコピー対象外です
+        if ((datetime)OrderGetInteger(ORDER_TIME_SETUP) <= StartServerTimeEA) { continue;}
 
         int entry_type = 0;
         switch ((int)OrderGetInteger(ORDER_TYPE)) {
@@ -404,6 +418,7 @@ int ScanCurrentPositions(POSITION_LIST& Current)
         Current.Lots[position_count] = OrderGetDouble(ORDER_VOLUME_CURRENT);
         Current.StopLoss[position_count] = OrderGetDouble(ORDER_SL);
         Current.TakeProfit[position_count] = OrderGetDouble(ORDER_TP);
+        Current.OpenTime[position_count] = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
         ++position_count;
     }
 
@@ -417,10 +432,16 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
 {
     // 外側のカウンタ current のループで現在のポジション全体をスキャンします
     for (int current = 0; current < position_count; ++current) {
+        // EA起動時よりも過去に建てられたポジションはコピー対象外です
+        if (Current.OpenTime[current] <= StartServerTimeEA) { continue; }
+
         bool added = true; // ポジション追加フラグ
 
         // 内側のカウンタ previous のループで前回のポジション全体をスキャンします
         for (int previous = 0; Previous.Tickets[previous] != 0 && previous < MAX_POSITION; ++previous) {
+            // EA起動時よりも過去に建てられたポジションはコピー対象外です
+            if (Previous.OpenTime[previous] <= StartServerTimeEA) { continue; }
+
             // チケット番号が一致するとき、
             if (Previous.Tickets[previous] == Current.Tickets[current]) {
                 // エントリー価格またはストップロスまたはテイクプロフィットのいずれかが不一致ならば変化ありです
@@ -514,6 +535,9 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
 
     // ポジションの差分をコピーポジション連携用タブ区切りファイルに出力します
     for (int i = 0; i < change_count; ++i) {
+        // EA起動時よりも過去に建てられたポジションはコピー対象外です
+        if (Output.OpenTime[i] <= StartServerTimeEA) { continue; }
+
         string symbol = Output.SymbolValue[i];
         StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
         // タブ区切りファイルの仕様
