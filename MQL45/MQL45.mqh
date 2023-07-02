@@ -289,7 +289,7 @@ public:
     static double iMomentum(string symbol, int timeframe, int period, int applied_price, int shift);
     static double iMFI(string symbol, int timeframe, int period, int shift);
     static double iMA(string symbol, int timeframe, int ma_period, int ma_shift, int ma_method, int applied_price, int shift);
-    static double iMAOnArray(double &array[], int total, int period, int ma_shift, int ma_method, int shift);
+    static double iMAOnArray(const double &array[], int total, int period, int ma_shift, int ma_method, int shift);
     static double iOsMA(string symbol, int timeframe, int fast_ma_period, int slow_ma_period, int signal_period, int applied_price, int shift);
     static double iMACD(string symbol, int timeframe, int fast_ma_period, int slow_ma_period, int signal_period, int applied_price, int mode, int shift);
     static double iOBV(string symbol, int timeframe, int applied_price, int shift);
@@ -436,6 +436,38 @@ double MQL45::SharpeRatioMonthly(double Balance)
     } \
     double OnTester() { \
         return cMQL45AppInstance.OnTester(); \
+    }
+
+#define MQL45_INDICATOR_START() \
+    class MQL45App : public MQL45 { \
+    public: \
+        MQL45App() { }
+
+#define MQL45_INDICATOR_END() \
+    }; \
+    MQL45App cMQL45AppInstance; \
+    int OnInit() { \
+        return cMQL45AppInstance.OnInit(); \
+    } \
+    void OnTick() { \
+        MQL45::RefreshRates(); \
+        cMQL45AppInstance.OnTick(); \
+    } \
+    void OnTimer() { \
+        cMQL45AppInstance.OnTimer(); \
+    } \
+    int OnCalculate(const int rates_total, \
+                    const int prev_calculated, \
+                    const datetime &time[], \
+                    const double &open[], \
+                    const double &high[], \
+                    const double &low[], \
+                    const double &close[], \
+                    const long &tick_volume[], \
+                    const long &volume[], \
+                    const int &spread[]) \
+    { \
+        return cMQL45AppInstance.OnCalculate(rates_total, prev_calculated, time, open, high,low, close, tick_volume, volume, spread); \
     }
 
 #endif /*__MQL45_INCLUDED*/
