@@ -6,6 +6,8 @@
 #property version   "1.00"
 #property strict
 
+const string EXPART_NAME = "CopyPositionSenderEA-Ver.1.00";
+
 #include <Trade/Trade.mqh>
 #include "WindowsAPI.mqh"
 
@@ -106,6 +108,14 @@ void ERROR(string error_message)
 //+------------------------------------------------------------------+
 int OnInit()
 {
+    // EAの名前をチェック
+    string ExpertName = MQLInfoString(MQL_PROGRAM_NAME);
+    if (ExpertName != EXPART_NAME) {
+        string error_message = StringFormat("EAのファイル名を「%s.ex5」からリネームしないで下さい。", EXPART_NAME);
+        MessageBox(error_message, "エラー", MB_ICONSTOP | MB_OK);
+        return INIT_FAILED;
+    }
+
     // EA開始時刻です
     StartServerTimeEA = TimeCurrent();
     

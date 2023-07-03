@@ -1,10 +1,12 @@
 //+------------------------------------------------------------------+
-//|                                          CopyPositionReciver.mq4 |
+//|                                          CopyPositionReciver.mq5 |
 //|                                          Copyright 2023, YUSUKE. |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, YUSUKE."
 #property version   "1.00"
 #property strict
+
+const string EXPART_NAME = "CopyPositionReciver-Ver.1.00";
 
 #include <Trade/Trade.mqh>
 #include "WindowsAPI.mqh"
@@ -54,6 +56,14 @@ void ERROR(string error_message)
 //+------------------------------------------------------------------+
 int OnInit()
 {
+    // EAの名前をチェック
+    string ExpertName = MQLInfoString(MQL_PROGRAM_NAME);
+    if (ExpertName != EXPART_NAME) {
+        string error_message = StringFormat("EAのファイル名を「%s.ex5」からリネームしないで下さい。", EXPART_NAME);
+        MessageBox(error_message, "エラー", MB_ICONSTOP | MB_OK);
+        return INIT_FAILED;
+    }
+
     // INIファイルより設定値を初期化します
     if (!Initialize()) {
         return INIT_FAILED;
