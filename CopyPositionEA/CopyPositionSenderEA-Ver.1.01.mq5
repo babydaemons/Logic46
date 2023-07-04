@@ -1,17 +1,20 @@
 //+------------------------------------------------------------------+
-//|                                          CopyPositionSederEA.mq4 |
+//|                                          CopyPositionSederEA.mq5 |
 //|                                          Copyright 2023, YUSUKE. |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, YUSUKE."
-#property version   "1.00"
+#property version   "1.01"
 #property strict
 
-const string EXPART_NAME = "CopyPositionSenderEA-Ver.1.00";
+const string EXPART_NAME = "CopyPositionSenderEA-Ver.1.01";
 
+#include <Trade/Trade.mqh>
 #include "WindowsAPI.mqh"
 
 string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
 double  LOTS_MULTIPLY;        // ポジションコピー時のロット数の係数
+
+CTrade Trader;
 
 //+------------------------------------------------------------------+
 //| ポジション操作を表す列挙値です                                   |
@@ -108,7 +111,7 @@ int OnInit()
     // EAの名前をチェック
     string ExpertName = MQLInfoString(MQL_PROGRAM_NAME);
     if (ExpertName != EXPART_NAME) {
-        string error_message = StringFormat("EAのファイル名を「%s.ex4」からリネームしないで下さい。", EXPART_NAME);
+        string error_message = StringFormat("EAのファイル名を「%s.ex5」からリネームしないで下さい。", EXPART_NAME);
         MessageBox(error_message, "エラー", MB_ICONSTOP | MB_OK);
         return INIT_FAILED;
     }
@@ -353,31 +356,64 @@ int ScanCurrentPositions(POSITION_LIST& Current)
 
     // 現在のポジション状態を全て取得します
     int position_count = 0;
-    for (int i = 0; i < OrdersTotal(); ++i) {
+    for (int i = 0; i < PositionsTotal(); ++i) {
         // トレード中のポジションを選択します
-        if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) { continue; }
+        ulong ticket = PositionGetTicket(i);
+        if (ticket == 0) { continue; }
 
         // EA起動時よりも過去に建てられたポジションはコピー対象外です
-        if (OrderCloseTime() <= StartServerTimeEA) { continue;}
+        if ((datetime)PositionGetInteger(POSITION_TIME) <= StartServerTimeEA) { continue;}
 
         int entry_type = 0;
-        switch (OrderType()) {
-        case OP_BUY:
+        switch ((int)PositionGetInteger(POSITION_TYPE)) {
+        case POSITION_TYPE_BUY:
             entry_type = +1;
             break;
-        case OP_BUYLIMIT:
-            entry_type = +2;
-            break;
-        case OP_BUYSTOP:
-            entry_type = +3;
-            break;
-        case OP_SELL:
+        case POSITION_TYPE_SELL:
             entry_type = -1;
             break;
-        case OP_SELLLIMIT:
+        default:
+            continue;
+        }
+
+        Current.Change[position_count] = INT_MAX;
+        Current.EntryType[position_count] = entry_type;
+        Current.EntryPrice[position_count] = PositionGetDouble(POSITION_PRICE_OPEN);
+        Current.SymbolValue[position_count] = PositionGetString(POSITION_SYMBOL);
+        Current.Tickets[position_count] = (int)ticket;
+        Current.Lots[position_count] = PositionGetDouble(POSITION_VOLUME);
+        Current.StopLoss[position_count] = PositionGetDouble(POSITION_SL);
+        Current.TakeProfit[position_count] = PositionGetDouble(POSITION_TP);
+        ++position_count;
+    }
+
+    // 現在の待機中オーダー状態を全て取得します
+    for (int i = 0; i < OrdersTotal(); ++i) {
+        // トレード中のポジションを選択します
+        ulong ticket = OrderGetTicket(i);
+        if (ticket == 0) { continue; }
+
+        // EA起動時よりも過去に建てられたポジションはコピー対象外です
+        if ((datetime)OrderGetInteger(ORDER_TIME_SETUP) <= StartServerTimeEA) { continue;}
+
+        int entry_type = 0;
+        switch ((int)OrderGetInteger(ORDER_TYPE)) {
+        case ORDER_TYPE_BUY:
+            entry_type = +1;
+            break;
+        case ORDER_TYPE_BUY_LIMIT:
+            entry_type = +2;
+            break;
+        case ORDER_TYPE_BUY_STOP:
+            entry_type = +3;
+            break;
+        case ORDER_TYPE_SELL:
+            entry_type = -1;
+            break;
+        case ORDER_TYPE_SELL_LIMIT:
             entry_type = -2;
             break;
-        case OP_SELLSTOP:
+        case ORDER_TYPE_SELL_STOP:
             entry_type = -3;
             break;
         default:
@@ -386,13 +422,13 @@ int ScanCurrentPositions(POSITION_LIST& Current)
 
         Current.Change[position_count] = INT_MAX;
         Current.EntryType[position_count] = entry_type;
-        Current.EntryPrice[position_count] = OrderOpenPrice();
-        Current.SymbolValue[position_count] = OrderSymbol();
-        Current.Tickets[position_count] = OrderTicket();
-        Current.Lots[position_count] = OrderLots();
-        Current.StopLoss[position_count] = OrderStopLoss();
-        Current.TakeProfit[position_count] = OrderTakeProfit();
-        Current.OpenTime[position_count] = OrderOpenTime();
+        Current.EntryPrice[position_count] = OrderGetDouble(ORDER_PRICE_OPEN);
+        Current.SymbolValue[position_count] = OrderGetString(ORDER_SYMBOL);
+        Current.Tickets[position_count] = (int)ticket;
+        Current.Lots[position_count] = OrderGetDouble(ORDER_VOLUME_CURRENT);
+        Current.StopLoss[position_count] = OrderGetDouble(ORDER_SL);
+        Current.TakeProfit[position_count] = OrderGetDouble(ORDER_TP);
+        Current.OpenTime[position_count] = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
         ++position_count;
     }
 
@@ -452,7 +488,7 @@ int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int po
     for (int previous = 0; Previous.Tickets[previous] != 0 && previous < MAX_POSITION; ++previous) {
         bool removed = true; // ポジション削除フラグ
 
-        // 内側のカウンタ current のループで現在のポジション全体をスキャンします
+        // 内側のカウンタcurrentのループで現在のポジション全体をスキャンします
         for (int current = 0; current < position_count; ++current) {
             // チケット番号が一致したらポジションに変化はありません
             // ポジション修正は ScanAddedPositions() で確認済みです
@@ -499,7 +535,7 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
     string path = StringFormat("%s\\%020u.tsv", output_path_prefix, epoch);
 
     // ファイルをオープンします
-    int file = FileOpen(path, FILE_WRITE | FILE_TXT |FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
+    int file = FileOpen(path, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
 
     // ファイルのオープンに失敗した場合は、ログを出力して処理を中断します
     if (file == INVALID_HANDLE) {

@@ -1,23 +1,20 @@
 //+------------------------------------------------------------------+
-//|                                          CopyPositionReciver.mq5 |
+//|                                          CopyPositionReciver.mq4 |
 //|                                          Copyright 2023, YUSUKE. |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, YUSUKE."
-#property version   "1.00"
+#property version   "1.01"
 #property strict
 
-const string EXPART_NAME = "CopyPositionReciver-Ver.1.00";
+const string EXPART_NAME = "CopyPositionReciverEA-Ver.1.01";
 
-#include <Trade/Trade.mqh>
 #include "WindowsAPI.mqh"
-#include "ErrorDescriptionMT5.mqh"
+#include "ErrorDescriptionMT4.mqh"
 
 string  SYMBOL_APPEND_SUFFIX; // ポジションコピー時にシンボル名に追加するサフィックス
 int     RETRY_INTERVAL_INIT;  // 発注時・ポジション修正時のリトライ時間の初期値(ミリ秒)
 int     RETRY_COUNT_MAX;      // 発注時・ポジション修正時のリトライ最大回数
 int     SLIPPAGE;             // スリッページ(ポイント)
-
-CTrade Trader;
 
 //+------------------------------------------------------------------+
 //| ポジション操作を表す列挙値です                                   |
@@ -59,7 +56,7 @@ int OnInit()
     // EAの名前をチェック
     string ExpertName = MQLInfoString(MQL_PROGRAM_NAME);
     if (ExpertName != EXPART_NAME) {
-        string error_message = StringFormat("EAのファイル名を「%s.ex5」からリネームしないで下さい。", EXPART_NAME);
+        string error_message = StringFormat("EAのファイル名を「%s.ex4」からリネームしないで下さい。", EXPART_NAME);
         MessageBox(error_message, "エラー", MB_ICONSTOP | MB_OK);
         return INIT_FAILED;
     }
@@ -302,84 +299,57 @@ void Entry(string sender_broker, int magic_number, int entry_type, double entry_
     lots = RoundLots(symbol, lots);
 
     double price = 0;
+    color arrow = clrNONE;
     if (entry_type > 0) {
         price = SymbolInfoDouble(symbol, SYMBOL_ASK);
+        arrow = clrBlue;
     } else {
         price = SymbolInfoDouble(symbol, SYMBOL_BID);
+        arrow = clrRed;
+    }
+
+    int cmd = 0;
+    switch (entry_type) {
+    case +1:
+        cmd = OP_BUY;
+        break;
+    case +2:
+        cmd = OP_BUYLIMIT;
+        price = entry_price;
+        break;
+    case +3:
+        cmd = OP_BUYSTOP;
+        price = entry_price;
+        break;
+    case -1:
+        cmd = OP_SELL;
+        break;
+    case -2:
+        cmd = OP_SELLLIMIT;
+        price = entry_price;
+        break;
+    case -3:
+        cmd = OP_SELLSTOP;
+        price = entry_price;
+        break;
+    default:
+        return;
     }
 
     string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
     string error_message = "";
-    if (entry_type == +1) {
-        for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.Buy(lots, symbol, price, stoploss, takeprofit, comment);
-            if (!result) {
-                error_message = ErrorDescription();
-                printf("※エラー: %s", error_message);
-                Sleep(RETRY_INTERVAL_INIT << times);
-            } else {
+    for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
+        int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, 0, 0, comment, magic_number, 0, arrow);
+        if (order_ticket == -1) {
+            int error = GetLastError();
+            if (error <= 1) {
                 return;
             }
-        }
-    }
-    else if (entry_type == -1) {
-        for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.Sell(lots, symbol, price, stoploss, takeprofit, comment);
-            if (!result) {
-                error_message = ErrorDescription();
-                printf("※エラー: %s", error_message);
-                Sleep(RETRY_INTERVAL_INIT << times);
-            } else {
-                return;
-            }
-        }
-    }
-    else if (entry_type == +2) {
-        for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.BuyLimit(lots, entry_price, symbol, stoploss, takeprofit, ORDER_TIME_GTC, 0, comment);
-            if (!result) {
-                error_message = ErrorDescription();
-                printf("※エラー: %s", error_message);
-                Sleep(RETRY_INTERVAL_INIT << times);
-            } else {
-                return;
-            }
-        }
-    }
-    else if (entry_type == -2) {
-        for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.SellLimit(lots, entry_price, symbol, stoploss, takeprofit, ORDER_TIME_GTC, 0, comment);
-            if (!result) {
-                error_message = ErrorDescription();
-                printf("※エラー: %s", error_message);
-                Sleep(RETRY_INTERVAL_INIT << times);
-            } else {
-                return;
-            }
-        }
-    }
-    else if (entry_type == +3) {
-        for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.BuyStop(lots, entry_price, symbol, stoploss, takeprofit, ORDER_TIME_GTC, 0, comment);
-            if (!result) {
-                error_message = ErrorDescription();
-                printf("※エラー: %s", error_message);
-                Sleep(RETRY_INTERVAL_INIT << times);
-            } else {
-                return;
-            }
-        }
-    }
-    else if (entry_type == -3) {
-        for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.SellStop(lots, entry_price, symbol, stoploss, takeprofit, ORDER_TIME_GTC, 0, comment);
-            if (!result) {
-                error_message = ErrorDescription();
-                printf("※エラー: %s", error_message);
-                Sleep(RETRY_INTERVAL_INIT << times);
-            } else {
-                return;
-            }
+            error_message = ErrorDescription(error);
+            printf("※エラー: %s", error_message);
+            Sleep(RETRY_INTERVAL_INIT << times);
+        } else {
+            return;
         }
     }
 
@@ -392,15 +362,15 @@ void Entry(string sender_broker, int magic_number, int entry_type, double entry_
 double RoundLots(string symbol, double lots)
 {
     double rounded_lots = lots;
-    double max_lots = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MAX);
+    double max_lots = MarketInfo(symbol, MODE_MAXLOT);
     if (lots > max_lots) {
         rounded_lots = max_lots;
     }
-    double min_lots = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MIN);
+    double min_lots = MarketInfo(symbol, MODE_MINLOT);
     if (lots < min_lots) {
         rounded_lots = min_lots;
     }
-    double lots_step = SymbolInfoDouble(symbol, SYMBOL_VOLUME_STEP);
+    double lots_step = MarketInfo(symbol, MODE_LOTSTEP);
     if (lots_step == 0.0) {
         lots_step = 0.01;
     }
@@ -414,49 +384,44 @@ double RoundLots(string symbol, double lots)
 void Exit(string sender_broker, int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double stoploss, double takeprofit)
 {
     double price = 0;
+    color arrow = clrNONE;
     if (entry_type > 0) {
         price = SymbolInfoDouble(symbol, SYMBOL_BID);
+        arrow = clrBlue;
     } else {
         price = SymbolInfoDouble(symbol, SYMBOL_ASK);
+        arrow = clrRed;
     }
 
     string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
     string error_message = "";
-    for (int i = 0; i < PositionsTotal(); ++i) {
-        ulong ticket = PositionGetTicket(i);
-        if (PositionGetString(POSITION_COMMENT) != comment) {
-            continue;
-        }
-        double lots = PositionGetDouble(POSITION_VOLUME);
-        for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.PositionClose(ticket, SLIPPAGE);
-            if (!result) {
-                error_message = ErrorDescription();
-                printf("※エラー: %s", error_message);
-                Sleep(RETRY_INTERVAL_INIT << times);
-            } else {
-                return;
-            }
-        }
-        Alert(error_message);
-        return;
-    }
     for (int i = 0; i < OrdersTotal(); ++i) {
-        ulong ticket = OrderGetTicket(i);
-        if (OrderGetString(ORDER_COMMENT) != comment) {
+        if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            break;
+        }
+        if (OrderComment() != comment) {
             continue;
         }
-        double lots = OrderGetDouble(ORDER_VOLUME_CURRENT);
+        int ticket = OrderTicket();
+        int order_type = OrderType();
+        double lots = OrderLots();
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.OrderDelete(ticket);
+            bool result = (order_type == OP_BUY || order_type == OP_SELL) ?
+                            OrderClose(ticket, lots, price, SLIPPAGE, arrow) :
+                            OrderDelete(ticket, arrow);
             if (!result) {
-                error_message = ErrorDescription();
+                int error = GetLastError();
+                if (error <= 1) {
+                    return;
+                }
+                error_message = ErrorDescription(error);
                 printf("※エラー: %s", error_message);
                 Sleep(RETRY_INTERVAL_INIT << times);
             } else {
                 return;
             }
         }
+
         Alert(error_message);
         return;
     }
@@ -469,39 +434,29 @@ void Modify(string sender_broker, int magic_number, int entry_type, double entry
 {
     string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
     string error_message = "";
-    for (int i = 0; i < PositionsTotal(); ++i) {
-        ulong ticket = PositionGetTicket(i);
-        if (PositionGetString(POSITION_COMMENT) != comment) {
-            continue;
-        }
-        for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.PositionModify(ticket, stoploss, takeprofit);
-            if (!result) {
-                error_message = ErrorDescription();
-                printf("※エラー: %s", error_message);
-                Sleep(RETRY_INTERVAL_INIT << times);
-            } else {
-                return;
-            }
-        }
-        Alert(error_message);
-        return;
-    }
     for (int i = 0; i < OrdersTotal(); ++i) {
-        ulong ticket = OrderGetTicket(i);
-        if (OrderGetString(ORDER_COMMENT) != comment) {
+        if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            break;
+        }
+        if (OrderComment() != comment) {
             continue;
         }
+        int ticket = OrderTicket();
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-            bool result = Trader.OrderModify(ticket, entry_price, stoploss, takeprofit, ORDER_TIME_GTC, 0);
+            bool result = OrderModify(ticket, entry_price, stoploss, takeprofit, 0);
             if (!result) {
-                error_message = ErrorDescription();
+                int error = GetLastError();
+                if (error <= 1) {
+                    return;
+                }
+                error_message = ErrorDescription(error);
                 printf("※エラー: %s", error_message);
                 Sleep(RETRY_INTERVAL_INIT << times);
             } else {
                 return;
             }
         }
+
         Alert(error_message);
         return;
     }
