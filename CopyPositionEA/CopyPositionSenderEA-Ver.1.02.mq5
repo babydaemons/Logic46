@@ -235,7 +235,13 @@ bool Initialize()
         string reciever_name = GetBrokerAccount(reciever_broker, StringToInteger(reciever_account));
         ArrayResize(CommunacationPathDir, i + 1);
         CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
-        FolderCreate(CommunacationPathDir[i], true);
+
+        // ポジションコピー連携ファイル用フォルダを作成する
+        if (!FolderCreate(CommunacationPathDir[i], FILE_COMMON)) {
+            string error_message = StringFormat("※エラー: ポジションコピー連携ファイル用フォルダが作成できません: '%s", CommunacationPathDir[i]);
+            ERROR(error_message);
+            return false;
+        }
     }
 
     printf("●コピーポジションの送信監視を開始します。");
