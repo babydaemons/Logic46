@@ -6,8 +6,6 @@
 #property version   "1.01"
 #property strict
 
-const string EXPART_NAME = "CopyPositionSenderEA-Ver.1.01";
-
 #include "WindowsAPI.mqh"
 
 string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
@@ -105,13 +103,16 @@ void ERROR(string error_message)
 //+------------------------------------------------------------------+
 int OnInit()
 {
+#ifdef __CHECK_EXPERT_NAME
     // EAの名前をチェック
+    const string EXPART_NAME = "CopyPositionSenderEA-Ver.1.01";
     string ExpertName = MQLInfoString(MQL_PROGRAM_NAME);
     if (ExpertName != EXPART_NAME) {
         string error_message = StringFormat("EAのファイル名を「%s.ex4」からリネームしないで下さい。", EXPART_NAME);
         MessageBox(error_message, "エラー", MB_ICONSTOP | MB_OK);
         return INIT_FAILED;
     }
+#endif // __CHECK_EXPERT_NAME
 
     // EA開始時刻です
     StartServerTimeEA = TimeCurrent();
