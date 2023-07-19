@@ -123,7 +123,11 @@ int OnInit()
     }
 
     // 100ミリ秒の周期でポジションコピーを行います
-    EventSetMillisecondTimer(100);
+    if (!EventSetMillisecondTimer(100)) {
+        string error_message = "ポジションコピーのインターバルタイマーを設定できませんでした。";
+        MessageBox(error_message, "エラー", MB_ICONSTOP | MB_OK);
+        return INIT_FAILED;
+    }
     
     // ポジション全体を表す構造体を
     // 添字0と1の両方(現在と前回の両方)を初期化します
@@ -365,7 +369,7 @@ int ScanCurrentPositions(POSITION_LIST& Current)
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) { continue; }
 
         // EA起動時よりも過去に建てられたポジションはコピー対象外です
-        if (OrderCloseTime() <= StartServerTimeEA) { continue;}
+        if (OrderOpenTime() <= StartServerTimeEA) { continue;}
 
         int entry_type = 0;
         switch (OrderType()) {
@@ -542,6 +546,11 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         line += StringFormat("%.6f\t", Output.StopLoss[i]);
         // 9列目：テイクプロフィット
         line += StringFormat("%.6f", Output.TakeProfit[i]);
+
+        string logging_line = line;
+        StringReplace(logging_line, "\t", "/");
+        printf("ポジションコピー送信: " + logging_line);
+
         FileWrite(file, line);
     }
 

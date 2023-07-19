@@ -68,7 +68,11 @@ int OnInit()
     }
 
     // 100ミリ秒の周期でポジションコピーを行います
-    EventSetMillisecondTimer(100);
+    if (!EventSetMillisecondTimer(100)) {
+        string error_message = "ポジションコピーのインターバルタイマーを設定できませんでした。";
+        MessageBox(error_message, "エラー", MB_ICONSTOP | MB_OK);
+        return INIT_FAILED;
+    }
     
     return INIT_SUCCEEDED;
 }
@@ -250,6 +254,10 @@ void LoadPosition(string communication_dir, double lots_multiply)
 
         string line;
         while ((line = FileReadString(file)) != "") {
+            string logging_line = line;
+            StringReplace(logging_line, "\t", "/");
+            printf("ポジションコピー受信: " + logging_line);
+
             string field[];
             StringSplit(line, '\t', field);
             // タブ区切りファイルの仕様
