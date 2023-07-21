@@ -180,12 +180,19 @@ bool Initialize()
 
         string sender_name = GetBrokerAccount(sender_broker, StringToInteger(sender_account));
         ArrayResize(CommunacationPathDir, i + 1);
-        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s\\", sender_name, reciever_name);
-        FolderCreate(CommunacationPathDir[i], true);
+        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s", sender_name, reciever_name);
+
+        // ポジションコピー連携ファイル用フォルダを作成する
+        if (!FolderCreate(CommunacationPathDir[i], FILE_COMMON)) {
+            string error_message = StringFormat("※エラー: コピー連携ファイルのフォルダーの作成に失敗しました: \"%s\"", CommunacationPathDir[i]);
+            ERROR(error_message);
+            return false;
+        }
 
         printf("[%03d]センダー側の証券会社は「%s」です。", i + 1, sender_broker);
         printf("[%03d]センダー側の口座番号は「%s」です。", i + 1, sender_account);
         printf("[%03d]センダー側からのポジションコピー時のロット係数は「%.3f」です。", i + 1, LotsMultiply[i]);
+        printf("[%03d]センダー側からのポジションコピーフォルダは「%s」です。", i + 1, CommunacationPathDir[i]);
     }
 
     printf("●コピーポジションの受信監視を開始します。");
@@ -237,13 +244,13 @@ void LoadPositions()
 void LoadPosition(string communication_dir, double lots_multiply)
 {
     string file_name;
-    long search_handle = FileFindFirst(communication_dir + "*.tsv", file_name, FILE_COMMON);
+    long search_handle = FileFindFirst(communication_dir + "\\*.tsv", file_name, FILE_COMMON);
     if (search_handle == INVALID_HANDLE) {
         return;
     }
 
     do {
-        string path = communication_dir + file_name;
+        string path = communication_dir + "\\" + file_name;
         int file = FileOpen(path, FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
         if (file == INVALID_HANDLE) {
             continue;
