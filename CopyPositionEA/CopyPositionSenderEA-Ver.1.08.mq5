@@ -8,6 +8,7 @@
 
 #include <Trade/Trade.mqh>
 #include "WindowsAPI.mqh"
+#include "ErrorDescriptionMT5.mqh"
 
 string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
 double  LOTS_MULTIPLY;        // ポジションコピー時のロット数の係数
@@ -176,6 +177,35 @@ bool Initialize()
                                StringFormat("●センダー側証券会社名は「%s」です。\n", AccountInfoString(ACCOUNT_COMPANY)) +
                                StringFormat("●センダー側口座番号は「%d」です。", AccountInfoInteger(ACCOUNT_LOGIN));
         ERROR(error_message);
+        int file = FileOpen(inifile_name, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_UTF8);
+        if (file == INVALID_HANDLE) {
+            string error_message2 = "※エラー: INIファイルの作成に失敗しました\n" + inifile_path + "\n" + ErrorDescription();
+            ERROR(error_message2);
+            return false;
+        }
+        FileWrite(file, "[Sender]");
+        FileWrite(file, "; (エラーチェック用)センダー側証券会社名");
+        FileWrite(file, "BROKER = " + AccountInfoString(ACCOUNT_COMPANY));
+        FileWrite(file, "; (エラーチェック用)センダー側口座番号");
+        FileWrite(file, "ACCOUNT = " + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
+        FileWrite(file, "; (オプション)ロット数の係数");
+        FileWrite(file, ";LOTS_MULTIPLY = 0.1");
+        FileWrite(file, "; (オプション)シンボル名の変換(\"変換前シンボル名|変換後シンボル名\"のカンマ区切り)");
+        FileWrite(file, ";SYMBOL_CONVERSION = XAUUSD|GOLD,XAGUSD|SILVER");
+        FileWrite(file, "; レシーバー側の設定個数");
+        FileWrite(file, "RECIEVER_COUNT = 1");
+        FileWrite(file, "");
+        FileWrite(file, "[Reciever001]");
+        FileWrite(file, "; (エラーチェック用)レシーバー側証券会社名");
+        FileWrite(file, "BROKER = Titan FX Limited");
+        FileWrite(file, "; (エラーチェック用)レシーバー側口座番号");
+        FileWrite(file, "ACCOUNT = 12345678");
+        FileWrite(file, "; (オプション)ロット数の係数");
+        FileWrite(file, ";LOTS_MULTIPLY = 1.0");
+        FileWrite(file, "; (オプション)シンボル名の変換(\"変換前シンボル名|変換後シンボル名\"のカンマ区切り)");
+        FileWrite(file, ";SYMBOL_CONVERSION = GOLD|XAUUSD,SILVER|XAGUSD");
+        FileClose(file);
+        MessageBox("テンプレートのINIファイルを作成しました。\n" + inifile_path, "ご案内", MB_ICONINFORMATION);
         return false;
     }
 
@@ -195,13 +225,14 @@ bool Initialize()
 
     // ポジションコピー時にシンボル名から削除するサフィックスを自動検索する
     int totalSymbols = SymbolsTotal(false);
-    bool existSymbol = false;
     SYMBOL_REMOVE_SUFFIX = "";
     for (int i = 0; i < totalSymbols; i++) {
         string symbolName = SymbolName(i, false);
+        printf("[%02d/%02d]%s", i + 1, totalSymbols, symbolName);
         if (StringSubstr(symbolName, 0, 6) == "USDJPY") {
             SYMBOL_REMOVE_SUFFIX = symbolName;
             StringReplace(SYMBOL_REMOVE_SUFFIX, "USDJPY", "");
+            printf("[%02d/%02d]コピーポジション送信時に削除するサフィックスは \'%s\' です。", i + 1, totalSymbols, SYMBOL_REMOVE_SUFFIX);
             break;
         }
     }
