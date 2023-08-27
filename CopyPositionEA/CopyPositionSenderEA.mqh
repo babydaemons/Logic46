@@ -6,20 +6,12 @@
 #property version   "1.01"
 #property strict
 
-#include "WindowsAPI.mqh"
-#include "ErrorDescriptionMT4.mqh"
+#include "CopyPositionEA.mqh"
+
+SYMBOL_CONVERSION SymbolConversion;
 
 string  SYMBOL_REMOVE_SUFFIX; // ポジションコピー時にシンボル名から削除するサフィックス
 double  LOTS_MULTIPLY;        // ポジションコピー時のロット数の係数
-
-//+------------------------------------------------------------------+
-//| ポジション操作を表す列挙値です                                   |
-//+------------------------------------------------------------------+
-enum ENUM_POSITION_OPERATION {
-    POSITION_ADD = +1,
-    POSITION_REMOVE = -1,
-    POSITION_MODIFY = 0,
-};
 
 #define MAX_POSITION 1024
 
@@ -66,37 +58,43 @@ bool CurrentIndex;
 // ポジション全体の差分を表す構造体です
 POSITION_LIST Output;
 
-// コピーポジション連携用タブ区切りファイルの個数です
-int CommunacationDirCount = 0;
-
-// コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
-string CommunacationPathDir[];
-
-// シンボル名の変換("変換前シンボル名|変換後シンボル名"のカンマ区切り)
-struct SYMBOL_CONVERSION {
-    int Count;
-    string Before[];
-    string After[];
-};
-SYMBOL_CONVERSION SymbolConversion;
-
 // 送信元証券会社名です
 string SenderBroker;
 
-// 設定INIファイルパスです
-string inifile_path;
-
-// EA開始時刻です
-datetime StartServerTimeEA;
-
 //+------------------------------------------------------------------+
-//| エラー表示します                                                 |
+//| センダー側INIのテンプレートを作成します                          |
 //+------------------------------------------------------------------+
-void ERROR(string error_message)
+void CreateSenderINI(string inifile_name)
 {
-    MessageBox(error_message + "\n\n※INIファイルパス:\n" + inifile_path, "エラー", MB_ICONERROR);
-    printf(error_message);
-    printf("※INIファイルパス: " + inifile_path);
+    int file = FileOpen(inifile_name, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_UTF8);
+    if (file == INVALID_HANDLE) {
+        string error_message2 = "※エラー: INIファイルの作成に失敗しました\n" + inifile_path + "\n" + ErrorDescription();
+        ERROR(error_message2);
+        return;
+    }
+    FileWrite(file, "[Sender]");
+    FileWrite(file, "; (エラーチェック用)センダー側証券会社名");
+    FileWrite(file, "BROKER = " + AccountInfoString(ACCOUNT_COMPANY));
+    FileWrite(file, "; (エラーチェック用)センダー側口座番号");
+    FileWrite(file, "ACCOUNT = " + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
+    FileWrite(file, "; (オプション)ロット数の係数");
+    FileWrite(file, ";LOTS_MULTIPLY = 0.1");
+    FileWrite(file, "; (オプション)シンボル名の変換(\"変換前シンボル名|変換後シンボル名\"のカンマ区切り)");
+    FileWrite(file, ";SYMBOL_CONVERSION = XAUUSD|GOLD,XAGUSD|SILVER");
+    FileWrite(file, "; レシーバー側の設定個数");
+    FileWrite(file, "RECIEVER_COUNT = 1");
+    FileWrite(file, "");
+    FileWrite(file, "[Reciever001]");
+    FileWrite(file, "; (エラーチェック用)センダー側証券会社名");
+    FileWrite(file, "BROKER = Titan FX Limited");
+    FileWrite(file, "; (エラーチェック用)センダー側口座番号");
+    FileWrite(file, "ACCOUNT = 12345678");
+    FileWrite(file, "; (オプション)ロット数の係数");
+    FileWrite(file, ";LOTS_MULTIPLY = 1.0");
+    FileWrite(file, "; (オプション)シンボル名の変換(\"変換前シンボル名|変換後シンボル名\"のカンマ区切り)");
+    FileWrite(file, ";SYMBOL_CONVERSION = GOLD|XAUUSD,SILVER|XAGUSD");
+    FileClose(file);
+    MessageBox("テンプレートのINIファイルを作成しました。\n" + inifile_path, "ご案内", MB_ICONINFORMATION);
 }
 
 //+------------------------------------------------------------------+
@@ -104,17 +102,6 @@ void ERROR(string error_message)
 //+------------------------------------------------------------------+
 int OnInit()
 {
-#ifdef __CHECK_EXPERT_NAME
-    // EAの名前をチェック
-    const string EXPART_NAME = "CopyPositionSenderEA-Ver.1.01";
-    string ExpertName = MQLInfoString(MQL_PROGRAM_NAME);
-    if (ExpertName != EXPART_NAME) {
-        string error_message = StringFormat("EAのファイル名を「%s.ex4」からリネームしないで下さい。", EXPART_NAME);
-        MessageBox(error_message, "エラー", MB_ICONSTOP | MB_OK);
-        return INIT_FAILED;
-    }
-#endif // __CHECK_EXPERT_NAME
-
     // EA開始時刻です
     StartServerTimeEA = TimeCurrent();
     
@@ -152,14 +139,7 @@ bool Initialize()
     string sender_name = GetBrokerAccount(SenderBroker, AccountInfoInteger(ACCOUNT_LOGIN));
 
     // Commonデータフォルダのパスを取得します
-    string appdata_dir = "";
-    uint appdata_dir_length = GetEnvironmentVariable("appdata", appdata_dir, 1024);
-    if (appdata_dir_length == 0) {
-        string error_message = "※エラー: 環境変数 appdata の値の取得に失敗しました";
-        ERROR(error_message);
-        return false;
-    } 
-    string common_data_dir = appdata_dir + "\\MetaQuotes\\Terminal\\Common\\Files";
+    string common_data_dir = TerminalInfoString(TERMINAL_COMMONDATA_PATH);
 
     // センダー側設定のINIファイルパスをログ出力します
     string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", sender_name);
@@ -173,35 +153,7 @@ bool Initialize()
                                StringFormat("●センダー側証券会社名は「%s」です。\n", AccountInfoString(ACCOUNT_COMPANY)) +
                                StringFormat("●センダー側口座番号は「%d」です。", AccountInfoInteger(ACCOUNT_LOGIN));
         ERROR(error_message);
-        int file = FileOpen(inifile_name, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_UTF8);
-        if (file == INVALID_HANDLE) {
-            string error_message2 = "※エラー: INIファイルの作成に失敗しました\n" + inifile_path + "\n" + ErrorDescription();
-            ERROR(error_message2);
-            return false;
-        }
-        FileWrite(file, "[Sender]");
-        FileWrite(file, "; (エラーチェック用)センダー側証券会社名");
-        FileWrite(file, "BROKER = " + AccountInfoString(ACCOUNT_COMPANY));
-        FileWrite(file, "; (エラーチェック用)センダー側口座番号");
-        FileWrite(file, "ACCOUNT = " + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
-        FileWrite(file, "; (オプション)ロット数の係数");
-        FileWrite(file, ";LOTS_MULTIPLY = 0.1");
-        FileWrite(file, "; (オプション)シンボル名の変換(\"変換前シンボル名|変換後シンボル名\"のカンマ区切り)");
-        FileWrite(file, ";SYMBOL_CONVERSION = XAUUSD|GOLD,XAGUSD|SILVER");
-        FileWrite(file, "; レシーバー側の設定個数");
-        FileWrite(file, "RECIEVER_COUNT = 1");
-        FileWrite(file, "");
-        FileWrite(file, "[Reciever001]");
-        FileWrite(file, "; (エラーチェック用)センダー側証券会社名");
-        FileWrite(file, "BROKER = Titan FX Limited");
-        FileWrite(file, "; (エラーチェック用)センダー側口座番号");
-        FileWrite(file, "ACCOUNT = 12345678");
-        FileWrite(file, "; (オプション)ロット数の係数");
-        FileWrite(file, ";LOTS_MULTIPLY = 1.0");
-        FileWrite(file, "; (オプション)シンボル名の変換(\"変換前シンボル名|変換後シンボル名\"のカンマ区切り)");
-        FileWrite(file, ";SYMBOL_CONVERSION = GOLD|XAUUSD,SILVER|XAGUSD");
-        FileClose(file);
-        MessageBox("テンプレートのINIファイルを作成しました。\n" + inifile_path, "ご案内", MB_ICONINFORMATION);
+        CreateSenderINI(inifile_name);
         return false;
     }
 
@@ -220,18 +172,7 @@ bool Initialize()
     }
 
     // ポジションコピー時にシンボル名から削除するサフィックスを自動検索する
-    int totalSymbols = SymbolsTotal(false);
-    SYMBOL_REMOVE_SUFFIX = "";
-    for (int i = 0; i < totalSymbols; i++) {
-        string symbolName = SymbolName(i, false);
-        printf("[%02d/%02d]%s", i + 1, totalSymbols, symbolName);
-        if (StringSubstr(symbolName, 0, 6) == "USDJPY") {
-            SYMBOL_REMOVE_SUFFIX = symbolName;
-            StringReplace(SYMBOL_REMOVE_SUFFIX, "USDJPY", "");
-            printf("[%02d/%02d]コピーポジション送信時に削除するサフィックスは \'%s\' です。", i + 1, totalSymbols, SYMBOL_REMOVE_SUFFIX);
-            break;
-        }
-    }
+    SYMBOL_REMOVE_SUFFIX = GetSymbolSuffix();
 
     // ポジションコピー時のロット数の係数
     string lots_multiply = "";
@@ -287,17 +228,6 @@ bool Initialize()
 
     printf("●コピーポジションの送信監視を開始します。");
     return true;
-}
-
-//+------------------------------------------------------------------+
-//| 証券会社名と口座番号の組の文字列を返します                       |
-//+------------------------------------------------------------------+
-string GetBrokerAccount(string& broker, long account)
-{
-    StringReplace(broker, " ", "_");
-    StringReplace(broker, ",", "");
-    StringReplace(broker, ".", "");
-    return StringFormat("%s-%d", broker, account);
 }
 
 //+------------------------------------------------------------------+
@@ -390,63 +320,6 @@ void SavePosition()
     for (int i = 0; i < CommunacationDirCount; ++i) {
         OutputPositionDeffference(CommunacationPathDir[i], change_count);
     }
-}
-
-//+------------------------------------------------------------------+
-//| 現在のポジション全体の状態を走査します                           |
-//+------------------------------------------------------------------+
-int ScanCurrentPositions(POSITION_LIST& Current)
-{
-    // 現在のポジション状態を取得する前に
-    // 現在の添字が指す配列要素をクリアします
-    Current.Clear();
-
-    // 現在のポジション状態を全て取得します
-    int position_count = 0;
-    for (int i = 0; i < OrdersTotal(); ++i) {
-        // トレード中のポジションを選択します
-        if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) { continue; }
-
-        // EA起動時よりも過去に建てられたポジションはコピー対象外です
-        if (OrderOpenTime() <= StartServerTimeEA) { continue;}
-
-        int entry_type = 0;
-        switch (OrderType()) {
-        case OP_BUY:
-            entry_type = +1;
-            break;
-        case OP_BUYLIMIT:
-            entry_type = +2;
-            break;
-        case OP_BUYSTOP:
-            entry_type = +3;
-            break;
-        case OP_SELL:
-            entry_type = -1;
-            break;
-        case OP_SELLLIMIT:
-            entry_type = -2;
-            break;
-        case OP_SELLSTOP:
-            entry_type = -3;
-            break;
-        default:
-            continue;
-        }
-
-        Current.Change[position_count] = INT_MAX;
-        Current.EntryType[position_count] = entry_type;
-        Current.EntryPrice[position_count] = OrderOpenPrice();
-        Current.SymbolValue[position_count] = OrderSymbol();
-        Current.Tickets[position_count] = OrderTicket();
-        Current.Lots[position_count] = OrderLots();
-        Current.StopLoss[position_count] = OrderStopLoss();
-        Current.TakeProfit[position_count] = OrderTakeProfit();
-        Current.OpenTime[position_count] = OrderOpenTime();
-        ++position_count;
-    }
-
-    return position_count;
 }
 
 //+------------------------------------------------------------------+
