@@ -8,7 +8,7 @@
 
 #include <Trade/Trade.mqh>
 #include "ErrorDescriptionMT5.mqh"
-#include "CopyPositionReciverEA.mqh"
+#include "CopyPositionReceiverEA.mqh"
 
 CTrade Trader;
 

@@ -7,7 +7,7 @@
 #property strict
 
 #include "ErrorDescriptionMT4.mqh"
-#include "CopyPositionReciverEA.mqh"
+#include "CopyPositionReceiverEA.mqh"
 
 //+------------------------------------------------------------------+
 //| コピーするポジションを発注します                                 |

@@ -7,25 +7,6 @@
 #property strict
 
 #import "kernel32.dll"
-uint GetEnvironmentVariableW(
-    string name,
-    ushort& returnValue[],
-    uint bufferSize);
-#import
-
-uint GetEnvironmentVariable(
-    string name,
-    string& returnValue,
-    uint bufferSize)
-{
-    static ushort buffer[1024];
-    ArrayFill(buffer, 0, 1024, 0);
-    uint result = GetEnvironmentVariableW(name, buffer, 1024);
-    returnValue = ShortArrayToString(buffer);
-    return result;
-}
-
-#import "kernel32.dll"
 uint GetPrivateProfileStringW(
     string sectionName,
     string keyName,

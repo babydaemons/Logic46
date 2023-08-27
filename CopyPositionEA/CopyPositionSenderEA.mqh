@@ -62,42 +62,6 @@ POSITION_LIST Output;
 string SenderBroker;
 
 //+------------------------------------------------------------------+
-//| センダー側INIのテンプレートを作成します                          |
-//+------------------------------------------------------------------+
-void CreateSenderINI(string inifile_name)
-{
-    int file = FileOpen(inifile_name, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_UTF8);
-    if (file == INVALID_HANDLE) {
-        string error_message2 = "※エラー: INIファイルの作成に失敗しました\n" + inifile_path + "\n" + ErrorDescription();
-        ERROR(error_message2);
-        return;
-    }
-    FileWrite(file, "[Sender]");
-    FileWrite(file, "; (エラーチェック用)センダー側証券会社名");
-    FileWrite(file, "BROKER = " + AccountInfoString(ACCOUNT_COMPANY));
-    FileWrite(file, "; (エラーチェック用)センダー側口座番号");
-    FileWrite(file, "ACCOUNT = " + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
-    FileWrite(file, "; (オプション)ロット数の係数");
-    FileWrite(file, ";LOTS_MULTIPLY = 0.1");
-    FileWrite(file, "; (オプション)シンボル名の変換(\"変換前シンボル名|変換後シンボル名\"のカンマ区切り)");
-    FileWrite(file, ";SYMBOL_CONVERSION = XAUUSD|GOLD,XAGUSD|SILVER");
-    FileWrite(file, "; レシーバー側の設定個数");
-    FileWrite(file, "RECIEVER_COUNT = 1");
-    FileWrite(file, "");
-    FileWrite(file, "[Reciever001]");
-    FileWrite(file, "; (エラーチェック用)センダー側証券会社名");
-    FileWrite(file, "BROKER = Titan FX Limited");
-    FileWrite(file, "; (エラーチェック用)センダー側口座番号");
-    FileWrite(file, "ACCOUNT = 12345678");
-    FileWrite(file, "; (オプション)ロット数の係数");
-    FileWrite(file, ";LOTS_MULTIPLY = 1.0");
-    FileWrite(file, "; (オプション)シンボル名の変換(\"変換前シンボル名|変換後シンボル名\"のカンマ区切り)");
-    FileWrite(file, ";SYMBOL_CONVERSION = GOLD|XAUUSD,SILVER|XAGUSD");
-    FileClose(file);
-    MessageBox("テンプレートのINIファイルを作成しました。\n" + inifile_path, "ご案内", MB_ICONINFORMATION);
-}
-
-//+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
@@ -136,43 +100,42 @@ bool Initialize()
 {
     // センダー側を識別する証券会社名+口座番号を取得します
     SenderBroker = AccountInfoString(ACCOUNT_COMPANY);
-    string sender_name = GetBrokerAccount(SenderBroker, AccountInfoInteger(ACCOUNT_LOGIN));
-
-    // Commonデータフォルダのパスを取得します
-    string common_data_dir = TerminalInfoString(TERMINAL_COMMONDATA_PATH);
+    string SenderAccount = IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN));
+    string sender_name = GetBrokerAccountName(SenderBroker, SenderAccount);
 
     // センダー側設定のINIファイルパスをログ出力します
-    string inifile_name = StringFormat("CopyPositionEA\\Sender-%s.ini", sender_name);
-    inifile_path = StringFormat("%s\\%s", common_data_dir, inifile_name);
+    string inifile_name = "";
+    string inifile_path = "";
+    CreateSettingPath(sender_name, true, inifile_name, inifile_path);
     printf("●センダー側設定INIファイルは「%s」です。", inifile_path);
-    printf("●センダー側証券会社名は「%s」です。", AccountInfoString(ACCOUNT_COMPANY));
-    printf("●センダー側口座番号は「%d」です。", AccountInfoInteger(ACCOUNT_LOGIN));
+    printf("●センダー側証券会社名は「%s」です。", SenderBroker);
+    printf("●センダー側口座番号は「%s」です。", SenderAccount);
 
     if (!FileIsExist(inifile_name, FILE_COMMON)) {
         string error_message = "※エラー: センダー側設定INIファイルが見つかりません。\n" +
                                StringFormat("●センダー側証券会社名は「%s」です。\n", AccountInfoString(ACCOUNT_COMPANY)) +
                                StringFormat("●センダー側口座番号は「%d」です。", AccountInfoInteger(ACCOUNT_LOGIN));
-        ERROR(error_message);
-        CreateSenderINI(inifile_name);
+        ERROR(inifile_path, error_message);
+        CreateSenderINI(SenderBroker, SenderAccount, "レシーバー側証券会社名", "レシーバー側口座番号");
         return false;
     }
 
     string sender_broker = "";
     if (GetPrivateProfileString("Sender", "BROKER", NONE, sender_broker, 1024, inifile_path) == 0 || sender_broker == NONE || AccountInfoString(ACCOUNT_COMPANY) != sender_broker) {
         string error_message = "※センダー側証券会社名が一致しません: セクション[Sender]のキー\"BROKER\"を見直してください。";
-        ERROR(error_message);
+        ERROR(inifile_path, error_message);
         return false;
     }
 
     string sender_account = "";
     if (GetPrivateProfileString("Sender", "ACCOUNT", NONE, sender_account, 1024, inifile_path) == 0 || sender_account == NONE || AccountInfoInteger(ACCOUNT_LOGIN) != StringToInteger(sender_account)) {
-        string error_message = "※センダー側証券会社名が一致しません: セクション[Sender]のキー\"ACCOUNT\"を見直してください。";
-        ERROR(error_message);
+        string error_message = "※センダー側口座番号が一致しません: セクション[Sender]のキー\"ACCOUNT\"を見直してください。";
+        ERROR(inifile_path, error_message);
         return false;
     }
 
     // ポジションコピー時にシンボル名から削除するサフィックスを自動検索する
-    SYMBOL_REMOVE_SUFFIX = GetSymbolSuffix();
+    SYMBOL_REMOVE_SUFFIX = GetSymbolSuffix(true);
 
     // ポジションコピー時のロット数の係数
     string lots_multiply = "";
@@ -185,49 +148,102 @@ bool Initialize()
     InitializeSymbolConversion(symbol_conversion_list);
 
     // レシーバー側の設定個数を取得
-    string reciever_count = "";
-    if (GetPrivateProfileString("Sender", "RECIEVER_COUNT", NONE, reciever_count, 1024, inifile_path) == 0 || reciever_count == NONE) {
+    string receiver_count = "";
+    if (GetPrivateProfileString("Sender", "RECIEVER_COUNT", NONE, receiver_count, 1024, inifile_path) == 0 || receiver_count == NONE) {
         string error_message = "※エラー: セクション[Sender]のキー\"RECIEVER_COUNT\"が見つかりません。";
-        ERROR(error_message);
+        ERROR(inifile_path, error_message);
         return false;
     }
-    CommunacationDirCount = (int)StringToInteger(reciever_count);
+    CommunacationDirCount = (int)StringToInteger(receiver_count);
     printf("●%d個のレシーバー側にポジションをコピーします。", CommunacationDirCount);
 
     for (int i = 0; i < CommunacationDirCount; ++i) {
-        string section_name = StringFormat("Reciever%03d", i + 1);
-        string reciever_broker = "";
-        if (GetPrivateProfileString(section_name, "BROKER", NONE, reciever_broker, 1024, inifile_path) == 0 || reciever_broker == NONE) {
-            string error_message = StringFormat("※エラー: セクション[%s]のキー\"BROKER\"が見つかりません。", section_name);
-            ERROR(error_message);
+        string section_name = StringFormat("Receiver%03d", i + 1);
+        string receiver_broker = "";
+        string receiver_account = "";
+        if (!GetBrokerAccountPair(inifile_path, section_name, receiver_broker, receiver_account)) {
             return false;
         }
 
-        string reciever_account = "";
-        if (GetPrivateProfileString(section_name, "ACCOUNT", NONE, reciever_account, 1024, inifile_path) == 0 || reciever_account == NONE) {
-            string error_message = StringFormat("※エラー: セクション[%s]のキー\"ACCOUNT\"が見つかりません。", section_name);
-            ERROR(error_message);
+        // レシーバー側設定INIファイルの存在確認
+        string receiver_name = GetBrokerAccountName(receiver_broker, receiver_account);
+        if (!CheckReceiverSetting(inifile_path, section_name, receiver_broker, receiver_account, SenderBroker, SenderAccount)) {
             return false;
         }
 
-        string reciever_name = GetBrokerAccount(reciever_broker, StringToInteger(reciever_account));
         ArrayResize(CommunacationPathDir, i + 1);
-        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s", sender_name, reciever_name);
+        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s", sender_name, receiver_name);
 
         // ポジションコピー連携ファイル用フォルダを作成する
         if (!FolderCreate(CommunacationPathDir[i], FILE_COMMON)) {
             string error_message = StringFormat("※エラー: コピー連携ファイルのフォルダーの作成に失敗しました: \"%s\"", CommunacationPathDir[i]);
-            ERROR(error_message);
+            ERROR(inifile_path, error_message);
             return false;
         }
 
-        printf("[%03d]レシーバー側の証券会社は「%s」です。", i + 1, reciever_broker);
-        printf("[%03d]レシーバー側の口座番号は「%s」です。", i + 1, reciever_account);
+        printf("[%03d]レシーバー側の証券会社は「%s」です。", i + 1, receiver_broker);
+        printf("[%03d]レシーバー側の口座番号は「%s」です。", i + 1, receiver_account);
         printf("[%03d]レシーバー側からのポジションコピーフォルダは「%s」です。", i + 1, CommunacationPathDir[i]);
     }
 
     printf("●コピーポジションの送信監視を開始します。");
     return true;
+}
+
+//+------------------------------------------------------------------+
+//| レシーバー側の設定を確認します                                   |
+//+------------------------------------------------------------------+
+bool CheckReceiverSetting(string base_inifile_path, string base_section_name, string receiver_broker, string receiver_account, string sender_broker, string sender_account)
+{
+    if (StringFind(receiver_broker, "側") != -1) {
+        string error_message = StringFormat("レシーバー側証券会社名がテンプレートから変更されていません。\n※セクション:\n[%s]", base_section_name); 
+        ERROR(base_inifile_path, error_message);
+        return false;
+    }
+
+    if (StringFind(receiver_account, "側") != -1) {
+        string error_message = StringFormat("レシーバー側口座番号がテンプレートから変更されていません。\n※セクション:\n[%s]", base_section_name); 
+        ERROR(base_inifile_path, error_message);
+        return false;
+    }
+
+    string receiver_name = GetBrokerAccountName(receiver_broker, receiver_account);
+    string inifile_name = "";
+    string inifile_path = "";
+    CreateSettingPath(receiver_name, false, inifile_name, inifile_path);
+    if (!FileIsExist(inifile_name, FILE_COMMON)) {
+        string error_message = "※エラー: レシーバー側設定INIファイルが見つかりません。\n" +
+                               StringFormat("●レシーバー側証券会社名は「%s」です。\n", receiver_broker) +
+                               StringFormat("●レシーバー側口座番号は「%s」です。", receiver_account);
+        ERROR(inifile_path, error_message);
+        CreateReciverINI(receiver_broker, receiver_account, sender_broker, sender_account);
+        return false;
+    }
+
+    // レシーバー側設定INIファイルのセンダー側の設定個数を取得
+    string setting_count_text = "";
+    if (GetPrivateProfileString("Receiver", "SENDER_COUNT", NONE, setting_count_text, 1024, inifile_path) == 0 || setting_count_text == NONE) {
+        string error_message = "※エラー: セクション[Receiver]のキー\"SENDER_COUNT\"が見つかりません。";
+        ERROR(inifile_path, error_message);
+        return false;
+    }
+
+    long setting_count = StringToInteger(setting_count_text);
+    for (int i = 0; i < setting_count; ++i) {
+        string section_name = StringFormat("Sender%03d", i + 1);
+        string broker = "";
+        string account = "";
+        if (!GetBrokerAccountPair(inifile_path, section_name, broker, account)) {
+            return false;
+        }
+        if (broker == sender_broker && account == sender_account) {
+            return true;
+        }
+    }
+
+    string error_message = StringFormat("※エラー: セクション[Receiver]の中に「%s」と「%s」の設定が見つかりません。", sender_broker, sender_account);
+    ERROR(inifile_path, error_message);
+    return false;
 }
 
 //+------------------------------------------------------------------+
