@@ -8,6 +8,8 @@
 #property version   "1.00"
 #property strict
 
+#define MQL45_BARS 2        //////////
+#include "MQL45/MQL45.mqh"  //////////
 //#define __DEBUG
 
 enum ENUM_TRADE_MODE {
@@ -41,6 +43,7 @@ double SMA2_Low2;
 double SMA40_Close3;
 int position_count;
 
+MQL45_APPLICATION_START() //////////
 
 // No.038	④ T3-RSI.mq4（or "T3-RSI2.ex4"）（カスタムインジケーター： 添付ファイル参照 ）
 // No.039	RSI_Period：2
@@ -455,3 +458,4 @@ bool SafeOrderClose(int ticket, double lots, bool buy, double profit) {
     return false;
 }
 
+MQL45_APPLICATION_END() //////////
