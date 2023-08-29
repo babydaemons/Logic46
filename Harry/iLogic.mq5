@@ -13,26 +13,27 @@
 //#define __DEBUG
 
 enum ENUM_TRADE_MODE {
-    TRADE_MODE_BUY, // BUY（手動判定）
-    TRADE_MODE_SELL, // SELL（手動判定）
-    TRADE_MODE_BUY_SELL, // BUY/SELL（手動判定）
-    TRADE_MODE_AUTO // AUTO（自動判定）
+    TRADE_MODE_BUY, // BUY (manual judgment)
+    TRADE_MODE_SELL, // SELL (manual judgment)
+    TRADE_MODE_BUY_SELL, // BUY/SELL (manual judgment)
+    TRADE_MODE_AUTO // AUTO (automatic judgment)0ppo
+    
 };
 
 //--- input parameters
-input int      LOT_COUNT_BUY = 10; // 最大ポジション保有数 (BUY)
-input int      LOT_COUNT_SELL = 10; // 最大ポジション保有数 (SELL)
-input double   LOTS = 0.1; // ロット数（単利）
-input uint     SLIPPAGE = 5; // 最大スリッページ制限
-input double   MAX_SPREAD = 5.5; // スプレッド制限
-input double   COMPOUND_INTEREST = 0.0; // 複利機能
-input double   RISK = 2.0; // 最大リスク
-input double   TAKE_PROFIT = 0.0; // 利益確定
-input double   STOP_LOSS = 0.0; // 損切り
-input int      STOP_LOSING = 0; // 連敗自動停止機能
-input int      SKIP_ENTRY = 0; // エントリースキップ機能
-input ENUM_TRADE_MODE TRADE_MODE = TRADE_MODE_AUTO; // トレンド判定
-sinput int     MAGIC = 12345678; // マジックナンバー
+input int      LOT_COUNT_BUY = 10; // Maximum number of open positions (BUY)
+input int      LOT_COUNT_SELL = 10; // Maximum Open Positions (SELL)
+input double   LOTS = 0.1; // Number of lots (simple interest)
+input uint     SLIPPAGE = 5; // Maximum slippage limit
+input double   MAX_SPREAD = 5.5; // Spread limit
+input double   COMPOUND_INTEREST = 0.0; // Compound interest function
+input double   RISK = 2.0; // Maximum risk
+input double   TAKE_PROFIT = 0.0; // Profit taking
+input double   STOP_LOSS = 0.0; // Loss cut
+input int      STOP_LOSING = 0; // Loss streak automatic stop function
+input int      SKIP_ENTRY = 0; // Entry skip function
+input ENUM_TRADE_MODE TRADE_MODE = TRADE_MODE_AUTO; // Trend judgment
+sinput int     MAGIC = 12345678; // Magic number
 
 #define ORDER_FAIL_RETRY_COUNT 5
 
