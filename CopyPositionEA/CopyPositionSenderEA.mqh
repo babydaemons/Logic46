@@ -21,6 +21,7 @@ double  LOTS_MULTIPLY;        // ポジションコピー時のロット数の�
 struct POSITION_LIST {
     int Change[MAX_POSITION];
     int MagicNumber[MAX_POSITION];
+    datetime EntryDate[MAX_POSITION];
     int EntryType[MAX_POSITION];
     double EntryPrice[MAX_POSITION];
     string SymbolValue[MAX_POSITION];
@@ -33,6 +34,7 @@ struct POSITION_LIST {
     void Clear() {
         ArrayFill(Change, 0, MAX_POSITION, 0);
         ArrayFill(MagicNumber, 0, MAX_POSITION, 0);
+        ArrayFill(EntryDate, 0, MAX_POSITION, 0);
         ArrayFill(EntryType, 0, MAX_POSITION, 0);
         ArrayFill(EntryPrice, 0, MAX_POSITION, 0);
         ArrayFill(Tickets, 0, MAX_POSITION, 0);
@@ -454,19 +456,21 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         line += StringFormat("%+d\t", Output.Change[i]);
         // 2列目：マジックナンバー
         line += StringFormat("%d\t", Output.MagicNumber[i]);
-        // 3列目：エントリー種別
+        // 3列目：エントリー時刻
+        line += StringFormat("%d\t", TimeToString(Output.EntryDate[i], TIME_DATE | TIME_MINUTES | TIME_SECONDS));
+        // 4列目：エントリー種別
         line += StringFormat("%d\t", Output.EntryType[i]);
-        // 4列目：エントリー価格
+        // 5列目：エントリー価格
         line += StringFormat("%.6f\t", Output.EntryPrice[i]);
-        // 5列目：シンボル名
+        // 6列目：シンボル名
         line += StringFormat("%s\t", ConvertSymbol(symbol));
-        // 6列目：コピー元チケット番号
+        // 7列目：コピー元チケット番号
         line += StringFormat("%d\t", Output.Tickets[i]);
-        // 7列目：ポジションサイズ
+        // 9列目：ポジションサイズ
         line += StringFormat("%.2f\t", LOTS_MULTIPLY * Output.Lots[i]);
-        // 8列目：ストップロス
+        // 10列目：ストップロス
         line += StringFormat("%.6f\t", Output.StopLoss[i]);
-        // 9列目：テイクプロフィット
+        // 11列目：テイクプロフィット
         line += StringFormat("%.6f", Output.TakeProfit[i]);
 
         string logging_line = line;

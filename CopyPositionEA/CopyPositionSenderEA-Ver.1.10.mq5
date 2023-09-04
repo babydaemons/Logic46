@@ -44,6 +44,7 @@ int ScanCurrentPositions(POSITION_LIST& Current)
         }
 
         Current.Change[position_count] = INT_MAX;
+        Current.EntryDate[position_count] = (datetime)PositionGetInteger(POSITION_TIME);
         Current.EntryType[position_count] = entry_type;
         Current.EntryPrice[position_count] = PositionGetDouble(POSITION_PRICE_OPEN);
         Current.SymbolValue[position_count] = PositionGetString(POSITION_SYMBOL);
@@ -89,6 +90,7 @@ int ScanCurrentPositions(POSITION_LIST& Current)
         }
 
         Current.Change[position_count] = INT_MAX;
+        Current.EntryDate[position_count] = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
         Current.EntryType[position_count] = entry_type;
         Current.EntryPrice[position_count] = OrderGetDouble(ORDER_PRICE_OPEN);
         Current.SymbolValue[position_count] = OrderGetString(ORDER_SYMBOL);

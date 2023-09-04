@@ -304,30 +304,32 @@ void LoadPosition(string communication_dir, double lots_multiply, int k)
             int change = (int)StringToInteger(field[1]);
             // 2列目：マジックナンバー
             int magic_number = (int)StringToInteger(field[2]);
-            // 3列目：エントリー種別
-            int entry_type = (int)StringToInteger(field[3]);
-            // 4列目：エントリー価格
-            double entry_price = StringToDouble(field[4]);
-            // 5列目：シンボル名
-            string symbol = ConvertSymbol(field[5], k) + SYMBOL_APPEND_SUFFIX;
-            // 4列目：エントリー価格を補正
+            // 3列目：エントリー時刻
+            string entry_date = field[3];
+            // 4列目：エントリー種別
+            int entry_type = (int)StringToInteger(field[4]);
+            // 5列目：エントリー価格
+            double entry_price = StringToDouble(field[5]);
+            // 6列目：シンボル名
+            string symbol = ConvertSymbol(field[6], k) + SYMBOL_APPEND_SUFFIX;
+            // 5列目：エントリー価格を補正
             if (entry_type > 0) {
                 entry_price = MathMin(entry_price, SymbolInfoDouble(symbol, SYMBOL_ASK));
             }
             else {
                 entry_price = MathMax(entry_price, SymbolInfoDouble(symbol, SYMBOL_BID));
             }
-            // 6列目：コピー元チケット番号
-            int ticket = (int)StringToInteger(field[6]);
-            // 7列目：ポジションサイズ
-            double lots = RoundLots(symbol, StringToDouble(field[7]) * lots_multiply);
-            // 8列目：ストップロス
-            double stoploss = StringToDouble(field[8]);
-            // 9列目：テイクプロフィット
-            double takeprofit = StringToDouble(field[9]);
+            // 7列目：コピー元チケット番号
+            int ticket = (int)StringToInteger(field[7]);
+            // 8列目：ポジションサイズ
+            double lots = RoundLots(symbol, StringToDouble(field[8]) * lots_multiply);
+            // 9列目：ストップロス
+            double stoploss = StringToDouble(field[9]);
+            // 10列目：テイクプロフィット
+            double takeprofit = StringToDouble(field[10]);
 
-            printf("ポジションコピー受信: %s %+d %d %+d %.6f %s %d %.2f %.6f %.6f",
-                sender_broker, change, magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
+            printf("ポジションコピー受信: %s %+d %d %s %+d %.6f %s %d %.2f %.6f %.6f",
+                sender_broker, change, magic_number, entry_date, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
 
             if (change == +1) {
                 Entry(sender_broker, magic_number, entry_type, entry_price, symbol, ticket, lots, stoploss, takeprofit);
