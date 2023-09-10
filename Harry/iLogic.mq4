@@ -14,8 +14,8 @@ enum ENUM_TRADE_MODE {
     TRADE_MODE_BUY, // BUY (manual judgment)
     TRADE_MODE_SELL, // SELL (manual judgment)
     TRADE_MODE_BUY_SELL, // BUY/SELL (manual judgment)
-    TRADE_MODE_AUTO // AUTO (automatic judgment)0ppo
-    
+    TRADE_MODE_AUTO, // AUTO (automatic judgment with T3-RSI)
+    TRADE_MODE_AUTO2 // AUTO-2 (automatic judgment with EMA40)
 };
 
 //--- input parameters
@@ -39,8 +39,9 @@ int SL;
 int TP;
 double SMA2_High1;
 double SMA2_Low2;
-double SMA40_Close3;
-int position_count;
+double EMA40_Close3;
+int position_count_buy;
+int position_count_sell;
 
 
 // No.038	④ T3-RSI.mq4（or "T3-RSI2.ex4"）（カスタムインジケーター： 添付ファイル参照 ）
@@ -115,7 +116,7 @@ T3_RSI T3;
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    position_count = 0;
+    Trade();
 
     // 利益確定と損切りの単位をpipsからポイントへ変換
     SL = (int)MathRound(10 * STOP_LOSS);
@@ -163,7 +164,7 @@ double OnTester() {
 //| トレード実施                                                     |
 //+------------------------------------------------------------------+
 void Trade() {
-    position_count = 0;
+    position_count_buy = position_count_sell = 0;
     int order_count = OrdersTotal();
     for (int i = order_count - 1; i >= 0; --i) {
         if (!OrderSelect(i, SELECT_BY_POS)) {
@@ -176,14 +177,33 @@ void Trade() {
         case OP_BUY:
         case OP_BUYLIMIT:
         case OP_BUYSTOP:
-            ++position_count;
+            ++position_count_buy;
             break;
         case OP_SELL:
         case OP_SELLLIMIT:
         case OP_SELLSTOP:
-            --position_count;
+            ++position_count_sell;
             break;
         }
+    }
+
+    // No.109	＊ 終値ではなく、値動きの中（ヒゲ）でMoving Averageにタッチした瞬間がエントリートリガーとなる。
+    // No.110	＊「【C】⑬ トレンド判定」の方向に準じてエントリーする。
+    // No.111	＊トレンドの判定方法に関しては「【A】①、②、③、④」を参照。
+    int trend = JudgeTrend();
+
+    // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
+    // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
+    // No.103-4	→そのような運用においても、正確にポジション・クローズ、そして 間髪入れないエントリー、にも対応出来ると助かります。
+    ExitTrend(trend);
+    if (trend == 0) {
+        return;
+    }
+
+    // No.051	⑤ スプレッド制限：5.5
+    double spread = MarketInfo(Symbol(), MODE_SPREAD);
+    if (spread >= 10 * MAX_SPREAD) {
+        return;
     }
 
     //+------------------------------------------------------------------+
@@ -206,19 +226,23 @@ void Trade() {
     // No.033	③ Moving Average（MT4ディフォルトインジケーター）
     // No.034	期間：40
     // No.035	表示移動：0
-    // No.036	移動平均線の種別：Simple
+    // No.036	移動平均線の種別：Exponential
     // No.037	適用価格：Close
-    SMA40_Close3 = iMA(Symbol(), Period(), 40, 0, MODE_SMA, PRICE_CLOSE, 0);
+    EMA40_Close3 = iMA(Symbol(), Period(), 40, 0, MODE_EMA, PRICE_CLOSE, 0);
 
-    if (-LOT_COUNT_SELL < position_count && position_count < +LOT_COUNT_BUY) {
-        Entry();
+    if (position_count_sell < LOT_COUNT_SELL || position_count_buy < LOT_COUNT_BUY) {
+        Entry(trend);
     }
-    if (position_count != 0) {
-        Exit();
+    if (position_count_buy > 0) {
+        ExitLong(false);
+    }
+    if (position_count_sell > 0) {
+        ExitShort(false);
     }
 
-    string message = StringFormat("Lot:%+.2f, Balance: %.2f, Profit: %.2f, Margin Level: %.2f%%",
-                                    position_count * LOTS,
+    string message = StringFormat("Buy:%+.2f, Sel: %.2f, Balance: %.2f, Profit: %.2f, Margin Level: %.2f%%",
+                                    position_count_buy * LOTS,
+                                    position_count_sell * LOTS,
                                     AccountInfoDouble(ACCOUNT_EQUITY),
                                     AccountInfoDouble(ACCOUNT_PROFIT),
                                     AccountInfoDouble(ACCOUNT_MARGIN_LEVEL));
@@ -228,24 +252,10 @@ void Trade() {
 //+------------------------------------------------------------------+
 //| No.108	【E】エントリー                                          |
 //+------------------------------------------------------------------+
-void Entry() {
-    // No.051	⑤ スプレッド制限：5.5
-    double spread = MarketInfo(Symbol(), MODE_SPREAD);
-    if (spread >= 10 * MAX_SPREAD) {
-        return;
-    }
-
-    // No.109	＊ 終値ではなく、値動きの中（ヒゲ）でMoving Averageにタッチした瞬間がエントリートリガーとなる。
-    // No.110	＊「【C】⑬ トレンド判定」の方向に準じてエントリーする。
-    // No.111	＊トレンドの判定方法に関しては「【A】①、②、③、④」を参照。
-    int trend = JudgeTrend();
-    if (trend == 0) {
-        return;
-    }
-
+void Entry(int trend) {
     // No.112	① BUY
     // No.113	上記【B】②のMoving Averageに価格がヒットした時にBUYエントリー。
-    if (trend == +1 && position_count >= 0) {
+    if (trend == +1 && position_count_buy < LOT_COUNT_BUY) {
         if (Bid <= SMA2_Low2) {
             double lots = LOTS;
             SafeOrderSend(lots, true);
@@ -255,7 +265,7 @@ void Entry() {
 
     // No.114	② SELL
     // No.115	上記【B】①のMoving Averageに価格がヒットした時にSELLエントリー。
-    if (trend == -1 && position_count <= 0) {
+    if (trend == -1 && position_count_sell < LOT_COUNT_SELL) {
         if (Ask >= SMA2_High1) {
             double lots = LOTS;
             SafeOrderSend(lots, false);
@@ -299,22 +309,34 @@ int JudgeTrend() {
         return 0;
     }
 
-    // No.011	④ AUTO（自動判定）
+    // No.015-1	④ AUTO（自動判定）
     // No.012	トレンド判定を自動化する。
     // No.013	両建てにならない事を前提に、自動化されたトレンド判定に従って「SELL」も「BUY」もポジションを持つ。
     if (TRADE_MODE == TRADE_MODE_AUTO) {
-        // No.014	(1) 価格が、下記インジケーター「【B】③」の「上」ならアップトレンド＝『BUYエントリーのみ』
-        // No.015	(2) 価格が、下記インジケーター「【B】③」の「下」ならダウントレンド＝『SELLエントリーのみ』
         // No.016	(3) 「【B】④」のインジケーターの、「RSI」が「T3」の「上」に位置している＝『BUYエントリーのみ』
         // No.017	(4) 「【B】④」のインジケーターの、「RSI」が「T3」の「下」に位置している＝『SELLエントリーのみ』
         double rsi = 0;
         double t3 = 0;
         T3.GetValue(rsi, t3);
         if (rsi > t3) {
-            return Bid > SMA40_Close3 ? +1 : 0;
+            return +1;
         }
         if (rsi < t3) {
-            return Ask < SMA40_Close3 ? -1 : 0;
+            return -1;
+        }
+    }
+
+    // No.013-1	⑤ AUTO-2（自動判定）
+    // No.012	トレンド判定を自動化する。
+    // No.013	両建てにならない事を前提に、自動化されたトレンド判定に従って「SELL」も「BUY」もポジションを持つ。
+    if (TRADE_MODE == TRADE_MODE_AUTO2) {
+        // No.014	(1) 価格が、下記インジケーター「【B】③」の「上」ならアップトレンド＝『BUYエントリーのみ』
+        // No.015	(2) 価格が、下記インジケーター「【B】③」の「下」ならダウントレンド＝『SELLエントリーのみ』
+        if (Bid > EMA40_Close3) {
+            return +1;
+        }
+        if (Ask < EMA40_Close3) {
+            return -1;
         }
     }
 
@@ -322,21 +344,21 @@ int JudgeTrend() {
 }
 
 //+------------------------------------------------------------------+
-//| イグジット                                                       |
+//| トレンド変換によりポジション決済する                             |
 //+------------------------------------------------------------------+
-void Exit() {
-    if (position_count > 0) {
-        ExitLong();
+void ExitTrend(int trend) {
+    if (trend > 0 && position_count_sell > 0) {
+        ExitLong(true);
     }
-    if (position_count < 0) {
-        ExitShort();
+    if (trend < 0 && position_count_buy > 0) {
+        ExitShort(true);
     }
 }
 
 //+------------------------------------------------------------------+
 //| ロングポジションを決済するか判断する                             |
 //+------------------------------------------------------------------+
-void ExitLong() {
+void ExitLong(bool force) {
     int order_count = OrdersTotal();
 
     for (int i = order_count - 1; i >= 0; --i) {
@@ -350,6 +372,14 @@ void ExitLong() {
         double profit = Bid - OrderOpenPrice();
         double lots = OrderLots();
 
+        // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
+        // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
+        // No.103-4	→そのような運用においても、正確にポジション・クローズ、そして 間髪入れないエントリー、にも対応出来ると助かります。
+        if (force) {
+            SafeOrderClose(ticket, lots, true, profit);
+            continue;
+        }
+
         // No.118	① BUYポジションの利益確定
         // No.119	上記【B】①のMoving Averageに価格がヒットした時にポジション決済。
         // No.130	① BUYポジションの損切り
@@ -357,18 +387,21 @@ void ExitLong() {
         // ⇒黒字なら「利益確定」、赤字なら「損切り」となる。
         if (Bid >= SMA2_High1) {
             SafeOrderClose(ticket, lots, true, profit);
+            continue;
         }
 
         // No.122	③ 上記【C】⑧で利益確定Pipsが指定されている場合
         // No.123	指定されたPips数で利益確定される。
         if (TP != 0 && profit >= +TP) {
             SafeOrderClose(ticket, lots, true, profit);
+            continue;
         }
 
         // No.134	③ 上記【C】⑨で損切りPipsが指定されている場合
         // No.135	指定されたPips数で利益確定される。
         if (SL != 0 && profit <= -SL) {
             SafeOrderClose(ticket, lots, true, profit);
+            continue;
         }
     }
 }
@@ -376,7 +409,7 @@ void ExitLong() {
 //+------------------------------------------------------------------+
 //| ショートポジションを決済するか判断する                           |
 //+------------------------------------------------------------------+
-void ExitShort() {
+void ExitShort(bool force) {
     int order_count = OrdersTotal();
 
     for (int i = order_count - 1; i >= 0; --i) {
@@ -390,6 +423,14 @@ void ExitShort() {
         double profit = OrderOpenPrice() - Ask;
         double lots = OrderLots();
 
+        // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
+        // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
+        // No.103-4	→そのような運用においても、正確にポジション・クローズ、そして 間髪入れないエントリー、にも対応出来ると助かります。
+        if (force) {
+            SafeOrderClose(ticket, lots, false, profit);
+            continue;
+        }
+
         // No.120	② SELLポジションの利益確定
         // No.121	上記【B】②のMoving Averageに価格がヒットした時にポジション決済。
         // No.132	② SELLポジションの損切り
@@ -397,18 +438,21 @@ void ExitShort() {
         // ⇒黒字なら「利益確定」、赤字なら「損切り」となる。
         if (Ask <= SMA2_Low2) {
             SafeOrderClose(ticket, lots, false, profit);
+            continue;
         }
 
         // No.122	③ 上記【C】⑧で利益確定Pipsが指定されている場合
         // No.123	指定されたPips数で利益確定される。
         if (TP != 0 && profit >= +TP) {
             SafeOrderClose(ticket, lots, false, profit);
+            continue;
         }
 
         // No.134	③ 上記【C】⑨で損切りPipsが指定されている場合
         // No.135	指定されたPips数で利益確定される。
         if (SL != 0 && profit <= -SL) {
             SafeOrderClose(ticket, lots, false, profit);
+            continue;
         }
     }
 }
@@ -431,7 +475,7 @@ bool SafeOrderSend(double lots, bool buy) {
         if (TP != 0) {
             tp = buy ? NormalizeDouble(Bid + TP * Point(), Digits) : NormalizeDouble(Ask - TP * Point(), Digits);
         }
-        int ticket = OrderSend(Symbol(), cmd, lots, price, SLIPPAGE, sl, tp, TerminalInfoString(TERMINAL_NAME), MAGIC, 0, arrow);
+        int ticket = OrderSend(Symbol(), cmd, lots, price, SLIPPAGE, sl, tp, WindowExpertName(), MAGIC, 0, arrow);
         if (ticket != -1) {
             return true;
         }
