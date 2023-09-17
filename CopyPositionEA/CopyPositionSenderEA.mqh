@@ -466,11 +466,11 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         line += StringFormat("%s\t", ConvertSymbol(symbol));
         // 7列目：コピー元チケット番号
         line += StringFormat("%d\t", Output.Tickets[i]);
-        // 9列目：ポジションサイズ
+        // 8列目：ポジションサイズ
         line += StringFormat("%.2f\t", LOTS_MULTIPLY * Output.Lots[i]);
-        // 10列目：ストップロス
+        // 9列目：ストップロス
         line += StringFormat("%.6f\t", Output.StopLoss[i]);
-        // 11列目：テイクプロフィット
+        // 10列目：テイクプロフィット
         line += StringFormat("%.6f", Output.TakeProfit[i]);
 
         string logging_line = line;

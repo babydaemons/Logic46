@@ -312,7 +312,7 @@ void LoadPosition(string communication_dir, double lots_multiply, int k)
             double entry_price = StringToDouble(field[5]);
             // 6列目：シンボル名
             string symbol = ConvertSymbol(field[6], k) + SYMBOL_APPEND_SUFFIX;
-            // 5列目：エントリー価格を補正
+            // 5列目+6列目：エントリー価格を補正
             if (entry_type > 0) {
                 entry_price = MathMin(entry_price, SymbolInfoDouble(symbol, SYMBOL_ASK));
             }
