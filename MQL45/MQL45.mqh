@@ -416,12 +416,12 @@ double MQL45::SharpeRatioMonthly(double Balance)
     return SR;
 }
 
-#define MQL45_APPLICATION_START() \
+#define MQL45_APPLICATION_START \
     class MQL45App : public MQL45 { \
     public: \
         MQL45App() { }
 
-#define MQL45_APPLICATION_END() \
+#define MQL45_APPLICATION_END \
     }; \
     MQL45App cMQL45AppInstance; \
     int OnInit() { \
@@ -438,12 +438,12 @@ double MQL45::SharpeRatioMonthly(double Balance)
         return cMQL45AppInstance.OnTester(); \
     }
 
-#define MQL45_INDICATOR_START() \
+#define MQL45_INDICATOR_START \
     class MQL45App : public MQL45 { \
     public: \
         MQL45App() { }
 
-#define MQL45_INDICATOR_END() \
+#define MQL45_INDICATOR_END \
     }; \
     MQL45App cMQL45AppInstance; \
     int OnInit() { \

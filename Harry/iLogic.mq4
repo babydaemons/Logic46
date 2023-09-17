@@ -40,8 +40,11 @@ int TP;
 double SMA2_High1;
 double SMA2_Low2;
 double EMA40_Close3;
+double spread;
 int position_count_buy;
 int position_count_sell;
+datetime t0;
+datetime t1;
 
 
 // No.038	④ T3-RSI.mq4（or "T3-RSI2.ex4"）（カスタムインジケーター： 添付ファイル参照 ）
@@ -201,7 +204,7 @@ void Trade() {
     }
 
     // No.051	⑤ スプレッド制限：5.5
-    double spread = MarketInfo(Symbol(), MODE_SPREAD);
+    spread = MarketInfo(Symbol(), MODE_SPREAD);
     if (spread >= 10 * MAX_SPREAD) {
         return;
     }
@@ -214,14 +217,14 @@ void Trade() {
     // No.026	移動平均線の種別：Simple
     // No.025	表示移動：0
     // No.027	適用価格：High
-    SMA2_High1 = iMA(Symbol(), Period(), 2, 0, MODE_SMA, PRICE_HIGH, 0);
+    SMA2_High1 = (High[1] + High[0]) / 2;
 
     // No.028	② Moving Average（MT4ディフォルトインジケーター） ＊上記①と同じもの
     // No.029	期間：2
     // No.030	表示移動：0
     // No.031	移動平均線の種別：Simple
     // No.032	適用価格：Low
-    SMA2_Low2 = iMA(Symbol(), Period(), 2, 0, MODE_SMA, PRICE_LOW, 0);
+    SMA2_Low2 = (Low[1] + Low[0]) / 2;
 
     // No.033	③ Moving Average（MT4ディフォルトインジケーター）
     // No.034	期間：40
@@ -230,14 +233,16 @@ void Trade() {
     // No.037	適用価格：Close
     EMA40_Close3 = iMA(Symbol(), Period(), 40, 0, MODE_EMA, PRICE_CLOSE, 0);
 
-    if (position_count_sell < LOT_COUNT_SELL || position_count_buy < LOT_COUNT_BUY) {
-        Entry(trend);
-    }
+    t1 = TimeCurrent();
+
     if (position_count_buy > 0) {
         ExitLong(false);
     }
     if (position_count_sell > 0) {
         ExitShort(false);
+    }
+    if (position_count_sell < LOT_COUNT_SELL || position_count_buy < LOT_COUNT_BUY) {
+        Entry(trend);
     }
 
     string message = StringFormat("Buy:%+.2f, Sel: %.2f, Balance: %.2f, Profit: %.2f, Margin Level: %.2f%%",
@@ -256,7 +261,7 @@ void Entry(int trend) {
     // No.112	① BUY
     // No.113	上記【B】②のMoving Averageに価格がヒットした時にBUYエントリー。
     if (trend == +1 && position_count_buy < LOT_COUNT_BUY) {
-        if (Bid <= SMA2_Low2) {
+        if (Ask <= SMA2_Low2) {
             double lots = LOTS;
             SafeOrderSend(lots, true);
         }
@@ -266,7 +271,7 @@ void Entry(int trend) {
     // No.114	② SELL
     // No.115	上記【B】①のMoving Averageに価格がヒットした時にSELLエントリー。
     if (trend == -1 && position_count_sell < LOT_COUNT_SELL) {
-        if (Ask >= SMA2_High1) {
+        if (Bid >= SMA2_High1) {
             double lots = LOTS;
             SafeOrderSend(lots, false);
         }
@@ -371,6 +376,7 @@ void ExitLong(bool force) {
         int ticket = OrderTicket();
         double profit = Bid - OrderOpenPrice();
         double lots = OrderLots();
+        t0 = OrderOpenTime();
 
         // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
         // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
@@ -422,6 +428,7 @@ void ExitShort(bool force) {
         int ticket = OrderTicket();
         double profit = OrderOpenPrice() - Ask;
         double lots = OrderLots();
+        t0 = OrderOpenTime();
 
         // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
         // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
@@ -492,6 +499,7 @@ bool SafeOrderClose(int ticket, double lots, bool buy, double profit) {
     for (int k = 0; k < ORDER_FAIL_RETRY_COUNT; ++k) {
         RefreshRates();
         double price = buy ? Bid : Ask;
+        double profit = OrderProfit();
         if (OrderClose(ticket, lots, price, SLIPPAGE, arrow)) {
             return true;
         }
