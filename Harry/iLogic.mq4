@@ -19,7 +19,7 @@ void OutputDebugStringW(string message);
 #else
 #define LOG_HEADER "[MQL4]["
 #endif
-#define LOGGING(message) OutputDebugStringW(LOG_HEADER + TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS) + "] " + message)
+#define LOGGING(message) OutputDebugStringW(LOG_HEADER + TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS) + "] " + (message))
 #else
 #define LOGGING(message) /*nothing*/
 #endif
@@ -49,6 +49,14 @@ input ENUM_TRADE_MODE TRADE_MODE = TRADE_MODE_AUTO; // Trend judgment
 sinput int     MAGIC = 12345678; // Magic number
 
 #define ORDER_FAIL_RETRY_COUNT 5
+
+enum ENUM_CLOSE_POSITION {
+    CLOSE_POSITION_NONE,
+    CLOSE_POSITION_TREND_CHANGED,
+    CLOSE_POSITION_EXIT,
+    CLOSE_POSITION_TAKE_PROFIT,
+    CLOSE_POSITION_STOP_LOSS,
+};
 
 int SL;
 int TP;
@@ -281,7 +289,6 @@ void Entry(int trend) {
     // No.113	上記【B】②のMoving Averageに価格がヒットした時にBUYエントリー。(Low)
     if (trend == +1 && position_count_buy < LOT_COUNT_BUY) {
         if (Ask <= SMA2_Low2) {
-            LOGGING("EntryLong");
             double lots = LOTS;
             SafeOrderSend(lots, true);
         }
@@ -292,7 +299,6 @@ void Entry(int trend) {
     // No.115	上記【B】①のMoving Averageに価格がヒットした時にSELLエントリー。(High)
     if (trend == -1 && position_count_sell < LOT_COUNT_SELL) {
         if (Bid >= SMA2_High1) {
-            LOGGING("EntryShort");
             double lots = LOTS;
             SafeOrderSend(lots, false);
         }
@@ -374,22 +380,30 @@ int JudgeTrend() {
 //+------------------------------------------------------------------+
 void ExitTrend(int trend) {
     // ロングポジションポジション保有中にダウントレンドに変化：ロングポジションをクローズする
-    if (position_count_buy > 0 && trend == -1) {
-        ExitLong(true);
+    if (position_count_buy > 0) {
+        if (trend == -1) {
+            ExitLong(CLOSE_POSITION_TREND_CHANGED);
+        }
+        else {
+            ExitLong(CLOSE_POSITION_NONE);
+        }
         return;
     }
     // ショートポジションポジション保有中にダウントレンドに変化：ショートポジションをクローズする
     if (position_count_sell > 0 && trend == +1) {
-        ExitShort(true);
+        if (trend == -1) {
+            ExitShort(CLOSE_POSITION_TREND_CHANGED);
+        }
+        else {
+            ExitShort(CLOSE_POSITION_NONE);
+        }
     }
 }
 
 //+------------------------------------------------------------------+
 //| ロングポジションを決済するか判断する                             |
 //+------------------------------------------------------------------+
-void ExitLong(bool force) {
-    LOGGING(StringFormat("ExitLong(%d)", (int)force));
-
+void ExitLong(ENUM_CLOSE_POSITION reason) {
     int order_count = OrdersTotal();
 
     for (int i = order_count - 1; i >= 0; --i) {
@@ -407,8 +421,8 @@ void ExitLong(bool force) {
         // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
         // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
         // No.103-4	→そのような運用においても、正確にポジション・クローズ、そして 間髪入れないエントリー、にも対応出来ると助かります。
-        if (force) {
-            SafeOrderClose(ticket, lots, true, profit);
+        if (reason == CLOSE_POSITION_TREND_CHANGED) {
+            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_TREND_CHANGED);
             continue;
         }
 
@@ -418,21 +432,21 @@ void ExitLong(bool force) {
         // No.131	上記【B】①のMoving Averageに価格がヒットした時にポジションを損切り。(High)
         // ⇒黒字なら「利益確定」、赤字なら「損切り」となる。
         if (Bid >= SMA2_High1) {
-            SafeOrderClose(ticket, lots, true, profit);
+            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_EXIT);
             continue;
         }
 
         // No.122	③ 上記【C】⑧で利益確定Pipsが指定されている場合
         // No.123	指定されたPips数で利益確定される。
         if (TP != 0 && profit >= +TP) {
-            SafeOrderClose(ticket, lots, true, profit);
+            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_TAKE_PROFIT);
             continue;
         }
 
         // No.134	③ 上記【C】⑨で損切りPipsが指定されている場合
         // No.135	指定されたPips数で利益確定される。
         if (SL != 0 && profit <= -SL) {
-            SafeOrderClose(ticket, lots, true, profit);
+            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_STOP_LOSS);
             continue;
         }
     }
@@ -441,9 +455,7 @@ void ExitLong(bool force) {
 //+------------------------------------------------------------------+
 //| ショートポジションを決済するか判断する                           |
 //+------------------------------------------------------------------+
-void ExitShort(bool force) {
-    LOGGING(StringFormat("ExitShort(%d)", (int)force));
-
+void ExitShort(ENUM_CLOSE_POSITION reason) {
     int order_count = OrdersTotal();
 
     for (int i = order_count - 1; i >= 0; --i) {
@@ -461,8 +473,8 @@ void ExitShort(bool force) {
         // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
         // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
         // No.103-4	→そのような運用においても、正確にポジション・クローズ、そして 間髪入れないエントリー、にも対応出来ると助かります。
-        if (force) {
-            SafeOrderClose(ticket, lots, false, profit);
+        if (reason == CLOSE_POSITION_TREND_CHANGED) {
+            SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_TREND_CHANGED);
             continue;
         }
 
@@ -472,21 +484,21 @@ void ExitShort(bool force) {
         // No.133	上記【B】②のMoving Averageに価格がヒットした時にポジションを損切り。(Low)
         // ⇒黒字なら「利益確定」、赤字なら「損切り」となる。
         if (Ask <= SMA2_Low2) {
-            SafeOrderClose(ticket, lots, false, profit);
+            SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_EXIT);
             continue;
         }
 
         // No.122	③ 上記【C】⑧で利益確定Pipsが指定されている場合
         // No.123	指定されたPips数で利益確定される。
         if (TP != 0 && profit >= +TP) {
-            SafeOrderClose(ticket, lots, false, profit);
+            SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_TAKE_PROFIT);
             continue;
         }
 
         // No.134	③ 上記【C】⑨で損切りPipsが指定されている場合
         // No.135	指定されたPips数で利益確定される。
         if (SL != 0 && profit <= -SL) {
-            SafeOrderClose(ticket, lots, false, profit);
+            SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_STOP_LOSS);
             continue;
         }
     }
@@ -496,6 +508,8 @@ void ExitShort(bool force) {
 //| ポジション発注をリトライありで行う                               |
 //+------------------------------------------------------------------+
 bool SafeOrderSend(double lots, bool buy) {
+    LOGGING(buy ? "EntryLong" : "EntryShort");
+
     int cmd = buy ? OP_BUY : OP_SELL;
     color arrow = buy ? clrBlue : clrRed;
 
@@ -522,7 +536,9 @@ bool SafeOrderSend(double lots, bool buy) {
 //+------------------------------------------------------------------+
 //| ポジション決済をリトライありで行う                               |
 //+------------------------------------------------------------------+
-bool SafeOrderClose(int ticket, double lots, bool buy, double profit) {
+bool SafeOrderClose(int ticket, double lots, bool buy, double profit, ENUM_CLOSE_POSITION reason) {
+    LOGGING(StringFormat("%s(%s): %f", buy ? "ExitLong" : "ExitShort", EnumToString(reason), profit));
+
     color arrow = buy ? clrBlue : clrRed;
     for (int k = 0; k < ORDER_FAIL_RETRY_COUNT; ++k) {
         RefreshRates();
