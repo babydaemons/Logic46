@@ -9,20 +9,48 @@
 #property strict
 
 #define __DEBUG
+//#define __MONITOR
 
 #ifdef __DEBUG
-#import "kernel32.dll"
-void OutputDebugStringW(string message);
-#import
-#ifdef __MQL5__
-#define LOG_HEADER "[MQL5]["
+    #ifdef __MQL5__
+        #define LOG_HEADER "[MQL5]["
+    #else
+        #define LOG_HEADER "[MQL4]["
+    #endif
+    #ifdef __MONITOR
+        #import "kernel32.dll"
+            void OutputDebugStringW(string message);
+        #import
+        #define LOGGING(message) OutputDebugStringW(LOG_HEADER + TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS) + "] " + (message))
+    #else // __MONITOR
+        struct SYSTEMTIME {
+            ushort wYear;
+            ushort wMonth;
+            ushort wDayOfWeek;
+            ushort wDay;
+            ushort wHour;
+            ushort wMinute;
+            ushort wSecond;
+            ushort wMilliseconds;
+        };
+        #import "kernel32.dll"
+            void GetLocalTime(SYSTEMTIME& date);
+        #import
+        string log_path;
+        int log_file;
+        #define LOGGING(message) output_log(message)
+        void output_log(string message) {
+            FileWrite(log_file, "[" + TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS) + "] " + message);
+            if (!FileSeek(log_file, 0, SEEK_END)) {
+                MessageBox(StringFormat("Cannot seek log file\n%s\nErrorCode %d", log_path, GetLastError()));
+                ExpertRemove();
+            }
+            FileFlush(log_file);
+        }
+    #endif
 #else
-#define LOG_HEADER "[MQL4]["
-#endif
-#define LOGGING(message) OutputDebugStringW(LOG_HEADER + TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS) + "] " + (message))
-#else
-#define LOGGING(message) /*nothing*/
-#endif
+    #define LOGGING(message) /*nothing*/
+#endif // __DEBUG
 
 #define MQL45_BARS 2        //////////
 #include "MQL45/MQL45.mqh"  //////////
@@ -53,9 +81,9 @@ sinput int     MAGIC = 12345678; // Magic number
 #define ORDER_FAIL_RETRY_COUNT 5
 
 enum ENUM_CLOSE_POSITION {
-    CLOSE_POSITION_NONE,
+    CLOSE_POSITION_CHECK_TO_EXIT,
     CLOSE_POSITION_TREND_CHANGED,
-    CLOSE_POSITION_EXIT,
+    CLOSE_POSITION_TOUCHED,
     CLOSE_POSITION_TAKE_PROFIT,
     CLOSE_POSITION_STOP_LOSS,
 };
@@ -152,9 +180,21 @@ int OnInit() {
     TP = (int)MathRound(10 * TAKE_PROFIT);
 
 #ifdef __DEBUG
-    // 1秒の周期でトレードのデバッグを行います
-    EventSetTimer(1);
-#endif
+    #ifndef __MONITOR
+        SYSTEMTIME date = {};
+        GetLocalTime(date);
+        log_path = StringFormat("%s-%04d.%02d.%02d-%02d%02d%02d.log",
+                        WindowExpertName(), date.wYear, date.wMonth, date.wDay,
+                        date.wHour, date.wMinute, date.wSecond);
+        log_file = FileOpen(log_path, FILE_WRITE | FILE_SHARE_READ | FILE_TXT | FILE_COMMON);
+        if (log_file == INVALID_HANDLE) {
+            MessageBox(StringFormat("Cannot write log file\n%s\nErrorCode %d", log_path, GetLastError()));
+            ExpertRemove();
+        }
+        // MessageBox("log file:\n" + log_path);
+    #endif // __MONITOR
+#endif // __DEBUG
+
     return INIT_SUCCEEDED;
 }
 
@@ -163,9 +203,10 @@ int OnInit() {
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason) {
 #ifdef __DEBUG
-    // タイマーを破棄します
-    EventKillTimer();
-#endif
+    #ifndef __MONITOR
+        FileClose(log_file);
+    #endif // __MONITOR
+#endif // __DEBUG
 }
 
 //+------------------------------------------------------------------+
@@ -222,11 +263,6 @@ void Trade() {
     // No.110	＊「【C】⑬ トレンド判定」の方向に準じてエントリーする。
     // No.111	＊トレンドの判定方法に関しては「【A】①、②、③、④」を参照。
     int trend = JudgeTrend();
-
-    // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
-    // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
-    // No.103-4	→そのような運用においても、正確にポジション・クローズ、そして 間髪入れないエントリー、にも対応出来ると助かります。
-    ExitTrend(trend);
     if (trend == 0) {
         return;
     }
@@ -272,6 +308,7 @@ void Trade() {
     }
 
     if (position_count_sell < LOT_COUNT_SELL || position_count_buy < LOT_COUNT_BUY) {
+        ExitTrend(trend);
         Entry(trend);
     }
 
@@ -293,6 +330,7 @@ void Entry(int trend) {
     if (trend == +1 && position_count_buy < LOT_COUNT_BUY) {
         if (Ask <= SMA2_Low2) {
             double lots = LOTS;
+            LOGGING(StringFormat("EntryLong: Ask = %.3f, Low = %.3f", Ask, SMA2_Low2));
             SafeOrderSend(lots, true);
         }
         return;
@@ -303,6 +341,7 @@ void Entry(int trend) {
     if (trend == -1 && position_count_sell < LOT_COUNT_SELL) {
         if (Bid >= SMA2_High1) {
             double lots = LOTS;
+            LOGGING(StringFormat("EntryShort: Bid = %.3f, High = %.3f", Ask, SMA2_High1));
             SafeOrderSend(lots, false);
         }
         return;
@@ -347,6 +386,7 @@ int JudgeTrend() {
     // No.015-1	④ AUTO（自動判定）
     // No.012	トレンド判定を自動化する。
     // No.013	両建てにならない事を前提に、自動化されたトレンド判定に従って「SELL」も「BUY」もポジションを持つ。
+    //          エントリー：「紫のMA」の上なら「LONG」だけ、下なら「SHORT」だけ。(スクリーンショット 2023-08-26 午前12.56.56.png)
     if (TRADE_MODE == TRADE_MODE_AUTO) {
         // No.016	(3) 「【B】④」のインジケーターの、「RSI」が「T3」の「上」に位置している＝『BUYエントリーのみ』
         // No.017	(4) 「【B】④」のインジケーターの、「RSI」が「T3」の「下」に位置している＝『SELLエントリーのみ』
@@ -354,16 +394,21 @@ int JudgeTrend() {
         double t3 = 0;
         T3.GetValue(rsi, t3);
         if (rsi > t3) {
-            return +1;
+            if (Bid > EMA40_Close3) {
+                return +1;
+            }
         }
         if (rsi < t3) {
-            return -1;
+            if (Ask < EMA40_Close3) {
+                return -1;
+            }
         }
     }
 
     // No.013-1	⑤ AUTO-2（自動判定）
     // No.012	トレンド判定を自動化する。
     // No.013	両建てにならない事を前提に、自動化されたトレンド判定に従って「SELL」も「BUY」もポジションを持つ。
+    //          エントリー：RSIがT3の上なら「LONG」だけ、下なら「SHORT」だけ。(スクリーンショット 2023-08-26 午前12.56.56.png)
     if (TRADE_MODE == TRADE_MODE_AUTO2) {
         // No.014	(1) 価格が、下記インジケーター「【B】③」の「上」ならアップトレンド＝『BUYエントリーのみ』
         // No.015	(2) 価格が、下記インジケーター「【B】③」の「下」ならダウントレンド＝『SELLエントリーのみ』
@@ -388,7 +433,7 @@ void ExitTrend(int trend) {
             ExitLong(CLOSE_POSITION_TREND_CHANGED);
         }
         else {
-            ExitLong(CLOSE_POSITION_NONE);
+            ExitLong(CLOSE_POSITION_CHECK_TO_EXIT);
         }
         return;
     }
@@ -398,7 +443,7 @@ void ExitTrend(int trend) {
             ExitShort(CLOSE_POSITION_TREND_CHANGED);
         }
         else {
-            ExitShort(CLOSE_POSITION_NONE);
+            ExitShort(CLOSE_POSITION_CHECK_TO_EXIT);
         }
     }
 }
@@ -434,8 +479,8 @@ void ExitLong(ENUM_CLOSE_POSITION reason) {
         // No.130	① BUYポジションの損切り
         // No.131	上記【B】①のMoving Averageに価格がヒットした時にポジションを損切り。(High)
         // ⇒黒字なら「利益確定」、赤字なら「損切り」となる。
-        if (Bid >= SMA2_High1) {
-            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_EXIT);
+        if (Ask >= SMA2_High1) {
+            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_TOUCHED);
             continue;
         }
 
@@ -486,8 +531,8 @@ void ExitShort(ENUM_CLOSE_POSITION reason) {
         // No.132	② SELLポジションの損切り
         // No.133	上記【B】②のMoving Averageに価格がヒットした時にポジションを損切り。(Low)
         // ⇒黒字なら「利益確定」、赤字なら「損切り」となる。
-        if (Ask <= SMA2_Low2) {
-            SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_EXIT);
+        if (Bid <= SMA2_Low2) {
+            SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_TOUCHED);
             continue;
         }
 
@@ -511,7 +556,13 @@ void ExitShort(ENUM_CLOSE_POSITION reason) {
 //| ポジション発注をリトライありで行う                               |
 //+------------------------------------------------------------------+
 bool SafeOrderSend(double lots, bool buy) {
-    LOGGING(buy ? "EntryLong" : "EntryShort");
+    // No.011	④ AUTO（自動判定）
+    // No.012	トレンド判定を自動化する。
+    // No.013	両建てにならない事を前提に、自動化されたトレンド判定に従って「SELL」も「BUY」もポジションを持つ。
+    // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
+    // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
+    // No.103-4	→そのような運用においても、正確にポジション・クローズ、そして 間髪入れないエントリー、にも対応出来ると助かります。
+    ExitTrend(buy ? +1 : -1);
 
     int cmd = buy ? OP_BUY : OP_SELL;
     color arrow = buy ? clrBlue : clrRed;
@@ -540,12 +591,12 @@ bool SafeOrderSend(double lots, bool buy) {
 //| ポジション決済をリトライありで行う                               |
 //+------------------------------------------------------------------+
 bool SafeOrderClose(int ticket, double lots, bool buy, double profit, ENUM_CLOSE_POSITION reason) {
-    LOGGING(StringFormat("%s(%s): %f", buy ? "ExitLong" : "ExitShort", EnumToString(reason), profit));
+    double price = buy ? Bid : Ask;
+    LOGGING(StringFormat("%s(%s): %.3f, profit = %.3f", buy ? "ExitLong" : "ExitShort", EnumToString(reason), price, profit));
 
     color arrow = buy ? clrBlue : clrRed;
     for (int k = 0; k < ORDER_FAIL_RETRY_COUNT; ++k) {
         RefreshRates();
-        double price = buy ? Bid : Ask;
         if (OrderClose(ticket, lots, price, SLIPPAGE, arrow)) {
             return true;
         }
