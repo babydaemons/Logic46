@@ -10,6 +10,7 @@
 
 #define __DEBUG
 //#define __MONITOR
+//#define __TIMESTAMP
 
 #ifdef __DEBUG
     #ifdef __MQL5__
@@ -23,19 +24,22 @@
         #import
         #define LOGGING(message) OutputDebugStringW(LOG_HEADER + TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS) + "] " + (message))
     #else // __MONITOR
-        struct SYSTEMTIME {
-            ushort wYear;
-            ushort wMonth;
-            ushort wDayOfWeek;
-            ushort wDay;
-            ushort wHour;
-            ushort wMinute;
-            ushort wSecond;
-            ushort wMilliseconds;
-        };
-        #import "kernel32.dll"
-            void GetLocalTime(SYSTEMTIME& date);
-        #import
+        #ifdef __TIMESTAMP
+            struct SYSTEMTIME {
+                ushort wYear;
+                ushort wMonth;
+                ushort wDayOfWeek;
+                ushort wDay;
+                ushort wHour;
+                ushort wMinute;
+                ushort wSecond;
+                ushort wMilliseconds;
+            };
+            #import "kernel32.dll"
+                void GetLocalTime(SYSTEMTIME& date);
+            #import
+        #endif // __TIMESTAMP
+
         string log_path;
         int log_file;
         #define LOGGING(message) output_log(message)
@@ -181,11 +185,16 @@ int OnInit() {
 
 #ifdef __DEBUG
     #ifndef __MONITOR
-        SYSTEMTIME date = {};
-        GetLocalTime(date);
-        log_path = StringFormat("%s-%04d.%02d.%02d-%02d%02d%02d.log",
-                        WindowExpertName(), date.wYear, date.wMonth, date.wDay,
-                        date.wHour, date.wMinute, date.wSecond);
+        #ifdef __TIMESTAMP
+            SYSTEMTIME date = {};
+            GetLocalTime(date);
+            log_path = StringFormat("%s-%04d.%02d.%02d-%02d%02d%02d.log",
+                            WindowExpertName(), date.wYear, date.wMonth, date.wDay,
+                            date.wHour, date.wMinute, date.wSecond);
+        #else //  __TIMESTAMP
+            log_path = StringFormat("%s.log", WindowExpertName());
+        #endif
+
         log_file = FileOpen(log_path, FILE_WRITE | FILE_SHARE_READ | FILE_TXT | FILE_COMMON);
         if (log_file == INVALID_HANDLE) {
             MessageBox(StringFormat("Cannot write log file\n%s\nErrorCode %d", log_path, GetLastError()));
