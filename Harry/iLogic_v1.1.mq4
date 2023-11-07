@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property strict
 
-#define __DEBUG
+//#define __DEBUG
 //#define __MONITOR
 //#define __TIMESTAMP
 
@@ -209,9 +209,7 @@ int OnInit() {
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason) {
 #ifdef __DEBUG
-    #ifndef __MONITOR
-        FileClose(log_file);
-    #endif // __MONITOR
+    FileClose(log_file);
 #endif // __DEBUG
 }
 
