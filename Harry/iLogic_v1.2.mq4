@@ -8,9 +8,15 @@
 #property version   "1.00"
 #property strict
 
+#define SHIFT 0
+#define EXIT_ON_TREND_CHANGED
+
 #define __DEBUG
-#define __MONITOR
+//#define __MONITOR
+#define __PAUSE
 //#define __TIMESTAMP
+//#define __DRAW_TREND_CHAGE
+#define __DRAW_TRADE
 
 #ifdef __DEBUG
     #ifdef __MQL5__
@@ -52,8 +58,33 @@
             FileFlush(log_file);
         }
     #endif
+    #ifdef __PAUSE
+        #ifdef __MQL5__
+            #define HWND ulong
+        #else // __MQL5__
+            #define HWND uint
+        #endif // __MQL5__
+        #import "user32.dll"
+            int MessageBoxW(
+              HWND    hWnd,
+              string  lpText,
+              string  lpCaption,
+              uint    uType
+            );
+        #import
+        void pause(string message) {
+            int result = MessageBoxW(0, message, TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS), MB_OKCANCEL | MB_ICONINFORMATION);
+            if (result == IDCANCEL) {
+                ExpertRemove();
+            }
+        }
+        #define PAUSE(message)  pause(message)
+    #else // __PAUSE
+        #define PAUSE(message)  /*nothing*/
+    #endif // __PAUSE
 #else
     #define LOGGING(message) /*nothing*/
+    #define PAUSE(message)  /*nothing*/
 #endif // __DEBUG
 
 
@@ -100,6 +131,9 @@ int position_count_buy;
 int position_count_sell;
 datetime t0;
 datetime t1;
+int current_trend;
+datetime entry_date;
+double entry_price;
 
 
 // No.038	④ T3-RSI.mq4（or "T3-RSI2.ex4"）（カスタムインジケーター： 添付ファイル参照 ）
@@ -174,11 +208,11 @@ T3_RSI T3;
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    Trade();
-
     // 利益確定と損切りの単位をpipsからポイントへ変換
     SL = (int)MathRound(10 * STOP_LOSS);
     TP = (int)MathRound(10 * TAKE_PROFIT);
+
+    current_trend = 0;
 
 #ifdef __DEBUG
     #ifndef __MONITOR
@@ -192,7 +226,7 @@ int OnInit() {
             log_path = StringFormat("%s.log", WindowExpertName());
         #endif
 
-        log_file = FileOpen(log_path, FILE_WRITE | FILE_SHARE_READ | FILE_TXT | FILE_COMMON);
+        log_file = FileOpen(log_path, FILE_WRITE | FILE_TXT | FILE_COMMON);
         if (log_file == INVALID_HANDLE) {
             MessageBox(StringFormat("Cannot write log file\n%s\nErrorCode %d", log_path, GetLastError()));
             ExpertRemove();
@@ -273,6 +307,23 @@ void Trade() {
         return;
     }
 
+    if (current_trend != trend) {
+#ifdef __DRAW_TREND_CHAGE
+        string obj_name = (trend == +1 ? "Up" : "Down") + 
+                            "trend started from " +
+                            TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
+        ObjectCreate(0, obj_name, OBJ_VLINE, 0, t1, 0, 0, 0);
+        color line_color = trend == +1 ? clrPink : clrCyan;
+        ObjectSetInteger(0, obj_name, OBJPROP_COLOR, line_color);
+        ObjectSetInteger(0, obj_name, OBJPROP_RAY_RIGHT, false);
+        ObjectSetInteger(0, obj_name, OBJPROP_WIDTH, 1); // 線の太さ
+        ObjectSetInteger(0, obj_name, OBJPROP_STYLE, STYLE_DOT); // 線のスタイル
+        ObjectSetInteger(0, obj_name, OBJPROP_SELECTED, false); // 選択を解除
+#endif // __DRAW_TREND_CHAGE
+        LOGGING(StringFormat("Trend Chaged: %+d ---> %+d", current_trend, trend));
+        current_trend = trend;
+    }
+
     // No.051	⑤ スプレッド制限：5.5
     spread = MarketInfo(Symbol(), MODE_SPREAD);
     if (spread >= 10 * MAX_SPREAD) {
@@ -287,9 +338,9 @@ void Trade() {
     // No.026	移動平均線の種別：Simple
     // No.025	表示移動：0
     // No.027	適用価格：High
-    SMA2_High1 = iMA(Symbol(), Period(), 2, 0, MODE_SMA, PRICE_HIGH, 0);
+    SMA2_High1 = iMA(Symbol(), Period(), 2, -SHIFT, MODE_SMA, PRICE_HIGH, 0);
 #ifdef __MQL5__
-    SMA2_High1 = (High[0] + High[1]) / 2;
+    SMA2_High1 = (High[0 + SHIFT] + High[1 + SHIFT]) / 2;
 #endif
 
     // No.028	② Moving Average（MT4ディフォルトインジケーター） ＊上記①と同じもの
@@ -297,9 +348,9 @@ void Trade() {
     // No.030	表示移動：0
     // No.031	移動平均線の種別：Simple
     // No.032	適用価格：Low
-    SMA2_Low2 = iMA(Symbol(), Period(), 2, 0, MODE_SMA, PRICE_LOW, 0);
+    SMA2_Low2 = iMA(Symbol(), Period(), 2, -SHIFT, MODE_SMA, PRICE_LOW, 0);
 #ifdef __MQL5__
-    SMA2_Low2 = (Low[0] + Low[1]) / 2;
+    SMA2_Low2 = (Low[0 + SHIFT] + Low[1 + SHIFT]) / 2;
 #endif
 
     // No.033	③ Moving Average（MT4ディフォルトインジケーター）
@@ -347,7 +398,7 @@ void Entry(int trend) {
     if (trend == -1 && position_count_sell < LOT_COUNT_SELL) {
         if (Bid >= SMA2_High1) {
             double lots = LOTS;
-            LOGGING(StringFormat("EntryShort: Bid = %.3f, High = %.3f", Ask, SMA2_High1));
+            LOGGING(StringFormat("EntryShort: Bid = %.3f, High = %.3f", Bid, SMA2_High1));
             SafeOrderSend(lots, false);
         }
         return;
@@ -433,31 +484,19 @@ int JudgeTrend() {
 //| トレンド変換によりポジション決済する                             |
 //+------------------------------------------------------------------+
 void ExitTrend(int trend) {
-    // ロングポジションポジション保有中にダウントレンドに変化：ロングポジションをクローズする
     if (position_count_buy > 0) {
-        if (trend == -1) {
-            ExitLong(CLOSE_POSITION_TREND_CHANGED);
-        }
-        else {
-            ExitLong(CLOSE_POSITION_CHECK_TO_EXIT);
-        }
-        return;
+        ExitLong(trend);
     }
-    // ショートポジションポジション保有中にダウントレンドに変化：ショートポジションをクローズする
-    if (position_count_sell > 0 && trend == +1) {
-        if (trend == -1) {
-            ExitShort(CLOSE_POSITION_TREND_CHANGED);
-        }
-        else {
-            ExitShort(CLOSE_POSITION_CHECK_TO_EXIT);
-        }
+
+    if (position_count_sell > 0) {
+        ExitShort(trend);
     }
 }
 
 //+------------------------------------------------------------------+
 //| ロングポジションを決済するか判断する                             |
 //+------------------------------------------------------------------+
-void ExitLong(ENUM_CLOSE_POSITION reason) {
+void ExitLong(int trend) {
     int order_count = OrdersTotal();
 
     for (int i = order_count - 1; i >= 0; --i) {
@@ -472,35 +511,37 @@ void ExitLong(ENUM_CLOSE_POSITION reason) {
         double lots = OrderLots();
         t0 = OrderOpenTime();
 
+#ifdef __EXIT_ON_TREND_CHANGED
         // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
         // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
         // No.103-4	→そのような運用においても、正確にポジション・クローズ、そして 間髪入れないエントリー、にも対応出来ると助かります。
-        if (reason == CLOSE_POSITION_TREND_CHANGED) {
-            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_TREND_CHANGED);
+        if (trend == -1) {
+            SafeOrderClose(ticket, lots, Bid, true, profit, CLOSE_POSITION_TREND_CHANGED);
             continue;
         }
+#endif // __EXIT_ON_TREND_CHANGED
 
         // No.118	① BUYポジションの利益確定
         // No.119	上記【B】①のMoving Averageに価格がヒットした時にポジション決済。(High)
         // No.130	① BUYポジションの損切り
         // No.131	上記【B】①のMoving Averageに価格がヒットした時にポジションを損切り。(High)
         // ⇒黒字なら「利益確定」、赤字なら「損切り」となる。
-        if (Ask >= SMA2_High1) {
-            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_TOUCHED);
+        if (Bid >= SMA2_High1) {
+            SafeOrderClose(ticket, lots, Bid, true, profit, CLOSE_POSITION_TOUCHED);
             continue;
         }
 
         // No.122	③ 上記【C】⑧で利益確定Pipsが指定されている場合
         // No.123	指定されたPips数で利益確定される。
         if (TP != 0 && profit >= +TP) {
-            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_TAKE_PROFIT);
+            SafeOrderClose(ticket, lots, Bid, true, profit, CLOSE_POSITION_TAKE_PROFIT);
             continue;
         }
 
         // No.134	③ 上記【C】⑨で損切りPipsが指定されている場合
         // No.135	指定されたPips数で利益確定される。
         if (SL != 0 && profit <= -SL) {
-            SafeOrderClose(ticket, lots, true, profit, CLOSE_POSITION_STOP_LOSS);
+            SafeOrderClose(ticket, lots, Bid, true, profit, CLOSE_POSITION_STOP_LOSS);
             continue;
         }
     }
@@ -509,7 +550,7 @@ void ExitLong(ENUM_CLOSE_POSITION reason) {
 //+------------------------------------------------------------------+
 //| ショートポジションを決済するか判断する                           |
 //+------------------------------------------------------------------+
-void ExitShort(ENUM_CLOSE_POSITION reason) {
+void ExitShort(int trend) {
     int order_count = OrdersTotal();
 
     for (int i = order_count - 1; i >= 0; --i) {
@@ -524,35 +565,37 @@ void ExitShort(ENUM_CLOSE_POSITION reason) {
         double lots = OrderLots();
         t0 = OrderOpenTime();
 
+#ifdef __EXIT_ON_TREND_CHANGED
         // No.103-2	→今回のV1は,実践の場において,エントリー方向を『手動』で小豆に切り替えて活用します。
         // No.103-3	→例えば、ロングポジションを保有中（未決済）に、トレード方向を「Short Only」に切り替える事（つまり、ドテンのような）も日常茶飯事になります。
         // No.103-4	→そのような運用においても、正確にポジション・クローズ、そして 間髪入れないエントリー、にも対応出来ると助かります。
-        if (reason == CLOSE_POSITION_TREND_CHANGED) {
+        if (trend == +1) {
             SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_TREND_CHANGED);
             continue;
         }
+#endif // __EXIT_ON_TREND_CHANGED
 
         // No.120	② SELLポジションの利益確定
         // No.121	上記【B】②のMoving Averageに価格がヒットした時にポジション決済。(Low)
         // No.132	② SELLポジションの損切り
         // No.133	上記【B】②のMoving Averageに価格がヒットした時にポジションを損切り。(Low)
         // ⇒黒字なら「利益確定」、赤字なら「損切り」となる。
-        if (Bid <= SMA2_Low2) {
-            SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_TOUCHED);
+        if (Ask <= SMA2_Low2) {
+            SafeOrderClose(ticket, lots, Ask, false, profit, CLOSE_POSITION_TOUCHED);
             continue;
         }
 
         // No.122	③ 上記【C】⑧で利益確定Pipsが指定されている場合
         // No.123	指定されたPips数で利益確定される。
         if (TP != 0 && profit >= +TP) {
-            SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_TAKE_PROFIT);
+            SafeOrderClose(ticket, lots, Ask, false, profit, CLOSE_POSITION_TAKE_PROFIT);
             continue;
         }
 
         // No.134	③ 上記【C】⑨で損切りPipsが指定されている場合
         // No.135	指定されたPips数で利益確定される。
         if (SL != 0 && profit <= -SL) {
-            SafeOrderClose(ticket, lots, false, profit, CLOSE_POSITION_STOP_LOSS);
+            SafeOrderClose(ticket, lots, Ask, false, profit, CLOSE_POSITION_STOP_LOSS);
             continue;
         }
     }
@@ -586,6 +629,9 @@ bool SafeOrderSend(double lots, bool buy) {
         }
         int ticket = OrderSend(Symbol(), cmd, lots, price, SLIPPAGE, sl, tp, WindowExpertName(), MAGIC, 0, arrow);
         if (ticket != -1) {
+            entry_date = TimeCurrent();
+            entry_price = price;
+            PAUSE(StringFormat("%s Position Entry:\n - %.3f (Low)\n - %.3f (Order)\n - %.3f (High)", buy ? "Long" : "Short", SMA2_Low2, price, SMA2_High1));
             return true;
         }
         Sleep(100 << k);
@@ -596,14 +642,24 @@ bool SafeOrderSend(double lots, bool buy) {
 //+------------------------------------------------------------------+
 //| ポジション決済をリトライありで行う                               |
 //+------------------------------------------------------------------+
-bool SafeOrderClose(int ticket, double lots, bool buy, double profit, ENUM_CLOSE_POSITION reason) {
-    double price = buy ? Bid : Ask;
+bool SafeOrderClose(int ticket, double lots, double price, bool buy, double profit, ENUM_CLOSE_POSITION reason) {
     LOGGING(StringFormat("%s(%s): %.3f, profit = %.3f", buy ? "ExitLong" : "ExitShort", EnumToString(reason), price, profit));
 
     color arrow = buy ? clrBlue : clrRed;
     for (int k = 0; k < ORDER_FAIL_RETRY_COUNT; ++k) {
         RefreshRates();
         if (OrderClose(ticket, lots, price, SLIPPAGE, arrow)) {
+#ifdef __DRAW_TRADE
+            string obj_name = StringFormat("Exit %s #%d", buy ? "Long" : "Short", ticket); 
+            ObjectCreate(0, obj_name, OBJ_TREND, 0, entry_date, entry_price, TimeCurrent(), price);
+            color line_color = buy ? C'96,255,255' : C'255,96,96';
+            ObjectSetInteger(0, obj_name, OBJPROP_COLOR, line_color);
+            ObjectSetInteger(0, obj_name, OBJPROP_RAY_RIGHT, false);
+            ObjectSetInteger(0, obj_name, OBJPROP_WIDTH, 5); // 線の太さ
+            ObjectSetInteger(0, obj_name, OBJPROP_STYLE, STYLE_DASH); // 線のスタイル
+            ObjectSetInteger(0, obj_name, OBJPROP_SELECTED, false); // 選択を解除
+#endif // __DRAW_TRADE
+            PAUSE(StringFormat("%s Position Exit:\n - %.3f (Low)\n - %.3f (Order)\n - %.3f (High)\n - %s", buy ? "Long" : "Short", SMA2_Low2, price, SMA2_High1, EnumToString(reason)));
             return true;
         }
         Sleep(100 << k);
