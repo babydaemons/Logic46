@@ -62,15 +62,16 @@ POSITION_LIST Output;
 
 // 送信元証券会社名です
 string SenderBroker;
+string SenderBrokerName; // ポジションコピー連携ファイル1列目フィールド値：コメント長制限から口座番号は含めない
+
+// 送信元証券会社名＋口座番号です
+string SenderName;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
 {
-    // EA開始時刻です
-    StartServerTimeEA = TimeCurrent();
-    
     // INIファイルより設定値を初期化します
     if (!Initialize()) {
         return INIT_FAILED;
@@ -102,13 +103,14 @@ bool Initialize()
 {
     // センダー側を識別する証券会社名+口座番号を取得します
     SenderBroker = AccountInfoString(ACCOUNT_COMPANY);
+    SenderBrokerName = GetBrokerName(SenderBroker);
     string SenderAccount = IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN));
-    string sender_name = GetBrokerAccountName(SenderBroker, SenderAccount);
+    SenderName = GetBrokerAccountName(SenderBroker, SenderAccount);
 
     // センダー側設定のINIファイルパスをログ出力します
     string inifile_name = "";
     string inifile_path = "";
-    CreateSettingPath(sender_name, true, inifile_name, inifile_path);
+    CreateSettingPath(SenderName, true, inifile_name, inifile_path);
     printf("●センダー側設定INIファイルは「%s」です。", inifile_path);
     printf("●センダー側証券会社名は「%s」です。", SenderBroker);
     printf("●センダー側口座番号は「%s」です。", SenderAccount);
@@ -174,7 +176,7 @@ bool Initialize()
         }
 
         ArrayResize(CommunacationPathDir, i + 1);
-        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s", sender_name, receiver_name);
+        CommunacationPathDir[i] = StringFormat("CopyPositionEA\\%s\\%s", SenderName, receiver_name);
 
         // ポジションコピー連携ファイル用フォルダを作成する
         if (!FolderCreate(CommunacationPathDir[i], FILE_COMMON)) {
@@ -182,6 +184,8 @@ bool Initialize()
             ERROR(inifile_path, error_message);
             return false;
         }
+
+        ClearPositionDeffference(CommunacationPathDir[i]);
 
         printf("[%03d]レシーバー側の証券会社は「%s」です。", i + 1, receiver_broker);
         printf("[%03d]レシーバー側の口座番号は「%s」です。", i + 1, receiver_account);
@@ -246,6 +250,27 @@ bool CheckReceiverSetting(string base_inifile_path, string base_section_name, st
     string error_message = StringFormat("※エラー: セクション[Receiver]の中に「%s」と「%s」の設定が見つかりません。", sender_broker, sender_account);
     ERROR(inifile_path, error_message);
     return false;
+}
+
+//+------------------------------------------------------------------+
+//| ポジションコピー連携ファイルを全削除します                       |
+//+------------------------------------------------------------------+
+void ClearPositionDeffference(string communication_dir)
+{
+    string file_name;
+    long search_handle = FileFindFirst(communication_dir + "\\*.tsv", file_name, FILE_COMMON);
+    if (search_handle == INVALID_HANDLE) {
+        return;
+    }
+
+    do {
+        string path = communication_dir + "\\" + file_name;
+        if (!FileDelete(path, FILE_COMMON)) {
+            printf("ファイル削除エラー ⇒ %s: %s", file_name, ErrorDescription());
+        }
+    } while (FileFindNext(search_handle, file_name));
+
+    FileFindClose(search_handle);
 }
 
 //+------------------------------------------------------------------+
@@ -319,12 +344,12 @@ void SavePosition()
     int previous = (int)!CurrentIndex;
 
     // 追加されたポジション全体の状態を走査します
-    // 戻り値 change_count は差分の総数です
-    int change_count = ScanAddedPositions(Positions[current], Positions[previous], position_count, 0);
+    // 戻り値 added_count は差分の総数です
+    int added_count = ScanAddedPositions(Positions[current], Positions[previous], position_count, 0);
 
     // 削除されたポジション全体の状態を走査します
     // 戻り値 change_count は差分の総数です
-    change_count = ScanRemovedPositions(Positions[current], Positions[previous], position_count, change_count);
+    int change_count = ScanRemovedPositions(Positions[current], Positions[previous], position_count, added_count);
 
     // 現在のポジション状態の添字と前回のポジション状態の添字を入れ替えます
     CurrentIndex = !CurrentIndex;
@@ -343,7 +368,7 @@ void SavePosition()
 //+------------------------------------------------------------------+
 //| 追加されたポジション全体の状態を走査します                       |
 //+------------------------------------------------------------------+
-int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int change_count)
+int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int added_count)
 {
     // 外側のカウンタ current のループで現在のポジション全体をスキャンします
     for (int current = 0; current < position_count; ++current) {
@@ -351,16 +376,13 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
 
         // 内側のカウンタ previous のループで前回のポジション全体をスキャンします
         for (int previous = 0; Previous.Tickets[previous] != 0 && previous < MAX_POSITION; ++previous) {
-            // EA起動時よりも過去に建てられたポジションはコピー対象外です
-            if (Previous.OpenTime[previous] <= StartServerTimeEA) { continue; }
-
             // チケット番号が一致するとき、
             if (Previous.Tickets[previous] == Current.Tickets[current]) {
                 // エントリー価格またはストップロスまたはテイクプロフィットのいずれかが不一致ならば変化ありです
                 if ((Previous.EntryPrice[previous] != Current.EntryPrice[current]) ||
                     (Previous.StopLoss[previous] != Current.StopLoss[current]) ||
                     (Previous.TakeProfit[previous] != Current.TakeProfit[current])) {
-                    change_count = AppendChangedPosition(Current, POSITION_MODIFY, change_count, current);
+                    added_count = AppendChangedPosition(Current, POSITION_MODIFY, added_count, current);
                     added = false;
                     break;               
                 }
@@ -374,11 +396,11 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
 
         // チケット番号が不一致のとき、ポジション追加です
         if (added) {
-            change_count = AppendChangedPosition(Current, POSITION_ADD, change_count, current);                 
+            added_count = AppendChangedPosition(Current, POSITION_ADD, added_count, current);                 
         }
     }
 
-    return change_count;
+    return added_count;
 }
 
 //+------------------------------------------------------------------+
@@ -416,6 +438,7 @@ int AppendChangedPosition(POSITION_LIST& Current, ENUM_POSITION_OPERATION change
 {
     Output.Change[dst] = change;
     Output.Tickets[dst] = Current.Tickets[src];
+    Output.EntryDate[dst] = Current.EntryDate[src];
     Output.EntryType[dst] = Current.EntryType[src];
     Output.EntryPrice[dst] = Current.EntryPrice[src];
     Output.SymbolValue[dst] = Current.SymbolValue[src];
@@ -430,11 +453,12 @@ int AppendChangedPosition(POSITION_LIST& Current, ENUM_POSITION_OPERATION change
 //+------------------------------------------------------------------+
 void OutputPositionDeffference(string output_path_prefix, int change_count)
 {
-    // システムが開始されてから経過したミリ秒数を取得します
-    ulong epoch = GetTickCount64();
-
     // コピーポジション連携用タブ区切りファイルのファイル名
-    string path = StringFormat("%s\\%020u.tsv", output_path_prefix, epoch);
+    string timestamp = TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
+    StringReplace(timestamp, ".", "");
+    StringReplace(timestamp, ":", "");
+    StringReplace(timestamp, " ", "-");
+    string path = StringFormat("%s\\%s-%010u.tsv", output_path_prefix, timestamp, Output.Tickets[0]);
 
     // ファイルをオープンします
     int file = FileOpen(path, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON, '\t', CP_ACP);
@@ -450,14 +474,16 @@ void OutputPositionDeffference(string output_path_prefix, int change_count)
         string symbol = Output.SymbolValue[i];
         StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
         // タブ区切りファイルの仕様
-        // 0列目：送信元証券会社名
-        string line = SenderBroker + "\t";
+        // 0列目：送信元証券会社名：コメント長制限から口座番号は含めない
+        string line = SenderBrokerName + "\t";
         // 1列目：+1: ポジション追加 ／ -1: ポジション削除 ／ 0: ポジション修正
         line += StringFormat("%+d\t", Output.Change[i]);
         // 2列目：マジックナンバー
         line += StringFormat("%d\t", Output.MagicNumber[i]);
         // 3列目：エントリー時刻
-        line += StringFormat("%d\t", TimeToString(Output.EntryDate[i], TIME_DATE | TIME_MINUTES | TIME_SECONDS));
+        string entry_time = TimeToString(Output.EntryDate[i], TIME_DATE | TIME_MINUTES | TIME_SECONDS);
+        StringReplace(entry_time, " ", "-");
+        line += StringFormat("%s\t", entry_time);
         // 4列目：エントリー種別
         line += StringFormat("%d\t", Output.EntryType[i]);
         // 5列目：エントリー価格

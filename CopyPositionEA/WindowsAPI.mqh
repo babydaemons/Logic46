@@ -32,7 +32,3 @@ uint GetPrivateProfileString(
 }
 
 const string NONE = "<NONE>";
-
-#import "kernel32.dll"
-ulong GetTickCount64();
-#import

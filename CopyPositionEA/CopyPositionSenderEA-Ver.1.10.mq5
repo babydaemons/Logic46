@@ -28,9 +28,6 @@ int ScanCurrentPositions(POSITION_LIST& Current)
         ulong ticket = PositionGetTicket(i);
         if (ticket == 0) { continue; }
 
-        // EA起動時よりも過去に建てられたポジションはコピー対象外です
-        if ((datetime)PositionGetInteger(POSITION_TIME) <= StartServerTimeEA) { continue; }
-
         int entry_type = 0;
         switch ((int)PositionGetInteger(POSITION_TYPE)) {
         case POSITION_TYPE_BUY:
@@ -61,9 +58,6 @@ int ScanCurrentPositions(POSITION_LIST& Current)
         // トレード中のポジションを選択します
         ulong ticket = OrderGetTicket(i);
         if (ticket == 0) { continue; }
-
-        // EA起動時よりも過去に建てられたポジションはコピー対象外です
-        if ((datetime)OrderGetInteger(ORDER_TIME_SETUP) <= StartServerTimeEA) { continue; }
 
         int entry_type = 0;
         switch ((int)OrderGetInteger(ORDER_TYPE)) {

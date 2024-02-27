@@ -17,6 +17,28 @@ CTrade Trader;
 //+------------------------------------------------------------------+
 void Entry(string sender_broker, int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
 {
+    string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
+    for (int i = 0; i < PositionsTotal(); ++i) {
+        ulong ticket = PositionGetTicket(i);
+        if (PositionGetInteger(POSITION_MAGIC) != magic_number) {
+            continue;
+        }
+        string position_comment = PositionGetString(POSITION_COMMENT);
+        if (position_comment == comment) {
+            return;
+        }
+    }
+    for (int i = 0; i < OrdersTotal(); ++i) {
+        ulong ticket = OrderGetTicket(i);
+        if (OrderGetInteger(ORDER_MAGIC) != magic_number) {
+            continue;
+        }
+        string position_comment = OrderGetString(ORDER_COMMENT);
+        if (position_comment == comment) {
+            return;
+        }
+    }
+
     lots = RoundLots(symbol, lots);
 
     double price = 0;
@@ -26,7 +48,6 @@ void Entry(string sender_broker, int magic_number, int entry_type, double entry_
         price = SymbolInfoDouble(symbol, SYMBOL_BID);
     }
 
-    string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
     string error_message = "";
     if (entry_type == +1) {
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {

@@ -30,9 +30,6 @@ int CommunacationDirCount = 0;
 // コピーポジション連携用タブ区切りファイルのプレフィックスの配列です
 string CommunacationPathDir[];
 
-// EA開始時刻です
-datetime StartServerTimeEA;
-
 //+------------------------------------------------------------------+
 //| エラー表示します                                                 |
 //+------------------------------------------------------------------+
@@ -180,7 +177,18 @@ string GetBrokerAccountName(string broker, string account)
     StringReplace(broker, " ", "_");
     StringReplace(broker, ",", "");
     StringReplace(broker, ".", "");
-    return StringFormat("%s-%s", broker, account);
+    return StringFormat("%s-%s", GetBrokerName(broker), account);
+}
+
+//+------------------------------------------------------------------+
+//| 証券会社名の文字列を返します 　　　　　　　                      |
+//+------------------------------------------------------------------+
+string GetBrokerName(string broker)
+{
+    StringReplace(broker, " ", "_");
+    StringReplace(broker, ",", "");
+    StringReplace(broker, ".", "");
+    return broker;
 }
 
 //+------------------------------------------------------------------+

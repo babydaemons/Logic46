@@ -14,6 +14,19 @@
 //+------------------------------------------------------------------+
 void Entry(string sender_broker, int magic_number, int entry_type, double entry_price, string symbol, int sender_ticket, double lots, double stoploss, double takeprofit)
 {
+    string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
+    for (int i = 0; i < OrdersTotal(); ++i) {
+        if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            break;
+        }
+        if (OrderMagicNumber() != magic_number) {
+            continue;
+        }
+        if (OrderComment() != comment) {
+            return;
+        }
+    }
+
     lots = RoundLots(symbol, lots);
 
     double price = 0;
@@ -54,7 +67,6 @@ void Entry(string sender_broker, int magic_number, int entry_type, double entry_
         return;
     }
 
-    string comment = StringFormat("%s-#%d", sender_broker, sender_ticket);
     string error_message = "";
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
         int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, 0, 0, comment, magic_number, 0, arrow);
@@ -156,6 +168,9 @@ void Modify(string sender_broker, int magic_number, int entry_type, double entry
         if (!OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
             break;
         }
+        if (OrderMagicNumber() != magic_number) {
+            continue;
+        }
         if (OrderComment() != comment) {
             continue;
         }
@@ -179,3 +194,4 @@ void Modify(string sender_broker, int magic_number, int entry_type, double entry
         return;
     }
 }
+
