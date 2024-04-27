@@ -1,0 +1,45 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34511.84
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "pyforex", ".\pyforex\pyforex.pyproj", "{A1403273-8635-4ECD-9E5A-8555347D777E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "pyforex_DLL", ".\pyforex_DLL\pyforex_DLL.csproj", "{13D887BE-5408-4278-94DB-50D82C015E1C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1403273-8635-4ECD-9E5A-8555347D777E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1403273-8635-4ECD-9E5A-8555347D777E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A1403273-8635-4ECD-9E5A-8555347D777E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A1403273-8635-4ECD-9E5A-8555347D777E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1403273-8635-4ECD-9E5A-8555347D777E}.Release|x64.ActiveCfg = Release|Any CPU
+		{A1403273-8635-4ECD-9E5A-8555347D777E}.Release|x86.ActiveCfg = Release|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Debug|x64.Build.0 = Debug|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Debug|x86.Build.0 = Debug|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Release|x64.ActiveCfg = Release|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Release|x64.Build.0 = Release|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Release|x86.ActiveCfg = Release|Any CPU
+		{13D887BE-5408-4278-94DB-50D82C015E1C}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {264D485E-A874-48BD-BF8F-F2948B1BEBA4}
+	EndGlobalSection
+EndGlobal
