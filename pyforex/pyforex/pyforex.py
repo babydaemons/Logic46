@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+
 import sys
 import struct
 import numpy as np
@@ -11,9 +14,9 @@ from keras.layers import Dense
 from keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping
 
-COMMON_FOLDER_PATH = f"{sys.argv[1]}\\Files\\pyforex";
-DATETIMES_PATH = f"{COMMON_FOLDER_PATH}\\datetimes.bin"
-CLOSE_PRICES_PATH = f"{COMMON_FOLDER_PATH}\\close_prices.bin"
+COMMON_FOLDER_PATH = f"{sys.argv[1]}/Files/pyforex";
+DATETIMES_PATH = f"{COMMON_FOLDER_PATH}/datetimes.bin"
+CLOSE_PRICES_PATH = f"{COMMON_FOLDER_PATH}/close_prices.bin"
 
 ##############################################################################################
 
@@ -85,9 +88,9 @@ print(f"price_change.shape : {price_change.shape}")
 def get_incline_data(y, n):
     x = np.array(list(range(n)))
     y = y.T
-    # ƒf[ƒ^‚ğs—ñ‚É•ÏŠ·‚µAƒoƒCƒAƒXiØ•Ğj‚ğ’Ç‰Á‚·‚é
+    # ãƒ‡ãƒ¼ã‚¿ã‚’è¡Œåˆ—ã«å¤‰æ›ã—ã€ãƒã‚¤ã‚¢ã‚¹ï¼ˆåˆ‡ç‰‡ï¼‰ã‚’è¿½åŠ ã™ã‚‹
     X = np.vstack([x, np.ones(len(x))]).T
-    # Å¬“ñæ–@‚ğg—p‚µ‚Ä’¼ü‚ÌŒW”‚ğŒvZ‚·‚é
+    # æœ€å°äºŒä¹—æ³•ã‚’ä½¿ç”¨ã—ã¦ç›´ç·šã®ä¿‚æ•°ã‚’è¨ˆç®—ã™ã‚‹
     m, c = np.linalg.lstsq(X, y, rcond=None)[0]
     return m
 
@@ -103,7 +106,7 @@ def create_incline_data(values, rows):
     inlines = np.empty((row_count, M3 + 1))
     
     for i in range(rows):
-        # get_volume_change_valueŠÖ”‚ğƒxƒNƒgƒ‹‰»‚µ‚ÄAˆê“x‚É•¡”‚Ìƒf[ƒ^ƒ|ƒCƒ“ƒg‚ğˆ—‚·‚é
+        # get_volume_change_valueé–¢æ•°ã‚’ãƒ™ã‚¯ãƒˆãƒ«åŒ–ã—ã¦ã€ä¸€åº¦ã«è¤‡æ•°ã®ãƒ‡ãƒ¼ã‚¿ãƒã‚¤ãƒ³ãƒˆã‚’å‡¦ç†ã™ã‚‹
         minute_indices = np.arange(column_range_minutes[0], column_range_minutes[N1 - 1] + FIVE_MINUTES, FIVE_MINUTES)
         hour_indices = np.arange(M1 + column_range_hours[0], M1 + column_range_hours[N2 - 1] + 1)
         day_indices = np.arange(M2 + column_range_days[0], M2 + column_range_days[N3 - 1] + 1)
@@ -142,15 +145,15 @@ y = predict
 
 ##############################################################################################
 
-# ŒP—ûƒf[ƒ^‚ÆƒeƒXƒgƒf[ƒ^‚É•ªŠ„
+# è¨“ç·´ãƒ‡ãƒ¼ã‚¿ã¨ãƒ†ã‚¹ãƒˆãƒ‡ãƒ¼ã‚¿ã«åˆ†å‰²
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 ##############################################################################################
 
-# ƒ‚ƒfƒ‹‚Ì\’z
+# ãƒ¢ãƒ‡ãƒ«ã®æ§‹ç¯‰
 N = X.shape[1]
 model = Sequential()
-# L2³‘¥‰»‚ğ“±“ü‚·‚é—á
+# L2æ­£å‰‡åŒ–ã‚’å°å…¥ã™ã‚‹ä¾‹
 #model.add(LSTM(units=N>>0, input_shape=[input_dimension], kernel_regularizer=l2(0.01)))
 model.add(Dense(units=N>>0, activation='relu', input_dim=N, kernel_regularizer=l2(0.01)))
 model.add(Dense(units=N>>1, activation='relu'))
@@ -163,29 +166,29 @@ model.add(Dense(units=N>>2, activation='relu'))
 #model.add(Dense(units=N>>8, activation='relu'))
 #model.add(Dense(units=N>>9, activation='relu'))
 #model.add(Dense(units=N>>10, activation='relu'))
-model.add(Dense(units=1, activation='linear'))  # o—Í‘w‚ÌŠˆ«‰»ŠÖ”‚Ílinear
+model.add(Dense(units=1, activation='linear'))  # å‡ºåŠ›å±¤ã®æ´»æ€§åŒ–é–¢æ•°ã¯linear
 
 ##############################################################################################
 
-# ƒ‚ƒfƒ‹‚ÌƒRƒ“ƒpƒCƒ‹
-model.compile(optimizer='adam', loss='mean_squared_error')  # •½‹Ï“ñæŒë·‚ğ‘¹¸ŠÖ”‚Æ‚µ‚Äg—p
+# ãƒ¢ãƒ‡ãƒ«ã®ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«
+model.compile(optimizer='adam', loss='mean_squared_error')  # å¹³å‡äºŒä¹—èª¤å·®ã‚’æå¤±é–¢æ•°ã¨ã—ã¦ä½¿ç”¨
 
 ##############################################################################################
 
-# Early StoppingƒR[ƒ‹ƒoƒbƒN‚Ìİ’è
+# Early Stoppingã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯ã®è¨­å®š
 early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
 
 ##############################################################################################
 
-# ƒ‚ƒfƒ‹‚ÌŠwK
+# ãƒ¢ãƒ‡ãƒ«ã®å­¦ç¿’
 model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stopping])
 #model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_test, y_test))
 
 ##############################################################################################
 
-# ŠwKÏ‚İƒ‚ƒfƒ‹‚ğg‚Á‚ÄÄ\’z
+# å­¦ç¿’æ¸ˆã¿ãƒ¢ãƒ‡ãƒ«ã‚’ä½¿ã£ã¦å†æ§‹ç¯‰
 y_predict = model.predict(X)
-# Ä\’zŒë·‚ÌŒvZ
+# å†æ§‹ç¯‰èª¤å·®ã®è¨ˆç®—
 error = y.ravel() - y_predict.ravel()
 
 ##############################################################################################
@@ -195,13 +198,13 @@ print(y_predict)
 
 ##############################################################################################
 
-# ‹³tƒf[ƒ^‚Ìƒmƒ‹ƒ€
+# æ•™å¸«ãƒ‡ãƒ¼ã‚¿ã®ãƒãƒ«ãƒ 
 y_norm = np.mean(np.square(y)) ** 0.5
 
-# Ä\’zŒë·‚Ìƒmƒ‹ƒ€
+# å†æ§‹ç¯‰èª¤å·®ã®ãƒãƒ«ãƒ 
 error_norm = np.mean(np.square(error)) ** 0.5
 
-# Ä\’zŒë·‚ÌŒvZ
+# å†æ§‹ç¯‰èª¤å·®ã®è¨ˆç®—
 reconstruction_error = error_norm / y_norm
 
 ##############################################################################################
