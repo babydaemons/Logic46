@@ -18,7 +18,7 @@ const uint WRITE_SHARED_MEMORY_SIZE = 1 * 1024 * 1024 * 1024;
 
 const int FIVE_MINUTES = 5;
 const int HOUR_MINUTES = 60;
-const int DAY_MINUES = 19 * HOUR_MINUTES + 30;
+const int DAY_MINUES = 24 * HOUR_MINUTES;
 const int WEEK_MINUES = 5 * DAY_MINUES;
 const int MONTH_MINUES = 4 * WEEK_MINUES;
 const int PREDICT_MINUTES = 60;

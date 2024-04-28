@@ -15,6 +15,7 @@
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <CommandLineArguments>C:\Users\shingo\AppData\Roaming\MetaQuotes\Terminal\Common</CommandLineArguments>
+    <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -28,28 +29,10 @@
     <Compile Include="pyforex.py" />
   </ItemGroup>
   <ItemGroup>
-    <Interpreter Include="pyforex\">
-      <Id>pyforex</Id>
-      <Version>0.0</Version>
-      <Description>pyforex (Python 3.12 (64-bit))</Description>
-      <InterpreterPath>Scripts\python.exe</InterpreterPath>
-      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
-      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
-      <Architecture>X64</Architecture>
-    </Interpreter>
     <Interpreter Include="venv3.12\">
       <Id>venv3.12</Id>
       <Version>0.0</Version>
       <Description>venv3.12 (Python 3.12 (64-bit))</Description>
-      <InterpreterPath>Scripts\python.exe</InterpreterPath>
-      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
-      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
-      <Architecture>X64</Architecture>
-    </Interpreter>
-    <Interpreter Include="venv\">
-      <Id>venv</Id>
-      <Version>3.11</Version>
-      <Description>venv (Python 3.11 (64-bit))</Description>
       <InterpreterPath>Scripts\python.exe</InterpreterPath>
       <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
       <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>

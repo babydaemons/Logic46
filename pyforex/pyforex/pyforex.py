@@ -21,16 +21,16 @@ CLOSE_PRICES_PATH = f"{COMMON_FOLDER_PATH}/close_prices.bin"
 ##############################################################################################
 
 FIVE_MINUTES = 5
-HOURS = 60
-DAYS = 19 * 60 + 30
-#WEEKS = 5 * DAYS
-PREDICT = 60
+HOUR_MINUTES = 60
+DAY_MINUES = 24 * HOUR_MINUTES
+#WEEKS = 5 * DAY_MINUES
+PREDICT_MINUTES = 60
 
 column_range_minutes = range(5, 360 + 1, 5)
 column_range_hours = range(1, 5 * 19 + 1)
 #column_range_days = range(1, 20 + 1)
 column_count = len(column_range_minutes) + len(column_range_hours) #+ len(column_range_days)
-ROW_COUNT = 250 * DAYS
+ROW_COUNT = 250 * DAY_MINUES
 
 ##############################################################################################
 
@@ -64,10 +64,10 @@ def get_price_change(values, column_range, span):
 
 def create_price_change_data(values):
     price_change_five_minutes = get_price_change(values, column_range_minutes, FIVE_MINUTES)
-    price_change_hours = get_price_change(values, column_range_hours, HOURS)
-    #price_change_days = get_price_change(values, column_range_days, DAYS)
+    price_change_hours = get_price_change(values, column_range_hours, HOUR_MINUTES)
+    #price_change_days = get_price_change(values, column_range_days, DAY_MINUES)
 
-    predict = ((values[:-PREDICT] - values[PREDICT:]) / values[:-PREDICT]) * 100.0
+    predict = ((values[:-PREDICT_MINUTES] - values[PREDICT_MINUTES:]) / values[:-PREDICT_MINUTES]) * 100.0
     #rows = min(price_change_five_minutes.shape[0], price_change_hours.shape[0], price_change_days.shape[0], len(predict))
     rows = min(price_change_five_minutes.shape[0], price_change_hours.shape[0], len(predict))
     predict = predict.ravel()
@@ -162,7 +162,7 @@ model = Sequential()
 model.add(Dense(units=N>>0, activation='relu', input_dim=N, kernel_regularizer=l2(0.01)))
 model.add(Dense(units=N>>1, activation='relu'))
 model.add(Dense(units=N>>2, activation='relu'))
-#model.add(Dense(units=N>>3, activation='relu'))
+model.add(Dense(units=N>>3, activation='relu'))
 #model.add(Dense(units=N>>4, activation='relu'))
 #model.add(Dense(units=N>>5, activation='relu'))
 #model.add(Dense(units=N>>6, activation='relu'))
