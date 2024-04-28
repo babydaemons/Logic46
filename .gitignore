@@ -2,5 +2,13 @@
 *.ex4
 *.ex5
 *.zip
+*.pdf
+*.xml
+*.xlsx
 bin/
 obj/
+orig/
+.vscode/
+dist/
+build/
+venv*/
