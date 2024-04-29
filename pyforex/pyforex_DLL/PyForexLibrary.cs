@@ -7,7 +7,8 @@ public static class PyForexLibrary
     public static void CreateProcess(string commandLine, string commonFolder)
     {
         ProcessStartInfo startInfo = new ProcessStartInfo();
-        startInfo.FileName = $"{commandLine} {commonFolder}";
+        startInfo.FileName = commandLine;
+        startInfo.Arguments = commonFolder;
         _process = Process.Start(startInfo);
     }
 
