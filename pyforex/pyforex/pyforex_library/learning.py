@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 
 from sklearn.model_selection import train_test_split
@@ -120,6 +122,7 @@ def learning(values):
         return similarity
 
     print(f"Reconstruction Error: {reconstruction_error}, Mean: {np.mean(error)}, Similarity: {cosine_similarity(y, y_predict)}") 
+    return model
 
 ##############################################################################################
 
@@ -200,3 +203,13 @@ def create_incline_data(values, rows):
 
     return inlines
 
+def predict(model, x_values):
+    (price_change, _) = create_price_change_data(x_values)
+    sys.stderr.write(f"price_change.shape : {price_change.shape}")
+
+    inlines = create_incline_data(x_values, x_values.shape[0])
+    sys.stderr.write(f"inlines.shape : {inlines.shape}")
+
+    X = np.hstack((price_change, inlines))
+    y_predict = model.predict(X)
+    return (y_predict.ravel())[0]
