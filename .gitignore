@@ -5,8 +5,10 @@
 *.pdf
 *.xml
 *.xlsx
+*.tsv
 bin/
 obj/
+Properties/
 orig/
 .vscode/
 dist/
