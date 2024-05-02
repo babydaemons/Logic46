@@ -24,7 +24,12 @@ ROW_COUNT = 250 * DAY_MINUES
 
 ##############################################################################################
 
-def learning(values):
+def load(model_path):
+    model = Sequential()
+    model.load(model_path)
+    return model
+
+def learning(values, model_path):
     (price_change, predict) = create_price_change_data(values)
     print(f"price_change.shape : {price_change.shape}")
 
@@ -85,6 +90,9 @@ def learning(values):
     # モデルの学習
     model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stopping])
     #model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_test, y_test))
+
+    # モデルを保存
+    model.save(model_path)
 
     ##############################################################################################
 
@@ -205,11 +213,15 @@ def create_incline_data(values, rows):
 
 def predict(model, x_values):
     (price_change, _) = create_price_change_data(x_values)
-    sys.stderr.write(f"price_change.shape : {price_change.shape}")
+    print(f"price_change.shape : {price_change.shape}")
 
     inlines = create_incline_data(x_values, x_values.shape[0])
-    sys.stderr.write(f"inlines.shape : {inlines.shape}")
+    print(f"inlines.shape : {inlines.shape}")
+
+    price_change = reshape_matrix(price_change, 1)
+    inlines = reshape_matrix(inlines, 1)
 
     X = np.hstack((price_change, inlines))
     y_predict = model.predict(X)
+
     return (y_predict.ravel())[0]
