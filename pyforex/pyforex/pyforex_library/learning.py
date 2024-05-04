@@ -30,11 +30,13 @@ def load(model_path):
     return model
 
 def learning(values, model_path):
+    print("##### creating price change data...")
     (price_change, predict) = create_price_change_data(values)
-    print(f"price_change.shape : {price_change.shape}")
+    #print(f"price_change.shape : {price_change.shape}")
 
+    print("##### creating incline data...")
     inlines = create_incline_data(values, values.shape[0])
-    print(f"inlines.shape : {inlines.shape}")
+    #print(f"inlines.shape : {inlines.shape}")
 
     rows = min(price_change.shape[0], inlines.shape[0])
     price_change = reshape_matrix(price_change, rows)
@@ -103,8 +105,8 @@ def learning(values, model_path):
 
     ##############################################################################################
 
-    print(y)
-    print(y_predict)
+    #print(y)
+    #print(y_predict)
 
     ##############################################################################################
 
@@ -213,10 +215,10 @@ def create_incline_data(values, rows):
 
 def predict(model, x_values):
     (price_change, _) = create_price_change_data(x_values)
-    print(f"price_change.shape : {price_change.shape}")
+    #print(f"price_change.shape : {price_change.shape}")
 
     inlines = create_incline_data(x_values, x_values.shape[0])
-    print(f"inlines.shape : {inlines.shape}")
+    #print(f"inlines.shape : {inlines.shape}")
 
     price_change = reshape_matrix(price_change, 1)
     inlines = reshape_matrix(inlines, 1)

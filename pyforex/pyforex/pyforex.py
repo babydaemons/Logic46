@@ -3,51 +3,76 @@
 
 import numpy as np
 
-import os
 import sys
 import struct
 
+import win32pipe
+import win32file
+
 import pyforex_library.learning
 
-COMMON_FOLDER_PATH = f"{sys.argv[1]}/Files/pyforex"
-MODEL_DATA_PATH = f"{COMMON_FOLDER_PATH}/model_data.keras"
-LEARNING_DATA_PATH = f"{COMMON_FOLDER_PATH}/learning_data.bin"
-PREDICT_DATA_PATH = f"{COMMON_FOLDER_PATH}/predict_data.bin"
-PREDICT_RESULT_PATH = f"{COMMON_FOLDER_PATH}/predict_result.txt"
+COMMON_FOLDER_PATH = sys.argv[1]
+PIPE_NAME = f"pyforex_{sys.argv[2]}"
+MODEL_DATA_PATH = f"{COMMON_FOLDER_PATH}\\Files\\pyforex\\model_data.keras"
+RESPONSE_DATA_PATH = f"{COMMON_FOLDER_PATH}\\Files\\pyforex\\response_data.txt"
 
 ##############################################################################################
 
-def load_values(path: str, fmt: str):
-    while True:
-        try:
-            with open(path, "rb") as f:
-                byte_image = f.read()
-                array_size = str(len(byte_image) // 8)
-                values = np.array(struct.unpack(array_size + fmt, byte_image))
-            return values
-        except Exception:
-            pass
+def load_values(byte_image: bytes, fmt: str):
+    array_size = str(len(byte_image) // 8)
+    values = np.array(struct.unpack(array_size + fmt, byte_image))
+    return values
 
+##############################################################################################
+
+# 名前付きパイプの作成
+pipe_path = f"\\\\.\\pipe\\{PIPE_NAME}"
+pipe = win32pipe.CreateNamedPipe(
+    pipe_path,
+    win32pipe.PIPE_ACCESS_DUPLEX,
+    win32pipe. PIPE_TYPE_BYTE | win32pipe.PIPE_READMODE_BYTE | win32pipe.PIPE_WAIT,
+    1, 1, 1024 * 1024, 0, None)
+
+# バッファの準備
+bytes_image = b''
+
+# 機械学習のモデル
 model = None
-if os.path.exists(MODEL_DATA_PATH):
-    model = pyforex_library.learning.load(MODEL_DATA_PATH)
 
+# クライアントの接続を待つ
+win32pipe.ConnectNamedPipe(pipe, None)
+
+# 無限ループ
 while True:
-    if os.path.exists(LEARNING_DATA_PATH):
-        values = load_values(LEARNING_DATA_PATH, 'd')
-        model = pyforex_library.learning.learning(values, MODEL_DATA_PATH)
-        os.remove(LEARNING_DATA_PATH)
+    # パイプから1文字読み取る
+    _, byte = win32file.ReadFile(pipe, 1)
 
-    if os.path.exists(PREDICT_DATA_PATH):
-        values = load_values(PREDICT_DATA_PATH, 'd')
-        predict_value = pyforex_library.learning.predict(model, values)
-        os.remove(PREDICT_DATA_PATH)
+    # バッファに追加
+    bytes_image += byte
+    
+    # 改行文字を読んだら
+    if byte == b'\n':
+        # 文字列へ変換
+        line = bytes_image.decode('utf-8').replace("\r", "")
+        #print(line)
 
-        while True:
-            try:
-                with open(PREDICT_RESULT_PATH, "wt") as f:
-                    f.write(f"{predict_value}")
-                    break 
-            except Exception:
-                pass
+        fields = line.split(',')
+        request = fields[0]
+        length = int(fields[1])
 
+        # パイプから全ての文字を読み取る
+        _, bytes_image = win32file.ReadFile(pipe, length)
+        values = load_values(bytes_image, 'd')
+
+        if request == "EXECUTE_LEARNING":
+            model = pyforex_library.learning.learning(values, MODEL_DATA_PATH)
+            with open(RESPONSE_DATA_PATH, "w") as f:
+                f.write("DONE\n")
+
+        if request == "EXECUTE_PREDICT":
+            predict_value = pyforex_library.learning.predict(model, values)
+            response = f"DONE,{predict_value}"
+            win32file.WriteFile(pipe, f"{response}\r\n".encode("utf-8"))
+
+        # 次の準備
+        bytes_image = b''
