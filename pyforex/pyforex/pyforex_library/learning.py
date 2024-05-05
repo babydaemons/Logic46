@@ -178,6 +178,10 @@ def get_incline_data(y, n):
     # データを行列に変換し、バイアス（切片）を追加する
     X = np.vstack([x, np.ones(len(x))]).T
     # 最小二乗法を使用して直線の係数を計算する
+    print("########## get_incline_data() ###########")
+    print(f"get_incline_data(): x = {x.shape}")
+    print(f"get_incline_data(): y = {y.shape}")
+    print(f"get_incline_data(): X = {X.shape}")
     m, _ = np.linalg.lstsq(X, y, rcond=None)[0]
     return m
 
