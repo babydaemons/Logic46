@@ -73,6 +73,7 @@ while True:
             predict_value = pyforex_library.learning.predict(model, values)
             response = f"DONE,{predict_value}"
             win32file.WriteFile(pipe, f"{response}\r\n".encode("utf-8"))
+            print(f"{fields[2]} {fields[3]} {predict_value}")
 
         # 次の準備
         bytes_image = b''

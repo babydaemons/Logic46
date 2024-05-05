@@ -10,17 +10,14 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 ##############################################################################################
 
-MINUTE = 1
-FIVE_MINUTES = 5
-HOUR_MINUTES = 60
-DAY_MINUES = 24 * HOUR_MINUTES
-PREDICT_MINUTES = 60
+ONE_HOUR = 1
+DAY_HOURS = 24 * ONE_HOUR
+PREDICT_HOURS = 4 * ONE_HOUR
 
-column_range_minutes = range(1, 60 + 1)
-column_range_five_minutes = range(5, 360 + 1, 5)
-column_range_hours = range(1, 5 * 19 + 1)
-column_count = len(column_range_minutes) + len(column_range_five_minutes) + len(column_range_hours)
-ROW_COUNT = 250 * DAY_MINUES
+column_range_hours = range(1, 5 * DAY_HOURS + 1)
+column_range_days = range(1, 60 * DAY_HOURS + 1, DAY_HOURS)
+column_count = len(column_range_hours) + len(column_range_days)
+ROW_COUNT = 250 * DAY_HOURS
 
 ##############################################################################################
 
@@ -32,11 +29,9 @@ def load(model_path):
 def learning(values, model_path):
     print("##### creating price change data...")
     (price_change, predict) = create_price_change_data(values)
-    #print(f"price_change.shape : {price_change.shape}")
 
     print("##### creating incline data...")
     inlines = create_incline_data(values, values.shape[0])
-    #print(f"inlines.shape : {inlines.shape}")
 
     rows = min(price_change.shape[0], inlines.shape[0])
     price_change = reshape_matrix(price_change, rows)
@@ -62,19 +57,11 @@ def learning(values, model_path):
     # モデルの構築
     N = X.shape[1]
     model = Sequential()
-    # L2正則化を導入する例
-    #model.add(LSTM(units=N>>0, input_shape=[input_dimension], kernel_regularizer=l2(0.01)))
+    # L2正則化を導入する例 #model.add(LSTM(units=N>>0, input_shape=[input_dimension], kernel_regularizer=l2(0.01)))
     model.add(Dense(units=N>>0, activation='relu', input_dim=N, kernel_regularizer=l2(0.01)))
     model.add(Dense(units=N>>1, activation='relu'))
     model.add(Dense(units=N>>2, activation='relu'))
     model.add(Dense(units=N>>3, activation='relu'))
-    #model.add(Dense(units=N>>4, activation='relu'))
-    #model.add(Dense(units=N>>5, activation='relu'))
-    #model.add(Dense(units=N>>6, activation='relu'))
-    #model.add(Dense(units=N>>7, activation='relu'))
-    #model.add(Dense(units=N>>8, activation='relu'))
-    #model.add(Dense(units=N>>9, activation='relu'))
-    #model.add(Dense(units=N>>10, activation='relu'))
     model.add(Dense(units=1, activation='linear'))  # 出力層の活性化関数はlinear
 
     ##############################################################################################
@@ -102,11 +89,6 @@ def learning(values, model_path):
     y_predict = model.predict(X)
     # 再構築誤差の計算
     error = y.ravel() - y_predict.ravel()
-
-    ##############################################################################################
-
-    #print(y)
-    #print(y_predict)
 
     ##############################################################################################
 
@@ -153,21 +135,19 @@ def get_price_change(values, column_range, span):
     return matrix
 
 def create_price_change_data(values):
-    price_change_minutes = get_price_change(values, column_range_minutes, MINUTE)
-    price_change_five_minutes = get_price_change(values, column_range_five_minutes, FIVE_MINUTES)
-    price_change_hours = get_price_change(values, column_range_hours, HOUR_MINUTES)
+    price_change_hours = get_price_change(values, column_range_hours, ONE_HOUR)
+    price_change_days = get_price_change(values, column_range_days, DAY_HOURS)
 
-    predict = ((values[:-PREDICT_MINUTES] - values[PREDICT_MINUTES:]) / values[:-PREDICT_MINUTES]) * 100.0
-    rows = min(price_change_minutes.shape[0], price_change_five_minutes.shape[0], price_change_hours.shape[0], len(predict))
+    predict = ((values[:-PREDICT_HOURS] - values[PREDICT_HOURS:]) / values[:-PREDICT_HOURS]) * 100.0
+    rows = min(price_change_hours.shape[0], price_change_days.shape[0], len(predict))
     predict = predict.ravel()
     predict = predict[:rows].reshape(rows, 1)
 
-    price_change_minutes = reshape_matrix(price_change_minutes, rows)
-    price_change_five_minutes = reshape_matrix(price_change_five_minutes, rows)
     price_change_hours = reshape_matrix(price_change_hours, rows)
+    price_change_days = reshape_matrix(price_change_days, rows)
 
-    price_change = np.hstack((price_change_minutes, price_change_five_minutes, price_change_hours))
-                             
+    price_change = np.hstack((price_change_hours, price_change_days))
+
     return (price_change, predict)
 
 ##############################################################################################
@@ -182,48 +162,34 @@ def get_incline_data(y, n):
     return m
 
 def create_incline_data(values, rows):
-    N1 = len(column_range_minutes)
-    N2 = len(column_range_five_minutes)
-    N3 = len(column_range_hours)
-
+    N1 = len(column_range_hours)
+    N2 = len(column_range_days)
     M0 = 0
     M1 = M0 + N1
     M2 = M1 + N2
-    M3 = M2 + N3
     row_count = len(values)
-    inlines = np.empty((row_count, M3 + 1))
+    inlines = np.empty((row_count, M2 + 1))
     
     for i in range(rows):
         # get_volume_change_value関数をベクトル化して、一度に複数のデータポイントを処理する
-        minute_indices = np.arange(column_range_minutes[0], column_range_minutes[N1 - 1] + MINUTE, MINUTE)
-        five_minute_indices = np.arange(column_range_five_minutes[0], column_range_five_minutes[N2 - 1] + FIVE_MINUTES, FIVE_MINUTES)
-        hour_indices = np.arange(M1 + column_range_hours[0], M1 + column_range_hours[N3 - 1] + 1)
-        
-        minute_prices = values[minute_indices]
-        five_minute_prices = values[five_minute_indices]
+        hour_indices = np.arange(column_range_hours[0], column_range_hours[N1 - 1] + ONE_HOUR, ONE_HOUR)
+        day_indices = np.arange(column_range_days[0], column_range_days[N2 - 1] + DAY_HOURS, DAY_HOURS)
         hour_prices = values[hour_indices]
+        day_prices = values[day_indices]
 
-        incline_minues = get_incline_data(minute_prices, N1)
-        incline_five_minues = get_incline_data(five_minute_prices, N2)
-        incline_hours = get_incline_data(hour_prices, N3)
+        incline_hours = get_incline_data(hour_prices, N1)
+        incline_days = get_incline_data(day_prices, N2)
 
-        inlines[i, M0:M1] = incline_minues
-        inlines[i, M1:M2] = incline_five_minues
-        inlines[i, M2:M3] = incline_hours
+        inlines[i, M0:M1] = incline_hours
+        inlines[i, M1:M2] = incline_days
 
     return inlines
 
 def predict(model, x_values):
     (price_change, _) = create_price_change_data(x_values)
-    #print(f"price_change.shape : {price_change.shape}")
-
     inlines = create_incline_data(x_values, x_values.shape[0])
-    #print(f"inlines.shape : {inlines.shape}")
-
     price_change = reshape_matrix(price_change, 1)
     inlines = reshape_matrix(inlines, 1)
-
     X = np.hstack((price_change, inlines))
     y_predict = model.predict(X)
-
     return (y_predict.ravel())[0]
