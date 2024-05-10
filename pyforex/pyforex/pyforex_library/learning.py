@@ -4,7 +4,7 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, Input
 from keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping
 
@@ -30,14 +30,15 @@ def load(model_path):
     return model
 
 def learning(values, model_path):
-    print("##### creating price change data...")
+    print("＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 価格の変化率を算出中です ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝")
     (price_change, predict) = create_price_change_data(values)
-    #print(f"price_change.shape : {price_change.shape}")
+    print("⇒  完了")
 
-    print("##### creating incline data...")
+    print("＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 価格の変化の傾きを算出中です ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝")
     inlines = create_incline_data(values, values.shape[0])
-    #print(f"inlines.shape : {inlines.shape}")
+    print("⇒  完了")
 
+    print("＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 価格予測のモデルを学習中です ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝")
     rows = min(price_change.shape[0], inlines.shape[0])
     price_change = reshape_matrix(price_change, rows)
     inlines = reshape_matrix(inlines, rows)
@@ -62,9 +63,13 @@ def learning(values, model_path):
     # モデルの構築
     N = X.shape[1]
     model = Sequential()
+
+    # 入力の形状を指定するInputレイヤーを追加
+    model.add(Input(shape=(N,)))
+
     # L2正則化を導入する例
     #model.add(LSTM(units=N>>0, input_shape=[input_dimension], kernel_regularizer=l2(0.01)))
-    model.add(Dense(units=N>>0, activation='relu', input_dim=N, kernel_regularizer=l2(0.01)))
+    model.add(Dense(units=N>>0, activation='relu', kernel_regularizer=l2(0.01)))
     model.add(Dense(units=N>>1, activation='relu'))
     model.add(Dense(units=N>>2, activation='relu'))
     model.add(Dense(units=N>>3, activation='relu'))
@@ -92,7 +97,9 @@ def learning(values, model_path):
     # モデルの学習
     model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stopping])
     #model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data=(X_test, y_test))
+    print("⇒  完了")
 
+    print("＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 価格予測のモデルを検算中です ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝")
     # モデルを保存
     model.save(model_path)
 
@@ -102,11 +109,6 @@ def learning(values, model_path):
     y_predict = model.predict(X)
     # 再構築誤差の計算
     error = y.ravel() - y_predict.ravel()
-
-    ##############################################################################################
-
-    #print(y)
-    #print(y_predict)
 
     ##############################################################################################
 
@@ -132,6 +134,8 @@ def learning(values, model_path):
         return similarity
 
     print(f"Reconstruction Error: {reconstruction_error}, Mean: {np.mean(error)}, Similarity: {cosine_similarity(y, y_predict)}") 
+    print("⇒  完了")
+    print("＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 価格予測を開始します ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝")
     return model
 
 ##############################################################################################
@@ -215,10 +219,8 @@ def create_incline_data(values, rows):
 
 def predict(model, x_values):
     (price_change, _) = create_price_change_data(x_values)
-    #print(f"price_change.shape : {price_change.shape}")
 
     inlines = create_incline_data(x_values, x_values.shape[0])
-    #print(f"inlines.shape : {inlines.shape}")
 
     price_change = reshape_matrix(price_change, 1)
     inlines = reshape_matrix(inlines, 1)
