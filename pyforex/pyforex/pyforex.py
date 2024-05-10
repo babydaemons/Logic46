@@ -53,26 +53,32 @@ while True:
     # 改行文字を読んだら
     if byte == b'\n':
         # 文字列へ変換
-        line = bytes_image.decode('utf-8').replace("\r", "")
+        request = bytes_image.decode('utf-8').replace("\r", "").replace("\n", "")
         #print(line)
 
-        fields = line.split(',')
-        request = fields[0]
-        length = int(fields[1])
+        requests = request.split(',')
+        command = requests[0]
+        length = int(requests[1])
 
         # パイプから全ての文字を読み取る
         _, bytes_image = win32file.ReadFile(pipe, length)
         values = load_values(bytes_image, 'd')
 
-        if request == "EXECUTE_LEARNING":
+        if command == "EXECUTE_LEARNING":
             model = pyforex_library.learning.learning(values, MODEL_DATA_PATH)
             with open(RESPONSE_DATA_PATH, "w") as f:
                 f.write("DONE\n")
 
-        if request == "EXECUTE_PREDICT":
+        if command == "EXECUTE_PREDICT":
+            timestamp = requests[2]
+            ask = requests[3]
             predict_value = pyforex_library.learning.predict(model, values)
             response = f"DONE,{predict_value}"
             win32file.WriteFile(pipe, f"{response}\r\n".encode("utf-8"))
+            sys.stdout.write("\r")
+            sys.stdout.flush() 
+            sys.stdout.write(f"\033[F\33[37C : {timestamp} : {ask} : {predict_value}\n")
+            sys.stdout.flush() 
 
         # 次の準備
         bytes_image = b''
