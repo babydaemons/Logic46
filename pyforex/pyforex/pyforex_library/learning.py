@@ -10,17 +10,16 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 ##############################################################################################
 
-MINUTE = 1
-FIVE_MINUTES = 5
-HOUR_MINUTES = 60
-DAY_MINUES = 24 * HOUR_MINUTES
-PREDICT_MINUTES = 60
+FIVE_MINUTES = 1
+HOUR_MINUTES = 12 * FIVE_MINUTES
+DAY_MINUTES = 24 * HOUR_MINUTES
+PREDICT_MINUTES = 2 * HOUR_MINUTES
 
-column_range_minutes = range(1, 60 + 1)
-column_range_five_minutes = range(5, 360 + 1, 5)
-column_range_hours = range(1, 5 * 19 + 1)
-column_count = len(column_range_minutes) + len(column_range_five_minutes) + len(column_range_hours)
-ROW_COUNT = 250 * DAY_MINUES
+column_range_five_minutes = range(5, 360 + 1)
+column_range_hours = range(1, 5 * 24 + 1)
+column_range_days = range(1, 3 * 24 + 1)
+column_count = len(column_range_five_minutes) + len(column_range_hours) + len(column_range_days)
+ROW_COUNT = 250 * DAY_MINUTES
 
 ##############################################################################################
 
@@ -157,20 +156,20 @@ def get_price_change(values, column_range, span):
     return matrix
 
 def create_price_change_data(values):
-    price_change_minutes = get_price_change(values, column_range_minutes, MINUTE)
     price_change_five_minutes = get_price_change(values, column_range_five_minutes, FIVE_MINUTES)
     price_change_hours = get_price_change(values, column_range_hours, HOUR_MINUTES)
+    price_change_days = get_price_change(values, column_range_hours, DAY_MINUTES)
 
     predict = ((values[:-PREDICT_MINUTES] - values[PREDICT_MINUTES:]) / values[:-PREDICT_MINUTES]) * 100.0
-    rows = min(price_change_minutes.shape[0], price_change_five_minutes.shape[0], price_change_hours.shape[0], len(predict))
+    rows = min(price_change_five_minutes.shape[0], price_change_hours.shape[0], price_change_days.shape[0], len(predict))
     predict = predict.ravel()
     predict = predict[:rows].reshape(rows, 1)
 
-    price_change_minutes = reshape_matrix(price_change_minutes, rows)
     price_change_five_minutes = reshape_matrix(price_change_five_minutes, rows)
     price_change_hours = reshape_matrix(price_change_hours, rows)
+    price_change_days = reshape_matrix(price_change_days, rows)
 
-    price_change = np.hstack((price_change_minutes, price_change_five_minutes, price_change_hours))
+    price_change = np.hstack((price_change_five_minutes, price_change_hours, price_change_days))
                              
     return (price_change, predict)
 
@@ -186,9 +185,9 @@ def get_incline_data(y, n):
     return m
 
 def create_incline_data(values, rows):
-    N1 = len(column_range_minutes)
-    N2 = len(column_range_five_minutes)
-    N3 = len(column_range_hours)
+    N1 = len(column_range_five_minutes)
+    N2 = len(column_range_hours)
+    N3 = len(column_range_days)
 
     M0 = 0
     M1 = M0 + N1
@@ -199,21 +198,21 @@ def create_incline_data(values, rows):
     
     for i in range(rows):
         # get_volume_change_value関数をベクトル化して、一度に複数のデータポイントを処理する
-        minute_indices = np.arange(column_range_minutes[0], column_range_minutes[N1 - 1] + MINUTE, MINUTE)
-        five_minute_indices = np.arange(column_range_five_minutes[0], column_range_five_minutes[N2 - 1] + FIVE_MINUTES, FIVE_MINUTES)
-        hour_indices = np.arange(M1 + column_range_hours[0], M1 + column_range_hours[N3 - 1] + 1)
+        five_minute_indices = np.arange(M0 + column_range_five_minutes[0], column_range_five_minutes[N1 - 1] + 1)
+        hour_indices = np.arange(M1 + column_range_hours[0], M1 + column_range_hours[N2 - 1] + 1)
+        day_indices = np.arange(M2 + column_range_days[0], M2 + column_range_days[N3 - 1] + 1)
         
-        minute_prices = values[minute_indices]
         five_minute_prices = values[five_minute_indices]
         hour_prices = values[hour_indices]
+        day_prices = values[day_indices]
 
-        incline_minues = get_incline_data(minute_prices, N1)
-        incline_five_minues = get_incline_data(five_minute_prices, N2)
-        incline_hours = get_incline_data(hour_prices, N3)
+        incline_five_minues = get_incline_data(five_minute_prices, N1)
+        incline_hours = get_incline_data(hour_prices, N2)
+        incline_days = get_incline_data(day_prices, N3)
 
-        inlines[i, M0:M1] = incline_minues
-        inlines[i, M1:M2] = incline_five_minues
-        inlines[i, M2:M3] = incline_hours
+        inlines[i, M0:M1] = incline_five_minues
+        inlines[i, M1:M2] = incline_hours
+        inlines[i, M2:M3] = incline_days
 
     return inlines
 
