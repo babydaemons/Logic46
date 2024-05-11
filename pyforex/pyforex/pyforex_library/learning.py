@@ -161,7 +161,8 @@ def create_price_change_data(values):
     price_change_five_minutes = get_price_change(values, column_range_five_minutes, FIVE_MINUTES)
     price_change_hours = get_price_change(values, column_range_hours, HOUR_MINUTES)
 
-    predict = ((values[:-PREDICT_MINUTES] - values[PREDICT_MINUTES:]) / values[:-PREDICT_MINUTES]) * 100.0
+    # 価格の配列はMT4/MT5と同様に添字が大きくなると過去データになる
+    predict = ((values[PREDICT_MINUTES:] - values[:-PREDICT_MINUTES:]) / values[:-PREDICT_MINUTES]) * 100.0
     rows = min(price_change_minutes.shape[0], price_change_five_minutes.shape[0], price_change_hours.shape[0], len(predict))
     predict = predict.ravel()
     predict = predict[:rows].reshape(rows, 1)
