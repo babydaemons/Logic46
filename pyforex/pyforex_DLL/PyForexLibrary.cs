@@ -8,6 +8,10 @@ public static class PyForexLibrary
 
     public static void CreateProcess(string commandLine, string commonFolderPath, string pipeName)
     {
+        if (_process != null)
+        {
+            TerminateProcess();
+        }
         ProcessStartInfo startInfo = new ProcessStartInfo();
         startInfo.FileName = commandLine;
         startInfo.Arguments = $"{commonFolderPath} {pipeName}";
