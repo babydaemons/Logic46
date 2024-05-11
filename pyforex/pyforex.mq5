@@ -7,7 +7,7 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
-#define SAMPLE_PERIOD PERIOD_M5
+#define SAMPLE_PERIOD PERIOD_H1
 
 const int FIVE__MINUTES = 1;
 const int HOUR_MINUTES = 12 * FIVE__MINUTES;
