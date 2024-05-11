@@ -7,14 +7,11 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
-#define SAMPLE_PERIOD PERIOD_M1
+#define SAMPLE_PERIOD PERIOD_H1
 
-const int FIVE_MINUTES = 5;
-const int HOUR_MINUTES = 60;
+const int HOUR_MINUTES = 1;
 const int DAY_MINUES = 24 * HOUR_MINUTES;
-const int WEEK_MINUES = 5 * DAY_MINUES;
-const int MONTH_MINUES = 4 * WEEK_MINUES;
-const int PREDICT_MINUTES = 60;
+const int PREDICT_MINUTES = 4 * HOUR_MINUTES;
 const int ROW_COUNT_MINUTES = 250 * DAY_MINUES;
 const int FETCH_ROW_COUNT = ROW_COUNT_MINUTES + PREDICT_MINUTES;
 
@@ -69,32 +66,31 @@ void OnTick()
     MqlDateTime t = {};
     TimeToStruct(TimeCurrent(), t);
     bool do_learning = false;
-    if (!HasLearned && t.day_of_week == FRIDAY && t.hour == 23 && t.min > 45) {
+    if (!HasLearned && t.day_of_week == FRIDAY && t.hour == 23) {
         do_learning = true;
     }
 
     if (!HasCreated) {
         PyForexLibrary::CreateProcess(ModulePath, CommonFolerPath, PipeName);
-        HasCreated = true;
-        do_learning = true;
-    }
-
-    if (do_learning) {
         string pipe_path = "\\\\.\\pipe\\pyforex_" + PipeName;
         PipeHandle = PipeOpen(pipe_path, FILE_WRITE | FILE_READ | FILE_BIN | FILE_ANSI);
-        printf("PipeHandle = %d", PipeHandle);
-        RequestLearning();
-        ResponseLearning();
-        HasLearned = true;
+
+        HasCreated = true;
+        do_learning = true;
     }
 
     if (t.day_of_week < FRIDAY) {
         HasLearned = false;
     }
 
+    if (do_learning) {
+        RequestLearning();
+        ResponseLearning();
+        HasLearned = true;
+    }
+
     RequestPredict();
     double predit_result_value = ResponsePredict();
-    printf("%f", predit_result_value);
 }
 
 //+------------------------------------------------------------------+
@@ -167,7 +163,7 @@ void ResponseLearning()
 void RequestPredict()
 {
     double close_prices[];
-    CopyOpen(Symbol(), SAMPLE_PERIOD, 0, MONTH_MINUES, close_prices);
+    CopyOpen(Symbol(), SAMPLE_PERIOD, 0, 1729, close_prices);
 
     string timestamp = TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
     double ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
