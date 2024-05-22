@@ -7,13 +7,13 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
-#define SAMPLE_PERIOD PERIOD_H1
+#define SAMPLE_PERIOD PERIOD_M5
 
-const int FIVE__MINUTES = 1;
-const int HOUR_MINUTES = 12 * FIVE__MINUTES;
+const int FIVE_MINUTES = 1;
+const int HOUR_MINUTES = 12 * FIVE_MINUTES;
 const int DAY_MINUES = 24 * HOUR_MINUTES;
 const int PREDICT_MINUTES = 4 * HOUR_MINUTES;
-const int ROW_COUNT_MINUTES = 250 * DAY_MINUES;
+const int ROW_COUNT_MINUTES = (2 * 250 + 1) * DAY_MINUES;
 const int FETCH_ROW_COUNT = ROW_COUNT_MINUTES + PREDICT_MINUTES;
 
 #import "pyforex.dll"
@@ -72,7 +72,7 @@ void OnTick()
     }
 
     if (!HasCreated) {
-        PyForexLibrary::CreateProcess(ModulePath, CommonFolerPath, PipeName);
+        PyForexLibrary::CreateProcess(ModulePath, CommonFolerPath, PipeName, PeriodSeconds() / 60, PREDICT_MINUTES);
         string pipe_path = "\\\\.\\pipe\\pyforex_" + PipeName;
         PipeHandle = PipeOpen(pipe_path, FILE_WRITE | FILE_READ | FILE_BIN | FILE_ANSI);
 
@@ -164,7 +164,7 @@ void ResponseLearning()
 void RequestPredict()
 {
     double close_prices[];
-    CopyOpen(Symbol(), SAMPLE_PERIOD, 0, 1729, close_prices);
+    CopyOpen(Symbol(), SAMPLE_PERIOD, 0, ROW_COUNT_MINUTES, close_prices);
 
     string timestamp = TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
     double ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);

@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 
 from sklearn.model_selection import train_test_split
@@ -10,12 +8,11 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 ##############################################################################################
 
-HOUR_MINUTES = 1
+HOUR_MINUTES = 12
 DAY_MINUTES = 24 * HOUR_MINUTES
-PREDICT_MINUTES = 60
 
 column_range_hours = range(1, 5 * DAY_MINUTES + 1)
-column_range_days = range(1, 3 * 24 * DAY_MINUTES + 1, DAY_MINUTES)
+column_range_days = range(1, 2 * 250 * DAY_MINUTES, DAY_MINUTES)
 column_count = len(column_range_hours) + len(column_range_days)
 ROW_COUNT = 250 * DAY_MINUTES
 
@@ -26,9 +23,9 @@ def load(model_path):
     model.load(model_path)
     return model
 
-def learning(values, model_path):
+def learning(values, predict_minutes, model_path):
     print("＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 価格の変化率を算出中です ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝")
-    (price_change, predict) = create_price_change_data(values)
+    (price_change, predict) = create_price_change_data(values, predict_minutes)
     print("⇒  完了")
 
     print("＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 価格の変化の傾きを算出中です ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝")
@@ -153,12 +150,12 @@ def get_price_change(values, column_range, span):
     matrix = np.lib.stride_tricks.as_strided(vector, shape=shape, strides=strides)
     return matrix
 
-def create_price_change_data(values):
+def create_price_change_data(values, predict_minutes):
     price_change_hours = get_price_change(values, column_range_hours, HOUR_MINUTES)
     price_change_days = get_price_change(values, column_range_days, DAY_MINUTES)
 
     # 価格の配列はMT4/MT5と同様に添字が大きくなると過去データになる
-    predict = ((values[PREDICT_MINUTES:] - values[:-PREDICT_MINUTES:]) / values[:-PREDICT_MINUTES]) * 100.0
+    predict = ((values[predict_minutes:] - values[:-predict_minutes:]) / values[:-predict_minutes]) * 100.0
     rows = min(price_change_hours.shape[0], price_change_days.shape[0], len(predict))
     predict = predict.ravel()
     predict = predict[:rows].reshape(rows, 1)
@@ -178,11 +175,11 @@ def get_incline_data(y, n):
     # データを行列に変換し、バイアス（切片）を追加する
     X = np.vstack([x, np.ones(len(x))]).T
     # 最小二乗法を使用して直線の係数を計算する
-    '''
+    
     print(f"n = {n}")
     print(f"y = {y.shape}")
     print(f"X = {X.shape}")
-    '''
+    
     m, _ = np.linalg.lstsq(X, y, rcond=None)[0]
     return m
 
@@ -212,8 +209,8 @@ def create_incline_data(values, rows):
 
     return inlines
 
-def predict(model, x_values):
-    (price_change, _) = create_price_change_data(x_values)
+def predict(model, x_values, predict_minutes):
+    (price_change, _) = create_price_change_data(x_values, predict_minutes)
 
     inlines = create_incline_data(x_values, x_values.shape[0])
 

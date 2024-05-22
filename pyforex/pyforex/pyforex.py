@@ -9,12 +9,14 @@ import struct
 import win32pipe
 import win32file
 
-import pyforex_library.learning
+from pyforex_library.learning import learning, predict
 
 COMMON_FOLDER_PATH = sys.argv[1]
 PIPE_NAME = f"pyforex_{sys.argv[2]}"
 MODEL_DATA_PATH = f"{COMMON_FOLDER_PATH}\\Files\\pyforex\\model_data.keras"
 RESPONSE_DATA_PATH = f"{COMMON_FOLDER_PATH}\\Files\\pyforex\\response_data.txt"
+PERIOD_MINUTES = int(sys.argv[3])
+PREDICT_MINUTES = int(sys.argv[4])
 
 ##############################################################################################
 
@@ -65,14 +67,14 @@ while True:
         values = load_values(bytes_image, 'd')
 
         if command == "EXECUTE_LEARNING":
-            model = pyforex_library.learning.learning(values, MODEL_DATA_PATH)
+            model = learning(values, PREDICT_MINUTES, MODEL_DATA_PATH)
             with open(RESPONSE_DATA_PATH, "w") as f:
                 f.write("DONE\n")
 
         if command == "EXECUTE_PREDICT":
             timestamp = requests[2]
             ask = requests[3]
-            predict_value = pyforex_library.learning.predict(model, values)
+            predict_value = predict(model, values, PREDICT_MINUTES)
             response = f"DONE,{predict_value}"
             win32file.WriteFile(pipe, f"{response}\r\n".encode("utf-8"))
             sys.stdout.write("\r")

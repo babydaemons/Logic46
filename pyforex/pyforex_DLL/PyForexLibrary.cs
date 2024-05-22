@@ -6,7 +6,7 @@ public static class PyForexLibrary
 {
     private static Process _process = null;
 
-    public static void CreateProcess(string commandLine, string commonFolderPath, string pipeName)
+    public static void CreateProcess(string commandLine, string commonFolderPath, string pipeName, int periodMinutes, int predictMinutes)
     {
         if (_process != null)
         {
@@ -14,7 +14,7 @@ public static class PyForexLibrary
         }
         ProcessStartInfo startInfo = new ProcessStartInfo();
         startInfo.FileName = commandLine;
-        startInfo.Arguments = $"{commonFolderPath} {pipeName}";
+        startInfo.Arguments = $"{commonFolderPath} {pipeName} {periodMinutes} {predictMinutes}";
         Console.WriteLine(startInfo.Arguments);
         _process = Process.Start(startInfo);
     }
