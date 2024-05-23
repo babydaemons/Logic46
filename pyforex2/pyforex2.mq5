@@ -11,7 +11,7 @@ const int FIVE_MINUTES = 1;
 const int HOUR_MINUTES = 12 * FIVE_MINUTES;
 const int DAY_MINUES = 24 * HOUR_MINUTES;
 const int PREDICT_MINUTES = 4 * HOUR_MINUTES;
-const int LEARNING_ROW_COUNT = (200 + 1) * DAY_MINUES + PREDICT_MINUTES;
+const int LEARNING_ROW_COUNT = (250 + 1) * DAY_MINUES + PREDICT_MINUTES;
 const int PREDICT_ROW_COUNT = (20 + 1) * DAY_MINUES + PREDICT_MINUTES;
 const int BARS = 60;
 
@@ -26,6 +26,7 @@ int PipeHandle = INVALID_HANDLE;
 int LoggingFile = INVALID_HANDLE;
 bool HasCreated = false;
 bool HasLearned = false;
+bool DoLearning = false;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -50,6 +51,8 @@ int OnInit()
 
     LoggingFile = FileOpen("pyforex\\pyforex_logging.tsv", FILE_WRITE | FILE_COMMON, CP_UTF8);
 
+    DoLearning = true;
+
     return INIT_SUCCEEDED;
 }
 
@@ -66,28 +69,23 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
-    MqlDateTime t = {};
-    TimeToStruct(TimeCurrent(), t);
-    bool do_learning = false;
-    if (!HasLearned && t.day_of_week == FRIDAY && t.hour == 23) {
-        do_learning = true;
+    if (!HasLearned) {
+        DoLearning = true;
+    }
+    else {
+        MqlDateTime t = {};
+        TimeToStruct(TimeCurrent(), t);
+        if (t.day_of_week == FRIDAY && t.hour == 23 && t.min >= 45) {
+            Terminate();
+            DoLearning = true;
+        }
     }
 
-    if (!HasCreated) {
-        PyForexAPI::CreateProcess(ModulePath, CommonFolerPath, PipeName, PREDICT_MINUTES, BARS);
-        string pipe_path = "\\\\.\\pipe\\pyforex_" + PipeName;
-        PipeHandle = PipeOpen(pipe_path, FILE_WRITE | FILE_READ | FILE_BIN | FILE_ANSI);
-
-        HasCreated = true;
-        do_learning = true;
-    }
-
-    if (t.day_of_week < FRIDAY) {
-        HasLearned = false;
-    }
-
-    if (do_learning) {
-        Learning();
+    if (DoLearning) {
+        if (!Learning()) {
+            return;
+        }
+        DoLearning = false;
         HasLearned = true;
     }
 
@@ -145,6 +143,15 @@ bool Learning()
     }
     ArrayReverse(valuesM05);
 
+    string timestamp = TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
+    StringReplace(timestamp, ":", ".");
+    StringReplace(timestamp, " ", "-");
+
+    string pipe_name = StringFormat("%s_%X", PipeName, GetTickCount64());
+    PyForexAPI::CreateProcess(ModulePath, CommonFolerPath, pipe_name, PREDICT_MINUTES, BARS);
+    string pipe_path = "\\\\.\\pipe\\pyforex_" + pipe_name;
+    PipeHandle = PipeOpen(pipe_path, FILE_WRITE | FILE_READ | FILE_BIN | FILE_ANSI);
+
     string command = StringFormat("EXECUTE_LEARNING,%d", LEARNING_ROW_COUNT);
     FileWriteString(PipeHandle, command + "\n");
     FileWriteArray(PipeHandle, valuesM05);
@@ -191,5 +198,17 @@ bool Predict(double& predict_value)
 
     string logging_line = StringFormat("%s\t%.3f\t%f\n", TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS), ask, predict_value);
     FileWriteString(LoggingFile, logging_line);
+    return true;
+}
+
+//+------------------------------------------------------------------+
+//| 予測プロセスの終了                                               |
+//+------------------------------------------------------------------+
+bool Terminate()
+{
+    string command = "EXECUTE_TERMINATE,0";
+    uint write_string_length = FileWriteString(PipeHandle, command + "\n");
+    FileClose(PipeHandle);
+    PipeHandle = INVALID_HANDLE;
     return true;
 }

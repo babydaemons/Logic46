@@ -101,6 +101,6 @@ class Learning:
 
         print(f"再構築誤差: {reconstruction_error}, 誤差平均: {np.mean(error)}, 類似度: {cosine_similarity(y, y_predict)}") 
         print(f"{BEGIN1}⇒  完了{END}")
-        print(f"{BEGIN2}━━━━━━━━━━━━━━━━━━━━━━━━━━ 価格予測を開始します ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{END}")
+        print(f"{BEGIN2}━━━━━━━━━━━━━━━━━━━━━━━━━━ 価格予測を開始します ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{END}")
 
         return ""

@@ -6,6 +6,7 @@ from config import Config
 from pipe import Pipe
 from learning import Learning
 from predict import Predict
+from terminate import Terminate
 
 DEBUGGING = False
 if DEBUGGING: print(f"プロセスID: {os.getpid()}")
@@ -19,10 +20,12 @@ config = Config(common_folder_path, pipe_name, predict_minutes, bar_count)
 
 learning = Learning(config)
 predict = Predict(config)
+terminate = Terminate(config)
 
 pipe = Pipe(config)
 pipe.regist("EXECUTE_LEARNING", learning.execute)
 pipe.regist("EXECUTE_PREDICT", predict.execute)
+pipe.regist("EXECUTE_TERMINATE", terminate.execute)
 
 pipe.open()
 pipe.polling()
