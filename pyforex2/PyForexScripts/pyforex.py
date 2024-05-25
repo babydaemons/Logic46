@@ -8,6 +8,10 @@ from learning import Learning
 from predict import Predict
 from terminate import Terminate
 
+REQUECT_LEARNING = 11111
+REQUECT_PREDICT = 22222
+REQUECT_TERMINATE = 33333
+
 DEBUGGING = False
 if DEBUGGING: print(f"プロセスID: {os.getpid()}")
 
@@ -23,9 +27,9 @@ predict = Predict(config)
 terminate = Terminate(config)
 
 pipe = Pipe(config)
-pipe.regist("EXECUTE_LEARNING", learning.execute)
-pipe.regist("EXECUTE_PREDICT", predict.execute)
-pipe.regist("EXECUTE_TERMINATE", terminate.execute)
+pipe.regist(REQUECT_LEARNING, learning.execute)
+pipe.regist(REQUECT_PREDICT, predict.execute)
+pipe.regist(REQUECT_TERMINATE, terminate.execute)
 
 pipe.open()
 pipe.polling()
