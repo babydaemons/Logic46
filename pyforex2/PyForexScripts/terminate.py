@@ -8,6 +8,6 @@ class Terminate:
     def __init__(self, config: Config):
         self.config = config
 
-    def execute(self, values, macd05M, signal05M, macd01H, signal01H, _):
+    def execute(self, values, macd05m, signal05m, macd01h, signal01h, _):
         print(f"{BEGIN1}⇒  完了{END}")
         sys.exit(len(values))

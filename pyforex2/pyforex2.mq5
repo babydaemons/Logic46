@@ -11,9 +11,9 @@ const int FIVE_MINUTES = 1;
 const int HOUR_MINUTES = 12 * FIVE_MINUTES;
 const int DAY_MINUES = 24 * HOUR_MINUTES;
 const int PREDICT_MINUTES = 4 * HOUR_MINUTES;
-const int LEARNING_ROW_COUNT = (20 + 1) * DAY_MINUES + PREDICT_MINUTES;
+const int LEARNING_ROW_COUNT = (25 + 1) * DAY_MINUES + PREDICT_MINUTES;
 const int PREDICT_ROW_COUNT = (10 + 1) * DAY_MINUES + PREDICT_MINUTES;
-const int BARS = 60;
+const int BARS = 90;
 
 #import "pyforex.dll"
 
@@ -24,12 +24,19 @@ string LearningResponsePath;
 string ModulePath;
 int PipeHandle = INVALID_HANDLE;
 int LoggingFile = INVALID_HANDLE;
-bool HasCreated = false;
-bool HasLearned = false;
 bool DoLearning = false;
+int PrevLearned = -1;
 
 int hMACD05M = INVALID_HANDLE;
 int hMACD01H = INVALID_HANDLE;
+
+enum PYTHON_REQUEST {
+    PYTHON_REQUEST_LEARNING = 11111,
+    PYTHON_REQUEST_PREDICT = 22222,
+    PYTHON_REQUEST_TERMINATE = 33333,
+};
+
+#define PYTHON_REQUEST_ARRAY_SIZE 6
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -49,8 +56,8 @@ int OnInit()
         }
     }
 
-    ModulePath = CommonFolerPath + "\\Files\\pyforex_loader3.bat";
-    //ModulePath = CommonFolerPath + "\\Files\\pyforex.exe";
+    //ModulePath = CommonFolerPath + "\\Files\\pyforex_loader3.bat";
+    ModulePath = CommonFolerPath + "\\Files\\pyforex.exe";
 
     LoggingFile = FileOpen("pyforex\\pyforex_logging.tsv", FILE_WRITE | FILE_COMMON, CP_UTF8);
 
@@ -75,24 +82,21 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
-    if (!HasLearned) {
+    MqlDateTime date = {};
+    TimeCurrent(date);
+    if (date.day_of_year != PrevLearned) {
         DoLearning = true;
-    }
-    else {
-        MqlDateTime t = {};
-        TimeToStruct(TimeCurrent(), t);
-        if (t.day_of_week == FRIDAY && t.hour == 23 && t.min >= 45) {
-            Terminate();
-            DoLearning = true;
-        }
     }
 
     if (DoLearning) {
+        if (PrevLearned != -1) {
+            Terminate();
+        }
         if (!Learning()) {
             return;
         }
-        DoLearning = false;
-        HasLearned = true;
+        PrevLearned = date.day_of_year;
+        DoLearning =false;
     }
 
     double predit_result_value = 0;
@@ -156,9 +160,13 @@ bool Learning()
     string pipe_path = "\\\\.\\pipe\\pyforex_" + pipe_name;
     PipeHandle = PipeOpen(pipe_path, FILE_WRITE | FILE_READ | FILE_BIN | FILE_ANSI);
 
-    string ask = PriceToString(SymbolInfoDouble(Symbol(), SYMBOL_ASK));
-    string command = StringFormat("EXECUTE_LEARNING,%d,%d,%d,%s", LEARNING_ROW_COUNT, LEARNING_ROW_COUNT, LEARNING_ROW_COUNT, ask);
-    FileWriteString(PipeHandle, command + "\n");
+    long request[PYTHON_REQUEST_ARRAY_SIZE] = {};
+    request[0] = PYTHON_REQUEST_LEARNING;
+    request[1] = LEARNING_ROW_COUNT;
+    request[2] = LEARNING_ROW_COUNT;
+    request[3] = LEARNING_ROW_COUNT;
+    FileWriteArray(PipeHandle, request);
+
     FileWriteArray(PipeHandle, buffer);
 
     while (true) {
@@ -182,10 +190,16 @@ bool Predict(double& predict_value)
         return false;
     }
 
-    string timestamp = TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
-    string ask = PriceToString(SymbolInfoDouble(Symbol(), SYMBOL_ASK));
-    string command = StringFormat("EXECUTE_PREDICT,%d,%d,%d,%s,%s", PREDICT_ROW_COUNT, PREDICT_ROW_COUNT, PREDICT_ROW_COUNT, timestamp, ask);
-    uint write_string_length = FileWriteString(PipeHandle, command + "\n");
+    double ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
+    long request[PYTHON_REQUEST_ARRAY_SIZE] = {};
+    request[0] = PYTHON_REQUEST_PREDICT;
+    request[1] = PREDICT_ROW_COUNT;
+    request[2] = PREDICT_ROW_COUNT;
+    request[3] = PREDICT_ROW_COUNT;
+    request[4] = (long)TimeCurrent();
+    request[5] = (long)(1000000 * ask);
+    FileWriteArray(PipeHandle, request);
+
     uint write_array_count = FileWriteArray(PipeHandle, buffer);
 
     string result = "";
@@ -200,7 +214,7 @@ bool Predict(double& predict_value)
     string predict_value_text = StringSubstr(result, 5);
     predict_value = StringToDouble(predict_value_text);
 
-    string logging_line = StringFormat("%s\t%.3f\t%s\n", TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS), ask, predict_value);
+    string logging_line = StringFormat("%s\t%.3f\t%+f\n", TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS), ask, predict_value);
     FileWriteString(LoggingFile, logging_line);
     return true;
 }
@@ -218,37 +232,37 @@ bool CreateBuffer(int price_bars, int macd05M_bars, int macd01H_bars, double& bu
     ArrayReverse(values05M);
     ArrayAppend(buffer, values05M);
 
-    double macd05M[];
-    CopyBuffer(hMACD05M, MAIN_LINE, 0, macd05M_bars, macd05M);
-    if (ArraySize(macd05M) != macd05M_bars) {
+    double macd5m[];
+    CopyBuffer(hMACD05M, MAIN_LINE, 0, macd05M_bars, macd5m);
+    if (ArraySize(macd5m) != macd05M_bars) {
         return false;
     }
-    ArrayReverse(macd05M);
-    ArrayAppend(buffer, macd05M);
+    ArrayReverse(macd5m);
+    ArrayAppend(buffer, macd5m);
 
-    double signal05M[];
-    CopyBuffer(hMACD05M, SIGNAL_LINE, 0, macd05M_bars, signal05M);
-    if (ArraySize(signal05M) != macd05M_bars) {
+    double signal05m[];
+    CopyBuffer(hMACD05M, SIGNAL_LINE, 0, macd05M_bars, signal05m);
+    if (ArraySize(signal05m) != macd05M_bars) {
         return false;
     }
-    ArrayReverse(signal05M);
-    ArrayAppend(buffer, signal05M);
+    ArrayReverse(signal05m);
+    ArrayAppend(buffer, signal05m);
 
-    double macd01H[];
-    CopyBuffer(hMACD01H, MAIN_LINE, 0, macd01H_bars, macd01H);
-    if (ArraySize(macd01H) != macd01H_bars) {
+    double macd01h[];
+    CopyBuffer(hMACD01H, MAIN_LINE, 0, macd01H_bars, macd01h);
+    if (ArraySize(macd01h) != macd01H_bars) {
         return false;
     }
-    ArrayReverse(macd01H);
-    ArrayAppend(buffer, macd01H);
+    ArrayReverse(macd01h);
+    ArrayAppend(buffer, macd01h);
 
-    double signal01H[];
-    CopyBuffer(hMACD01H, MAIN_LINE, 0, macd01H_bars, signal01H);
-    if (ArraySize(signal01H) != macd01H_bars) {
+    double signal01h[];
+    CopyBuffer(hMACD01H, MAIN_LINE, 0, macd01H_bars, signal01h);
+    if (ArraySize(signal01h) != macd01H_bars) {
         return false;
     }
-    ArrayReverse(signal01H);
-    ArrayAppend(buffer, signal01H);
+    ArrayReverse(signal01h);
+    ArrayAppend(buffer, signal01h);
 
     return true;
 }
@@ -278,9 +292,12 @@ string PriceToString(double price)
 //+------------------------------------------------------------------+
 bool Terminate()
 {
-    string command = "EXECUTE_TERMINATE,0,0,0";
-    uint write_string_length = FileWriteString(PipeHandle, command + "\n");
-    FileClose(PipeHandle);
+    PyForexAPI::TerminateProcess();
+/*
+    long request[PYTHON_REQUEST_ARRAY_SIZE] = {};
+    request[0] = PYTHON_REQUEST_TERMINATE;
+    FileWriteArray(PipeHandle, request);
+*/
     PipeHandle = INVALID_HANDLE;
     return true;
 }

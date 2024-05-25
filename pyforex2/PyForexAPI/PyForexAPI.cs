@@ -23,12 +23,22 @@ public class PyForexAPI
         ProcessStartInfo startInfo = new ProcessStartInfo();
         startInfo.FileName = commandLine;
         startInfo.Arguments = $"{commonFolderPath} {pipeName} {predictMinutes} {barCount}";
-        Console.WriteLine(startInfo.Arguments);
+        startInfo.CreateNoWindow = true;
         _process = Process.Start(startInfo);
     }
 
+    private static void KillProcess()
+    {
+        ProcessStartInfo startInfo = new ProcessStartInfo();
+        startInfo.FileName = @"C:\Windows\System32\taskkill.exe";
+        startInfo.Arguments = "/im pyforex.exe /f";
+        startInfo.CreateNoWindow = true;
+        Process.Start(startInfo);
+    }
     public static void TerminateProcess()
     {
+        KillProcess();
+
         if (_process != null)
         {
             _process.Kill();
