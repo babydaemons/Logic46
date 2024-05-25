@@ -14,8 +14,8 @@ class Learning:
         self.config = config
         if DEBUGGING: print(f"Learning: {self.config}")
 
-    def execute(self, values, _):
-        (x, y) = create_learning_data(values, self.config)
+    def execute(self, values, macd05M, signal05M, macd01H, signal01H, _):
+        (x, y) = create_learning_data(values, macd05M, signal05M, macd01H, signal01H, self.config)
 
         print(f"{BEGIN2}━━━━━━━━━━━━━━━━━━━━━━━━━━ 価格予測のモデルを学習中です ━━━━━━━━━━━━━━━━━━━━━━━━━━{END}")
 

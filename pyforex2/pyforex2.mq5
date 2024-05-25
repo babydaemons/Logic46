@@ -11,8 +11,8 @@ const int FIVE_MINUTES = 1;
 const int HOUR_MINUTES = 12 * FIVE_MINUTES;
 const int DAY_MINUES = 24 * HOUR_MINUTES;
 const int PREDICT_MINUTES = 4 * HOUR_MINUTES;
-const int LEARNING_ROW_COUNT = (250 + 1) * DAY_MINUES + PREDICT_MINUTES;
-const int PREDICT_ROW_COUNT = (20 + 1) * DAY_MINUES + PREDICT_MINUTES;
+const int LEARNING_ROW_COUNT = (20 + 1) * DAY_MINUES + PREDICT_MINUTES;
+const int PREDICT_ROW_COUNT = (10 + 1) * DAY_MINUES + PREDICT_MINUTES;
 const int BARS = 60;
 
 #import "pyforex.dll"
@@ -27,6 +27,9 @@ int LoggingFile = INVALID_HANDLE;
 bool HasCreated = false;
 bool HasLearned = false;
 bool DoLearning = false;
+
+int hMACD05M = INVALID_HANDLE;
+int hMACD01H = INVALID_HANDLE;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -50,6 +53,9 @@ int OnInit()
     //ModulePath = CommonFolerPath + "\\Files\\pyforex.exe";
 
     LoggingFile = FileOpen("pyforex\\pyforex_logging.tsv", FILE_WRITE | FILE_COMMON, CP_UTF8);
+
+    hMACD05M = iMACD(Symbol(), PERIOD_M5, 12, 26, 9, PRICE_OPEN);
+    hMACD01H = iMACD(Symbol(), PERIOD_H1, 12, 26, 9, PRICE_OPEN);
 
     DoLearning = true;
 
@@ -136,12 +142,10 @@ bool Learning()
     FolderCreate("pyforex", FILE_COMMON);
     FileDelete(LearningResponsePath, FILE_COMMON);
 
-    double valuesM05[];
-    int read_count = CopyOpen(Symbol(), PERIOD_M5, 0, LEARNING_ROW_COUNT, valuesM05);
-    if (read_count != LEARNING_ROW_COUNT) {
+    double buffer[];
+    if (!CreateBuffer(LEARNING_ROW_COUNT, LEARNING_ROW_COUNT, LEARNING_ROW_COUNT, buffer)) {
         return false;
     }
-    ArrayReverse(valuesM05);
 
     string timestamp = TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
     StringReplace(timestamp, ":", ".");
@@ -152,9 +156,10 @@ bool Learning()
     string pipe_path = "\\\\.\\pipe\\pyforex_" + pipe_name;
     PipeHandle = PipeOpen(pipe_path, FILE_WRITE | FILE_READ | FILE_BIN | FILE_ANSI);
 
-    string command = StringFormat("EXECUTE_LEARNING,%d", LEARNING_ROW_COUNT);
+    string ask = PriceToString(SymbolInfoDouble(Symbol(), SYMBOL_ASK));
+    string command = StringFormat("EXECUTE_LEARNING,%d,%d,%d,%s", LEARNING_ROW_COUNT, LEARNING_ROW_COUNT, LEARNING_ROW_COUNT, ask);
     FileWriteString(PipeHandle, command + "\n");
-    FileWriteArray(PipeHandle, valuesM05);
+    FileWriteArray(PipeHandle, buffer);
 
     while (true) {
         if (FileIsExist(LearningResponsePath, FILE_COMMON)) {
@@ -172,17 +177,16 @@ bool Learning()
 //+------------------------------------------------------------------+
 bool Predict(double& predict_value)
 {
-    double close_prices[];
-    int read_count = CopyOpen(Symbol(), PERIOD_M5, 0, PREDICT_ROW_COUNT, close_prices);
-    if (read_count != PREDICT_ROW_COUNT) {
+    double buffer[];
+    if (!CreateBuffer(PREDICT_ROW_COUNT, PREDICT_ROW_COUNT, PREDICT_ROW_COUNT, buffer)) {
         return false;
     }
 
     string timestamp = TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
-    double ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
-    string command = StringFormat("EXECUTE_PREDICT,%d,%s,%.3f", ArraySize(close_prices) * 8, timestamp, ask);
+    string ask = PriceToString(SymbolInfoDouble(Symbol(), SYMBOL_ASK));
+    string command = StringFormat("EXECUTE_PREDICT,%d,%d,%d,%s,%s", PREDICT_ROW_COUNT, PREDICT_ROW_COUNT, PREDICT_ROW_COUNT, timestamp, ask);
     uint write_string_length = FileWriteString(PipeHandle, command + "\n");
-    uint write_array_count = FileWriteArray(PipeHandle, close_prices);
+    uint write_array_count = FileWriteArray(PipeHandle, buffer);
 
     string result = "";
     while (true) {
@@ -196,9 +200,77 @@ bool Predict(double& predict_value)
     string predict_value_text = StringSubstr(result, 5);
     predict_value = StringToDouble(predict_value_text);
 
-    string logging_line = StringFormat("%s\t%.3f\t%f\n", TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS), ask, predict_value);
+    string logging_line = StringFormat("%s\t%.3f\t%s\n", TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS), ask, predict_value);
     FileWriteString(LoggingFile, logging_line);
     return true;
+}
+
+//+------------------------------------------------------------------+
+//| 学習/予測データの作成                                            |
+//+------------------------------------------------------------------+
+bool CreateBuffer(int price_bars, int macd05M_bars, int macd01H_bars, double& buffer[])
+{
+    double values05M[];
+    CopyOpen(Symbol(), PERIOD_M5, 0, price_bars, values05M);
+    if (ArraySize(values05M) != price_bars) {
+        return false;
+    }
+    ArrayReverse(values05M);
+    ArrayAppend(buffer, values05M);
+
+    double macd05M[];
+    CopyBuffer(hMACD05M, MAIN_LINE, 0, macd05M_bars, macd05M);
+    if (ArraySize(macd05M) != macd05M_bars) {
+        return false;
+    }
+    ArrayReverse(macd05M);
+    ArrayAppend(buffer, macd05M);
+
+    double signal05M[];
+    CopyBuffer(hMACD05M, SIGNAL_LINE, 0, macd05M_bars, signal05M);
+    if (ArraySize(signal05M) != macd05M_bars) {
+        return false;
+    }
+    ArrayReverse(signal05M);
+    ArrayAppend(buffer, signal05M);
+
+    double macd01H[];
+    CopyBuffer(hMACD01H, MAIN_LINE, 0, macd01H_bars, macd01H);
+    if (ArraySize(macd01H) != macd01H_bars) {
+        return false;
+    }
+    ArrayReverse(macd01H);
+    ArrayAppend(buffer, macd01H);
+
+    double signal01H[];
+    CopyBuffer(hMACD01H, MAIN_LINE, 0, macd01H_bars, signal01H);
+    if (ArraySize(signal01H) != macd01H_bars) {
+        return false;
+    }
+    ArrayReverse(signal01H);
+    ArrayAppend(buffer, signal01H);
+
+    return true;
+}
+
+//+------------------------------------------------------------------+
+//| 配列の追記                                                       |
+//+------------------------------------------------------------------+
+void ArrayAppend(double& dst[], const double& src[])
+{
+    int offset = ArraySize(dst);
+    int dst_size = offset + ArraySize(src);
+    ArrayResize(dst, dst_size);
+    ArrayCopy(dst, src, offset, 0);
+}
+
+//+------------------------------------------------------------------+
+//| 価格の文字列化                                                   |
+//+------------------------------------------------------------------+
+string PriceToString(double price)
+{
+    int digits = (int)SymbolInfoInteger(Symbol(), SYMBOL_DIGITS);
+    return DoubleToString(price, digits);
 }
 
 //+------------------------------------------------------------------+
@@ -206,7 +278,7 @@ bool Predict(double& predict_value)
 //+------------------------------------------------------------------+
 bool Terminate()
 {
-    string command = "EXECUTE_TERMINATE,0";
+    string command = "EXECUTE_TERMINATE,0,0,0";
     uint write_string_length = FileWriteString(PipeHandle, command + "\n");
     FileClose(PipeHandle);
     PipeHandle = INVALID_HANDLE;

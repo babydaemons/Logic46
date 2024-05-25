@@ -29,9 +29,12 @@ public class PyForexAPI
 
     public static void TerminateProcess()
     {
-        _process.Close();
-        _process.Dispose();
-        _process = null;
+        if (_process != null)
+        {
+            _process.Kill();
+            _process.Dispose();
+            _process = null;
+        }
     }
 
     public static void Sleep(int milliseconds)

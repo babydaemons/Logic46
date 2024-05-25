@@ -15,7 +15,7 @@ DAY_BARS = 24 * HOUR_BARS
 
 VERBOSE = False
 
-def create_learning_data(values, config):
+def create_learning_data(values, macd05M, signal05M, macd01H, signal01H, config):
     if VERBOSE: print(f"{BEGIN2}━━━━━━━━━━━━━━━━━━━━━━━━━━ 価格の変化率を算出中です ━━━━━━━━━━━━━━━━━━━━━━━━━━━━{END}")
     predict_minutes = config.predict_minutes
     (price_change, y) = create_price_change_data(values, config.bar_count, predict_minutes)
@@ -29,7 +29,17 @@ def create_learning_data(values, config):
     if DEBUGGING: print(f"inclines = {inclines.shape}")
     if VERBOSE: print(f"{BEGIN1}⇒  完了{END}")
 
-    rows = min(price_change.shape[0], inclines.shape[0])
+    row_count05M = len(macd05M)
+    row_count01H = len(macd01H)
+    bar_count = config.bar_count
+    column_range_minutes = range(1, bar_count + 1, MINUTE_BARS)
+    column_range_hours = range(1, bar_count + 1, HOUR_BARS)
+    macd05M = stride_vectors(macd05M, row_count05M, column_range_minutes, MINUTE_BARS)
+    signal05M = stride_vectors(signal05M, row_count05M, column_range_minutes, MINUTE_BARS)
+    macd01H = stride_vectors(macd01H.ravel(), row_count01H, column_range_hours, HOUR_BARS)
+    signal01H = stride_vectors(signal01H.ravel(), row_count01H, column_range_hours, HOUR_BARS)
+
+    rows = min(price_change.shape[0], inclines.shape[0], macd05M.shape[0], signal05M.shape[0], macd01H.shape[0], signal01H.shape[0])
     price_change = reshape_matrix(price_change, rows)
     inclines = reshape_matrix(inclines, rows)
     x = np.hstack((price_change, inclines))
@@ -119,6 +129,7 @@ def get_incline_data(values, column_range, window_size):
     numerator = n * sum_xy - sum_x * sum_y
     denominator = n * sum_xx - sum_x * sum_x
     m = numerator / denominator
+    if DEBUGGING: print(f"m = {m.shape}")
 
     row_count = len(values)
     return stride_vectors(m, row_count, column_range, window_size)
@@ -126,6 +137,7 @@ def get_incline_data(values, column_range, window_size):
 def stride_vectors(vector, row_count, column_range, span):
     if DEBUGGING: print(f"vector = {vector.shape}")
     if DEBUGGING: print(f"vector = {vector}")
+    if DEBUGGING:print(f"row_count = {row_count}")
     shape = (row_count - (2 * span + 2), len(column_range))
     strides = (vector.strides[0], vector.strides[0])
     matrix = np.lib.stride_tricks.as_strided(vector, shape=shape, strides=strides)
