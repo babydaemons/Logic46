@@ -74,7 +74,6 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-    PyForexAPI::TerminateProcess();
 }
 
 //+------------------------------------------------------------------+
@@ -143,40 +142,11 @@ string PipeReadLine(int pipe)
 //+------------------------------------------------------------------+
 bool Learning()
 {
-    FolderCreate("pyforex", FILE_COMMON);
-    FileDelete(LearningResponsePath, FILE_COMMON);
-
     double buffer[];
     if (!CreateBuffer(LEARNING_ROW_COUNT, LEARNING_ROW_COUNT, LEARNING_ROW_COUNT, buffer)) {
         return false;
     }
-
-    string timestamp = TimeToString(TimeCurrent(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
-    StringReplace(timestamp, ":", ".");
-    StringReplace(timestamp, " ", "-");
-
-    string pipe_name = StringFormat("%s_%X", PipeName, GetTickCount64());
-    PyForexAPI::CreateProcess(ModulePath, CommonFolerPath, pipe_name, PREDICT_MINUTES, BARS);
-    string pipe_path = "\\\\.\\pipe\\pyforex_" + pipe_name;
-    PipeHandle = PipeOpen(pipe_path, FILE_WRITE | FILE_READ | FILE_BIN | FILE_ANSI);
-
-    long request[PYTHON_REQUEST_ARRAY_SIZE] = {};
-    request[0] = PYTHON_REQUEST_LEARNING;
-    request[1] = LEARNING_ROW_COUNT;
-    request[2] = LEARNING_ROW_COUNT;
-    request[3] = LEARNING_ROW_COUNT;
-    FileWriteArray(PipeHandle, request);
-
-    FileWriteArray(PipeHandle, buffer);
-
-    while (true) {
-        if (FileIsExist(LearningResponsePath, FILE_COMMON)) {
-            break;
-        }
-        PyForexAPI::Sleep(100);
-    }
-    FileDelete(LearningResponsePath, FILE_COMMON);
-
+    ExpertRemove();
     return true;
 }
 
@@ -292,12 +262,5 @@ string PriceToString(double price)
 //+------------------------------------------------------------------+
 bool Terminate()
 {
-    PyForexAPI::TerminateProcess();
-/*
-    long request[PYTHON_REQUEST_ARRAY_SIZE] = {};
-    request[0] = PYTHON_REQUEST_TERMINATE;
-    FileWriteArray(PipeHandle, request);
-*/
-    PipeHandle = INVALID_HANDLE;
     return true;
 }

@@ -4,7 +4,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>f2180214-8bd4-40be-b9b4-658db3e11d91</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>config.py</StartupFile>
+    <StartupFile>
+    </StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -23,21 +24,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="common.py" />
-    <Compile Include="config.py" />
     <Compile Include="learning.py" />
-    <Compile Include="pipe.py" />
+    <Compile Include="predict.py" />
     <Compile Include="pyforex.py" />
   </ItemGroup>
   <ItemGroup>
-    <Interpreter Include="venv3.10\">
-      <Id>venv3.10</Id>
-      <Version>3.10</Version>
-      <Description>venv3.10 (Python 3.10 (64-bit))</Description>
-      <InterpreterPath>Scripts\python.exe</InterpreterPath>
-      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
-      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
-      <Architecture>X64</Architecture>
-    </Interpreter>
     <Interpreter Include="venv3.11\">
       <Id>venv3.11</Id>
       <Version>3.11</Version>
