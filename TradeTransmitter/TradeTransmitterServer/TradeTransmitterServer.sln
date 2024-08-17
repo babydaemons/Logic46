@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35208.52
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TradeTransmitterServer", "TradeTransmitterServer.csproj", "{F1037F3A-8842-47E8-8C2C-9AD4F2CB66C7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F1037F3A-8842-47E8-8C2C-9AD4F2CB66C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1037F3A-8842-47E8-8C2C-9AD4F2CB66C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1037F3A-8842-47E8-8C2C-9AD4F2CB66C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1037F3A-8842-47E8-8C2C-9AD4F2CB66C7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B9BA475A-D8EC-4120-B60E-6413EAACEE61}
+	EndGlobalSection
+EndGlobal
