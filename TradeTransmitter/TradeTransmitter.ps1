@@ -17,11 +17,14 @@ $certStoreLocation = "cert:\LocalMachine\My"
 # ファイルから最初の行を読み込む
 $domainName = Get-Content -Path $domainNamePath -TotalCount 1
 
-# 読み込んだ行を表示
-Write-Host $domainName
+##########################################################################################
+# ステップ1: IIS をインストール
+# 管理ツールも含めて IIS をインストール
+##########################################################################################
+Install-WindowsFeature Web-Server -IncludeManagementTools
 
 ##########################################################################################
-# ステップ1: 自己署名証明書の作成
+# ステップ2: 自己署名証明書の作成
 # まず、自己署名証明書を作成します。
 ##########################################################################################
 # 証明書の変数を設定
@@ -32,7 +35,7 @@ $password = ConvertTo-SecureString -String $plainPassword -Force -AsPlainText
 Export-PfxCertificate -Cert $cert -FilePath $pfxKeyPath -Password $password
 
 ##########################################################################################
-# ステップ2: IISに証明書をインポート
+# ステップ3: IISに証明書をインポート
 # 次に、IISに証明書をインポートします。
 ##########################################################################################
 # PFXファイルをインポート
@@ -40,7 +43,7 @@ $password = ConvertTo-SecureString -String $plainPassword -Force -AsPlainText
 Import-PfxCertificate -FilePath $pfxKeyPath -CertStoreLocation $certStoreLocation -Password $password
 
 ##########################################################################################
-# ステップ3: IISサイトに証明書をバインド
+# ステップ4: IISサイトに証明書をバインド
 # 最後に、IISのサイトに証明書をバインドし、45678番ポートで待ち受けるように設定します。
 ##########################################################################################
 # 証明書のサムプリントを取得
@@ -56,7 +59,10 @@ Get-Item cert:\LocalMachine\My\$certThumbprint | New-Item 0.0.0.0!45678
 Pop-Location
 
 ##########################################################################################
-# ステップ4: ファイアウォールの設定
+# ステップ5: ファイアウォールの設定
 # ファイアウォールで45678番ポートを許可する必要があります。
 ##########################################################################################
 New-NetFirewallRule -DisplayName "Allow HTTPS on Port 45678" -Direction Inbound -Protocol TCP -LocalPort 45678 -Action Allow
+
+Write-Host "処理が完了しました。続行するには[Enter]キーを押してください..."
+Read-Host
