@@ -6,13 +6,19 @@
 ##########################################################################################
 
 # ドメイン名ファイルのパスを指定
-$domainNamePath = ".\TradeTransmitter-DomainName.txt"
+$domainNamePath = "C:\\TradeTransmitter\\TradeTransmitter-DomainName.txt"
 # 証明書ファイルのパスを指定
-$pfxKeyPath = ".\TradeTransmitter-Certificate.pfx"
+$pfxKeyPath = "C:\\TradeTransmitter\\TradeTransmitter-Certificate.pfx"
 # 証明書ファイルの生パスワードを指定
 $plainPassword = "Tr@d?Transm!tterP@ssw0rd"
 # 証明書ストアを指定
 $certStoreLocation = "cert:\LocalMachine\My"
+
+if (!(Test-Path $domainNamePath)) {
+    Write-Host "ドメイン名ファイル ${domainNamePath} が存在しません。[Enter]キーを押してください..."
+    Read-Host
+    Exit
+}
 
 # ファイルから最初の行を読み込む
 $domainName = Get-Content -Path $domainNamePath -TotalCount 1
@@ -30,6 +36,14 @@ If (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 # 管理ツールも含めて IIS をインストール
 ##########################################################################################
 Install-WindowsFeature Web-Server -IncludeManagementTools
+
+$siteName = "TradeTransmitter Web Site"
+$sitePath = "C:\\TradeTransmitter"
+$port = 45678
+$ipAddress = "*"
+$hostHeader = "reciever.fx-kazuya.com"  # 必要に応じて設定
+
+New-WebSite -Name $siteName -PhysicalPath $sitePath -Port $port -IPAddress $ipAddress -HostHeader $hostHeader
 
 ##########################################################################################
 # ステップ2: 自己署名証明書の作成
@@ -61,7 +75,7 @@ $certThumbprint = (Get-ChildItem -Path $certStoreLocation | Where-Object { $_.Dn
 Import-Module WebAdministration
 
 # 新しいバインドを作成して証明書をバインドする
-New-WebBinding -Name "TradeTransmitter Web Site" -Protocol https -Port 45678
+New-WebBinding -Name $siteName -Protocol https -Port 45678
 Push-Location IIS:\SslBindings
 Get-Item cert:\LocalMachine\My\$certThumbprint | New-Item 0.0.0.0!45678
 Pop-Location
