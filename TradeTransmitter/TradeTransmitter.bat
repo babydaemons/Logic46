@@ -1,1 +1,1 @@
-@PowerShell.exe "%~dpn.ps1"
+@PowerShell.exe -File "%~dpn0.ps1"

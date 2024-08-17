@@ -1,4 +1,4 @@
-##########################################################################################
+﻿##########################################################################################
 # トレード受信側 IIS（Internet Information Services）の
 # インストールスクリプト
 ##########################################################################################
@@ -16,6 +16,14 @@ $certStoreLocation = "cert:\LocalMachine\My"
 
 # ファイルから最初の行を読み込む
 $domainName = Get-Content -Path $domainNamePath -TotalCount 1
+
+# 管理者権限が必要かどうか確認する
+If (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole] "Administrator"))
+{
+    # 管理者権限で再実行する
+    Start-Process powershell "-File `"$PSCommandPath`"" -Verb RunAs
+    Exit
+}
 
 ##########################################################################################
 # ステップ1: IIS をインストール
@@ -64,5 +72,5 @@ Pop-Location
 ##########################################################################################
 New-NetFirewallRule -DisplayName "Allow HTTPS on Port 45678" -Direction Inbound -Protocol TCP -LocalPort 45678 -Action Allow
 
-Write-Host "処理が完了しました。続行するには[Enter]キーを押してください..."
+Write-Host "処理が完了しました。[Enter]キーを押してください..."
 Read-Host
