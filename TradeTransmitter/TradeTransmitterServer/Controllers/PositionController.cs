@@ -17,7 +17,7 @@ public class PositionController : ControllerBase
         }
 
         AllPositions.Enqueue(position);
-        var command = $"{position.BrokerName},{position.AccountNumber},{position.Symbol},{position.TradeType},{position.Lots},{position.Price},{position.Ticket}";
+        var command = $"{position.BrokerName},{position.AccountNumber},{position.Change},{position.Symbol},{position.Lots},{position.Ticket},{position.MagicNumber}";
         System.Console.Error.WriteLine($">>>>>>>>>> {command}");
         return Ok($"{command}");
     }
@@ -34,7 +34,7 @@ public class PositionController : ControllerBase
         {
             if (AllPositions.TryDequeue(out var position))
             {
-                var command = $"{position.BrokerName},{position.AccountNumber},{position.Symbol},{position.TradeType},{position.Lots},{position.Price},{position.Ticket}";
+                var command = $"{position.BrokerName},{position.AccountNumber},{position.Change},{position.Symbol},{position.Lots},{position.Ticket},{position.MagicNumber}";
                 System.Console.Error.WriteLine($"<<<<<<<<<< {command}");
                 records += $"{command}\n";
             }
