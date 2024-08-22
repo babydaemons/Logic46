@@ -6,20 +6,29 @@ namespace TradeTransmitter;
 [Route("api/[controller]")]
 public class PositionController : ControllerBase
 {
-    private static ConcurrentQueue<TradeRequestModel> AllPositions = new();
+    private static ConcurrentQueue<PositionRequestModel> AllPositions = new();
 
     [HttpPost("submit")]
-    public IActionResult SubmitData([FromBody] TradeRequestModel position)
+    public IActionResult SubmitData([FromBody] TradeRequestModel request)
     {
-        if (position == null)
+        if (request == null)
+        {
+            return BadRequest("Invalid data.");
+        }
+        if (request.Positions == null)
         {
             return BadRequest("Invalid data.");
         }
 
-        AllPositions.Enqueue(position);
-        var command = $"{position.BrokerName},{position.AccountNumber},{position.Change},{position.Symbol},{position.Lots},{position.Ticket},{position.MagicNumber}";
-        System.Console.Error.WriteLine($">>>>>>>>>> {command}");
-        return Ok($"{command}");
+        string result = string.Empty;
+        foreach (var position in request.Positions)
+        {
+            AllPositions.Enqueue(position);
+            var command = $"{position.PositionId},{position.Change},{position.Symbol},{position.Lots},{position.MagicNumber}";
+            System.Console.Error.WriteLine($">>>>>>>>>> {command}");
+            result += $"{command}\n";
+        }
+        return Ok($"{result}");
     }
 
     public static void StartPolling()
@@ -34,7 +43,7 @@ public class PositionController : ControllerBase
         {
             if (AllPositions.TryDequeue(out var position))
             {
-                var command = $"{position.BrokerName},{position.AccountNumber},{position.Change},{position.Symbol},{position.Lots},{position.Ticket},{position.MagicNumber}";
+                var command = $"{position.PositionId},{position.Change},{position.Symbol},{position.Lots},{position.MagicNumber}";
                 System.Console.Error.WriteLine($"<<<<<<<<<< {command}");
                 records += $"{command}\n";
             }
