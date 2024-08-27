@@ -8,7 +8,7 @@ public class PositionController : ControllerBase
 {
     private static ConcurrentQueue<PositionRequestModel> AllPositions = new();
 
-    [HttpGet("{change}/{command}/{symbol}/{lots}/{magic}/{position_id}")]
+    //[HttpGet("{change}/{command}/{symbol}/{lots}/{magic}/{position_id}")]
     public IActionResult SubmitData(string change, string command, string symbol, double lots, ulong magic, string position_id)
     {
         var position = new PositionRequestModel
