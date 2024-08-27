@@ -8,27 +8,23 @@ public class PositionController : ControllerBase
 {
     private static ConcurrentQueue<PositionRequestModel> AllPositions = new();
 
-    [HttpPost("submit")]
-    public IActionResult SubmitData([FromBody] TradeRequestModel request)
+    [HttpGet("{change}/{command}/{symbol}/{lots}/{magic}/{position_id}")]
+    public IActionResult SubmitData(string change, string command, string symbol, double lots, ulong magic, string position_id)
     {
-        if (request == null)
+        var position = new PositionRequestModel
         {
-            return BadRequest("Invalid data.");
-        }
-        if (request.Positions == null)
-        {
-            return BadRequest("Invalid data.");
-        }
+            Change = change,
+            Command = command,
+            Symbol = symbol,
+            Lots = lots,
+            MagicNumber = magic,
+            PositionId = position_id
+        };
 
-        string result = string.Empty;
-        foreach (var position in request.Positions)
-        {
-            AllPositions.Enqueue(position);
-            var command = $"{position.PositionId},{position.Change},{position.Symbol},{position.Lots},{position.MagicNumber}";
-            System.Console.Error.WriteLine($">>>>>>>>>> {command}");
-            result += $"{command}\n";
-        }
-        return Ok($"{result}");
+        AllPositions.Enqueue(position);
+        var request = $"{position.Change},{position.Command},{position.Symbol},{position.Lots},{position.MagicNumber},{position.PositionId}";
+        System.Console.Error.WriteLine($">>>>>>>>>> {request}");
+        return Ok(request);
     }
 
     public static void StartPolling()
@@ -43,9 +39,9 @@ public class PositionController : ControllerBase
         {
             if (AllPositions.TryDequeue(out var position))
             {
-                var command = $"{position.PositionId},{position.Change},{position.Symbol},{position.Lots},{position.MagicNumber}";
-                System.Console.Error.WriteLine($"<<<<<<<<<< {command}");
-                records += $"{command}\n";
+                var request = $"{position.Change},{position.Command},{position.Symbol},{position.Lots},{position.MagicNumber},{position.PositionId}";
+                System.Console.Error.WriteLine($"<<<<<<<<<< {request}");
+                records += $"{request}\n";
             }
         }
         return records;
