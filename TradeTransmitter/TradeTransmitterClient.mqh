@@ -1,9 +1,9 @@
 //+------------------------------------------------------------------+
 //|                                          CopyPositionSederEA.mq4 |
-//|                                          Copyright 2023, YUSUKE. |
+//|                          Copyright 2024, Kazuya Quartet Academy. |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2023, YUSUKE."
-#property version   "1.01"
+#property copyright "Copyright 2024, Kazuya Quartet Academy."
+#property version   "1.00"
 #property strict
 
 #include "TradeTransmitter.mqh"
@@ -300,8 +300,8 @@ void SendPositionRequest(int change_count) {
         StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
 
         string position_id = StringFormat("%08x%08x%08x", SenderBrokerID, SenderAccountNumber, Output.Tickets[i]);
-        string uri = StringFormat("http://localhost/api/position/?change=%s&command=%s&symbol=%s&lots=%.2lf&magic=%010lu&position_id=%s",
-            Output.Change[i] == +1 ? "entry" : "exit", Output.Command[i] == +1 ? "buy" : "sell", symbol,  LOTS_MULTIPLY * Output.Lots[i], Output.MagicNumber[i], position_id);
+        string uri = StringFormat("http://%s/api/position/?change=%s&command=%s&symbol=%s&lots=%.2lf&magic=%010lu&position_id=%s",
+            SERVER_NAME, Output.Change[i] == +1 ? "entry" : "exit", Output.Command[i] == +1 ? "buy" : "sell", symbol,  LOTS_MULTIPLY * Output.Lots[i], Output.MagicNumber[i], position_id);
         Get(uri);
     }
 }
