@@ -1,8 +1,11 @@
 ﻿//+------------------------------------------------------------------+
-//|                                             ErrorDescription.mqh |
-//|                                          Copyright 2023, YUSUKE. |
+//|                                          ErrorDescriptionMT4.mqh |
+//|                          Copyright 2024, Kazuya Quartet Academy. |
+//|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2022, atelierlapin."
+#property copyright "Copyright 2024, Kazuya Quartet Academy."
+#property link      "https://www.fx-kazuya.com/"
+#property version   "1.00"
 #property strict
 
 //+------------------------------------------------------------------+

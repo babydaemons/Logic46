@@ -1,8 +1,10 @@
 //+------------------------------------------------------------------+
-//|                                          CopyPositionSederEA.mq4 |
+//|                                       TradeTransmitterClient.mqh |
 //|                          Copyright 2024, Kazuya Quartet Academy. |
+//|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, Kazuya Quartet Academy."
+#property link      "https://www.fx-kazuya.com/"
 #property version   "1.00"
 #property strict
 
@@ -58,7 +60,7 @@ bool CurrentIndex;
 POSITION_LIST Output;
 
 // 送信元証券会社のIDです
-ulong SenderBrokerID = 0;
+ulong ClientBrokerID = 0;
 
 // 口座番号です
 ulong SenderAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
@@ -73,7 +75,7 @@ int OnInit() {
     int shift_bytes = 3;
     for (int i = 0; i < StringLen(broker_name); ++i) {
         uchar byte = (uchar)StringGetChar(broker_name, i);
-        SenderBrokerID ^= byte << (8 * shift_bytes);
+        ClientBrokerID ^= byte << (8 * shift_bytes);
         --shift_bytes;
         if (shift_bytes < 0) {
             shift_bytes = 3;
@@ -294,14 +296,19 @@ int AppendChangedPosition(POSITION_LIST& Current, int change, int dst, int src) 
 //| コピーポジション連携用HTTPリクエストで送信します                 |
 //+------------------------------------------------------------------+
 void SendPositionRequest(int change_count) {
-    // ポジションの差分をコピーポジション連携用タブ区切りファイルに出力します
     for (int i = 0; i < change_count; ++i) {
         string symbol = Output.SymbolValue[i];
         StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
 
-        string position_id = StringFormat("%08x%08x%08x", SenderBrokerID, SenderAccountNumber, Output.Tickets[i]);
-        string uri = StringFormat("http://%s/api/position/?change=%s&command=%s&symbol=%s&lots=%.2lf&magic=%010lu&position_id=%s",
-            SERVER_NAME, Output.Change[i] == +1 ? "entry" : "exit", Output.Command[i] == +1 ? "buy" : "sell", symbol,  LOTS_MULTIPLY * Output.Lots[i], Output.MagicNumber[i], position_id);
-        Get(uri);
+        string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, Output.Tickets[i]);
+        string json = StringFormat("{\"Command\":\"%s\",\"Type\":\"%s\",\"Symbol\":\"%s\",\"Lots\":%.2lf,\"PositionId\":\"%s\"}",
+            Output.Change[i] == +1 ? "entry" : "exit", Output.Command[i] == +1 ? "buy" : "sell", symbol,  Output.Lots[i], position_id);
+
+        string trade = "";
+        for (int j = 0; j < StringLen(json); ++j) {
+            trade += StringFormat("%02x", json[j]);
+        }
+        Get(URL + "?trade=" + trade);
+        break;
     }
 }
