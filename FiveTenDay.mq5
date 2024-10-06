@@ -18,10 +18,10 @@ input int TREND_SCAN_BARS = 2; // トレンド確認するバーの本数(hour)
 input int VOLATILITY_SCAN_BARS = 4; // ボラティリティ確認するバーの本数(hour)
 input double STDDEV_VOLATILITY_RATIO = 1.0; // ストップロスを算出する時の標準偏差に対する係数
 sinput bool USE_MM = true; // 複利運用するか
-sinput double LOTS = 0.01; // ロット数(複利運用時0.00)
+sinput double LOTS = 0.00; // ロット数(複利運用時0.00)
 sinput double RISK_RATIO_PERCENTAGE = 25.0; // 許容リスクパーセンテージ(%))
 sinput double MAX_LOTS = 0.0; // 最大ロット数(0.0で自動設定)
-sinput double MIN_MARGIN_LEVEL = 150.0; // 最低証拠金維持率(%)
+input double MIN_MARGIN_LEVEL = 150.0; // 最低証拠金維持率(%)
 sinput int SLIPPAGE = 10; // スリッページ
 sinput int MAGIC = 15151515; // マジックナンバー
 
@@ -94,7 +94,7 @@ void OnTick()
     static double profit;
     if (ticket != 0) {
         if (!OrderSelect(ticket, SELECT_BY_TICKET)) {
-            printf("#%d: +%.0f", ticket, profit);
+            printf("#%d: %+.0f", ticket, profit);
             ticket = 0;
             return;
         }
@@ -105,7 +105,7 @@ void OnTick()
             if (!OrderSelect(ticket, SELECT_BY_TICKET)) {
                 return;
             }
-            printf("#%d: +%.0f", ticket, profit);
+            printf("#%d: %+.0f", ticket, profit);
             if (OrderClose(ticket, lots, Bid, SLIPPAGE, clrRed)) {
                 ticket = 0;
             }
@@ -146,7 +146,7 @@ double GetStopLoss(double& SL)
     if (SL == 0.0) {
         return 0.0;
     }
-    double sl = MathFloor(SL * MathPow(10, Digits)) / MathPow(10, Digits);
+    double sl = NormalizeDouble(Bid - SL, Digits);
     return sl;
 }
 
