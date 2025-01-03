@@ -379,7 +379,7 @@ public:
 //+------------------------------------------------------------------+
 //| https://qiita.com/LitopsQ/items/494be412b3f96d26784b             |
 //+------------------------------------------------------------------+
-double MQL45::SharpeRatioMonthly(double Balance)
+double MQL45::SharpeRatioMonthly(double balance)
 {
     int CalcMonth = 0;
     int TradeMonths = 0;
@@ -403,9 +403,9 @@ double MQL45::SharpeRatioMonthly(double Balance)
     double SumMER = 0;
 
     for(i = 0; i < ArraySize(MonthlyProfit); i++) {
-        MonthlyEarningRate[i] = MonthlyProfit[i] / Balance;
+        MonthlyEarningRate[i] = MonthlyProfit[i] / balance;
         SumMER += MonthlyEarningRate[i];
-        Balance += MonthlyProfit[i];
+        balance += MonthlyProfit[i];
     }
 
     double MER_Average = SumMER / TradeMonths;
