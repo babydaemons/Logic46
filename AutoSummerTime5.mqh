@@ -368,12 +368,21 @@ public:
         return(tm.min);
     }
 
-private:
-    static int SummerGmtOffsets[];
-    static int WinterGmtOffsets[];
+    static int GetDiffHours()
+    {
+        if (IsSummerTime()) {
+            return SummerGmtOffsets[TIMEZONE_TYPE] - SummerGmtOffsets[TIMEZONE_TOKYO];
+        }
+        else {
+            return WinterGmtOffsets[TIMEZONE_TYPE] - WinterGmtOffsets[TIMEZONE_TOKYO];
+        }
+    }
+public:
+    static const int SummerGmtOffsets[];
+    static const int WinterGmtOffsets[];
 };
 
-int AutoSummerTime::SummerGmtOffsets[] = { +3, -4, +1, -9 };
-int AutoSummerTime::WinterGmtOffsets[] = { +2, -5, +0, -9 };
+const int AutoSummerTime::SummerGmtOffsets[] = { +3, -4, +1, -9 };
+const int AutoSummerTime::WinterGmtOffsets[] = { +2, -5, +0, -9 };
 
 //+------------------------------------------------------------------+
