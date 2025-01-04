@@ -12,10 +12,12 @@
 #include "AtelierLapin/Lib/MT5/ErrorDescription.mqh"
 
 input int INIT_LOT = 1000;
+input int INIT_BALANCE = 20000;
 input string INDEX_JP = "JPN225";
 input string INDEX_US = "US30";
-input double THRESHOLD_CHANGE_US = 0.20;
-input double THRESHOLD_RSI_JP = 13.0;
+input double THRESHOLD_CHANGE_US = 0.55;
+input double THRESHOLD_RSI_US = 12.5;
+input double THRESHOLD_RSI_JP = 20.0;
 
 //+------------------------------------------------------------------+
 //| 経過秒数を返す                                                   |
@@ -38,7 +40,7 @@ int MARKET_JP_PM_OPEN  = GetSeconds(12, 30, 0);
 int MARKET_JP_PM_CLOSE = GetSeconds(15,  0, 0);
 int MARKET_US_OPEN     = GetSeconds( 9, 30, 0);
 int MARKET_US_CLOSE    = GetSeconds(16,  0, 0);
-int Balance = 25000;
+int Balance = INIT_BALANCE;
 int Position = 0;
 double Entry_jp = 0;
 double Exit_jp = 0;
@@ -47,9 +49,11 @@ int logger = INVALID_HANDLE;
 double Dow0 = 0;
 double Dow1 = 0;
 double Signal_us = 0;
-double Signal_jp = 0;
+double Signal_us2 = 0;
+double Signal_jp2 = 0;
 
 int hRSI_jp = INVALID_HANDLE;
+int hRSI_us = INVALID_HANDLE;
 
 double WeeklyProfit[];
 double WeeklyBalance[];
@@ -57,7 +61,6 @@ int DayOfWeek = -1;
 int N = -1;
 
 int LOT = 0;
-int InitialBalance = 0;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -71,12 +74,16 @@ int OnInit()
             return INIT_FAILED;
         }
     }
+    hRSI_us = iRSI(INDEX_US, PERIOD_H1, 5 * 24, PRICE_CLOSE);
+    if (hRSI_us == INVALID_HANDLE) {
+        printf(ErrorDescription());
+        return INIT_FAILED;
+    }
     hRSI_jp = iRSI(INDEX_JP, PERIOD_H1, 5 * 24, PRICE_CLOSE);
     if (hRSI_jp == INVALID_HANDLE) {
         printf(ErrorDescription());
         return INIT_FAILED;
     }
-    InitialBalance = Balance;
     return INIT_SUCCEEDED;
 }
 
@@ -103,7 +110,7 @@ void OnTick()
         ArrayResize(WeeklyProfit, N + 1);
         ArrayResize(WeeklyBalance, N + 1);
         WeeklyBalance[N] = Balance;
-        int m = (int)(10 * Balance / (double)InitialBalance);
+        int m = (int)(10 * Balance / (double)INIT_BALANCE);
         if (m < 10) { m = 10; }
         LOT = m * INIT_LOT / 10;
     }
@@ -160,9 +167,10 @@ void OnTick()
             result = "-";
         }
         if (logger != INVALID_HANDLE) {
-            string signal_us = StringFormat("%+.3f", Signal_us);
-            string signal_jp = StringFormat("%+.3f", Signal_jp);
-            FileWrite(logger, timestamp, Position, Dow0, Dow1, signal_us, Entry_jp, Exit_jp, signal_jp, LOT, result, Balance);
+            string signal_us =  StringFormat("%+.3f", Signal_us);
+            string signal_us2 = StringFormat("%+.3f", Signal_us2);
+            string signal_jp2 = StringFormat("%+.3f", Signal_jp2);
+            FileWrite(logger, timestamp, Position, Dow0, Dow1, signal_us, signal_us2, Entry_jp, Exit_jp, signal_jp2, LOT, result, Balance);
         }
         Position = 0;
     }
@@ -185,14 +193,18 @@ int GetEntry(bool is_am_market)
 
     Signal_us = 100.0 * (Dow1 - Dow0) / Dow0;
 
+    double rsi_us[];
+    CopyBuffer(hRSI_us, MAIN_LINE, 0, 1, rsi_us);
+    Signal_us2 = rsi_us[0] - 50.0;
+
     double rsi_jp[];
     CopyBuffer(hRSI_jp, MAIN_LINE, 0, 1, rsi_jp);
-    Signal_jp = rsi_jp[0] - 50.0;
+    Signal_jp2 = rsi_jp[0] - 50.0;
 
-    if (Signal_us > +THRESHOLD_CHANGE_US && Signal_jp < +THRESHOLD_RSI_JP) {
+    if (Signal_us > +THRESHOLD_CHANGE_US && Signal_us2 < +THRESHOLD_RSI_US && Signal_jp2 < +THRESHOLD_RSI_JP) {
         return +1;
     }
-    if (Signal_us < -THRESHOLD_CHANGE_US && Signal_jp > -THRESHOLD_RSI_JP) {
+    if (Signal_us < -THRESHOLD_CHANGE_US && Signal_us2 > -THRESHOLD_RSI_US && Signal_jp2 > -THRESHOLD_RSI_JP) {
         return -1;
     }
     return 999;
@@ -224,7 +236,12 @@ double SharpeRatioWeekly()
     double MER_Average = SumMER / N;
     double MER_SD = CalcSD(WeeklyEarningRate);
     double SR = 0;
-    if (MER_SD != 0) SR = MER_Average / MER_SD; // ゼロ割を回避
+    if (MER_SD != 0) {
+        SR = MER_Average / MER_SD; // ゼロ割を回避
+    }
+    if (!MathIsValidNumber(SR)) {
+        SR = 0;
+    }
     return SR;
 }
 
