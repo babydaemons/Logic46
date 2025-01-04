@@ -15,7 +15,7 @@ input int INIT_LOT = 1000;
 input string INDEX_JP = "JPN225";
 input string INDEX_US = "US30";
 input double THRESHOLD_CHANGE_US = 0.20;
-input double THRESHOLD_RSI_JP = 40.0;
+input double THRESHOLD_RSI_JP = 13.0;
 
 //+------------------------------------------------------------------+
 //| 経過秒数を返す                                                   |
@@ -51,9 +51,9 @@ double Signal_jp = 0;
 
 int hRSI_jp = INVALID_HANDLE;
 
-double MonthlyProfit[];
-double MonthlyBalance[];
-int Month = -1;
+double WeeklyProfit[];
+double WeeklyBalance[];
+int DayOfWeek = -1;
 int N = -1;
 
 int LOT = 0;
@@ -97,15 +97,15 @@ void OnTick()
     MqlDateTime d = {};
     TimeToStruct(localtime, d);
     int t = GetSeconds(d.hour, d.min, d.sec);
-    if (Month != d.mon) {
-        Month = d.mon;
+    if (DayOfWeek != d.day_of_week) {
+        DayOfWeek = d.day_of_week;
         ++N;
-        ArrayResize(MonthlyProfit, N + 1);
-        ArrayResize(MonthlyBalance, N + 1);
-        MonthlyBalance[N] = Balance;
-        int m = (int)(Balance / InitialBalance);
-        if (m < 1) { m = 1; }
-        LOT = m * INIT_LOT;
+        ArrayResize(WeeklyProfit, N + 1);
+        ArrayResize(WeeklyBalance, N + 1);
+        WeeklyBalance[N] = Balance;
+        int m = (int)(10 * Balance / (double)InitialBalance);
+        if (m < 10) { m = 10; }
+        LOT = m * INIT_LOT / 10;
     }
     if (Position == 0) {
         if (MARKET_JP_AM_OPEN <= t && t < MARKET_JP_AM_CLOSE) {
@@ -138,10 +138,10 @@ void OnTick()
             if (Entry_jp < Exit_jp) {
                 Balance += 2 * LOT;
                 result = "W";
-                MonthlyProfit[N] += LOT;
+                WeeklyProfit[N] += LOT;
             }
             else {
-                MonthlyProfit[N] -= LOT;
+                WeeklyProfit[N] -= LOT;
             }
         }
         else if (Position == -1) {
@@ -149,10 +149,10 @@ void OnTick()
             if (Entry_jp < Exit_jp) {
                 Balance += 2 * LOT;
                 result = "W";
-                MonthlyProfit[N] += LOT;
+                WeeklyProfit[N] += LOT;
             }
             else {
-                MonthlyProfit[N] -= LOT;
+                WeeklyProfit[N] -= LOT;
             }
         }
         else {
@@ -162,7 +162,7 @@ void OnTick()
         if (logger != INVALID_HANDLE) {
             string signal_us = StringFormat("%+.3f", Signal_us);
             string signal_jp = StringFormat("%+.3f", Signal_jp);
-            FileWrite(logger, timestamp, Position, Dow0, Dow1, signal_us, Entry_jp, Exit_jp, signal_jp, result, Balance);
+            FileWrite(logger, timestamp, Position, Dow0, Dow1, signal_us, Entry_jp, Exit_jp, signal_jp, LOT, result, Balance);
         }
         Position = 0;
     }
@@ -203,26 +203,26 @@ int GetEntry(bool is_am_market)
 //+------------------------------------------------------------------+
 double OnTester()
 {
-    return SharpeRatioMonthly() * Balance;
+    return SharpeRatioWeekly() * Balance;
 }
 
 //+------------------------------------------------------------------+
 //| https://qiita.com/LitopsQ/items/494be412b3f96d26784b             |
 //+------------------------------------------------------------------+
-double SharpeRatioMonthly()
+double SharpeRatioWeekly()
 {
     ++N;
-    double MonthlyEarningRate[];
-    ArrayResize(MonthlyEarningRate, N);
+    double WeeklyEarningRate[];
+    ArrayResize(WeeklyEarningRate, N);
     double SumMER = 0;
 
     for (int i = 0; i < N; ++i) {
-        MonthlyEarningRate[i] = MonthlyProfit[i] / MonthlyBalance[i];
-        SumMER += MonthlyEarningRate[i];
+        WeeklyEarningRate[i] = WeeklyProfit[i] / WeeklyBalance[i];
+        SumMER += WeeklyEarningRate[i];
     }
 
     double MER_Average = SumMER / N;
-    double MER_SD = CalcSD(MonthlyEarningRate);
+    double MER_SD = CalcSD(WeeklyEarningRate);
     double SR = 0;
     if (MER_SD != 0) SR = MER_Average / MER_SD; // ゼロ割を回避
     return SR;
