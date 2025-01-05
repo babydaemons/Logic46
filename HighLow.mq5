@@ -17,7 +17,6 @@ input string INDEX_JP = "JPN225";
 input string INDEX_US = "US30";
 input double THRESHOLD_CHANGE_US = 0.20;
 input double THRESHOLD_RSI_US = 10.0;
-input double THRESHOLD_RSI_JP = 20.0;
 
 //+------------------------------------------------------------------+
 //| 経過秒数を返す                                                   |
@@ -51,9 +50,7 @@ double Dow1 = 0;
 double Signal_us = 0;
 double Signal_us2 = 0;
 double Signal_us3 = 0;
-double Signal_jp2 = 0;
 
-int hRSI_jp = INVALID_HANDLE;
 int hRSI_us = INVALID_HANDLE;
 int hMACD_us = INVALID_HANDLE;
 
@@ -83,15 +80,10 @@ int OnInit()
             printf(ErrorDescription());
             return INIT_FAILED;
         }
-        FileWrite(logger, "yyyy-MM-dd hh:mm:ss", "Open", "Close", "Change", "Dow_RSI", "MACD", "Open", "Close", "L/S", "Change", "NK_RSI", "Entry", "W/L", "Balance");
+        FileWrite(logger, "yyyy-MM-dd hh:mm:ss", "Open", "Close", "Change", "Dow_RSI", "MACD", "Open", "Close", "L/S", "Change", "Entry", "W/L", "Balance");
     }
     hRSI_us = iRSI(INDEX_US, PERIOD_H1, 5 * 24, PRICE_CLOSE);
     if (hRSI_us == INVALID_HANDLE) {
-        printf(ErrorDescription());
-        return INIT_FAILED;
-    }
-    hRSI_jp = iRSI(INDEX_JP, PERIOD_H1, 5 * 24, PRICE_CLOSE);
-    if (hRSI_jp == INVALID_HANDLE) {
         printf(ErrorDescription());
         return INIT_FAILED;
     }
@@ -199,8 +191,7 @@ void OnTick()
             string signal_us2 = StringFormat("%+.3f", Signal_us2);
             string signal_us3 = StringFormat("%+.3f", Signal_us3);
             string signal_jp =  StringFormat("%+.3f", 100.0 * (Exit_jp - Entry_jp) / (double)Entry_jp);
-            string signal_jp2 = StringFormat("%+.3f", Signal_jp2);
-            FileWrite(logger, timestamp, Dow0, Dow1, signal_us, signal_us2, signal_us3, Entry_jp, Exit_jp, Position, signal_jp, signal_jp2, LOT, result, Balance);
+            FileWrite(logger, timestamp, Dow0, Dow1, signal_us, signal_us2, signal_us3, Entry_jp, Exit_jp, Position, signal_jp, LOT, result, Balance);
         }
         Position = 0;
     }
@@ -227,20 +218,16 @@ int GetEntry(bool is_am_market)
     CopyBuffer(hRSI_us, MAIN_LINE, 0, 1, rsi_us);
     Signal_us2 = rsi_us[0] - 50.0;
 
-    double rsi_jp[];
-    CopyBuffer(hRSI_jp, MAIN_LINE, 0, 1, rsi_jp);
-    Signal_jp2 = rsi_jp[0] - 50.0;
-
     double macd_us1[];
     CopyBuffer(hMACD_us, MAIN_LINE,   0, 1, macd_us1);
     double macd_us2[];
     CopyBuffer(hMACD_us, SIGNAL_LINE, 0, 1, macd_us2);
     Signal_us3 = 100.0 * (macd_us1[0] - macd_us2[0]) / Dow1;
 
-    if (Signal_us > +THRESHOLD_CHANGE_US && Signal_us2 < +THRESHOLD_RSI_US && Signal_us3 > 0 && Signal_jp2 < +THRESHOLD_RSI_JP) {
+    if (Signal_us > +THRESHOLD_CHANGE_US && Signal_us2 < +THRESHOLD_RSI_US && Signal_us3 > 0) {
         return +1;
     }
-    if (Signal_us < -THRESHOLD_CHANGE_US && Signal_us2 > -THRESHOLD_RSI_US && Signal_us3 < 0 && Signal_jp2 > -THRESHOLD_RSI_JP) {
+    if (Signal_us < -THRESHOLD_CHANGE_US && Signal_us2 > -THRESHOLD_RSI_US && Signal_us3 < 0) {
         return -1;
     }
     return 999;
