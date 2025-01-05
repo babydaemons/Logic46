@@ -81,6 +81,7 @@ int OnInit()
             printf(ErrorDescription());
             return INIT_FAILED;
         }
+        FileWrite(logger, "yyyy-MM-dd hh:mm:ss", "Open", "Close", "Change", "Dow_RSI", "MACD", "Open", "Close", "L/S", "Change", "NK_RSI", "Entry", "W/L", "Balance");
     }
     hRSI_us = iRSI(INDEX_US, PERIOD_H1, 5 * 24, PRICE_CLOSE);
     if (hRSI_us == INVALID_HANDLE) {
