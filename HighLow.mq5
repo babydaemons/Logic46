@@ -60,11 +60,13 @@ int hMACD_us = INVALID_HANDLE;
 double WeeklyProfit[];
 double WeeklyBalance[];
 int DayOfWeek = -1;
+double MonthlyProfit[];
+double MonthlyBalance[];
+int Month = -1;
 int N = -1;
+int M = -1;
 
 int LOT = 0;
-
-double SharpeRatio = 0;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -124,10 +126,17 @@ void OnTick()
         ArrayResize(WeeklyBalance, N + 1);
         WeeklyProfit[N] = 0;
         WeeklyBalance[N] = Balance;
-        WeeklyProfit[N] = 0;
         int m = (int)(10 * Balance / (double)INIT_BALANCE);
         if (m < 10) { m = 10; }
         LOT = m * INIT_LOT / 10;
+    }
+    if (Month != d.mon) {
+        Month = d.mon;
+        ++M;
+        ArrayResize(MonthlyProfit, M + 1);
+        ArrayResize(MonthlyBalance, M + 1);
+        MonthlyProfit[M] = 0;
+        MonthlyBalance[M] = Balance;
     }
     if (Position == 0) {
         if (MARKET_JP_AM_OPEN <= t && t < MARKET_JP_AM_CLOSE) {
@@ -161,9 +170,11 @@ void OnTick()
                 Balance += 2 * LOT;
                 result = "W";
                 WeeklyProfit[N] += LOT;
+                MonthlyProfit[M] += LOT;
             }
             else {
                 WeeklyProfit[N] -= LOT;
+                MonthlyProfit[M] -= LOT;
             }
         }
         else if (Position == -1) {
@@ -172,9 +183,11 @@ void OnTick()
                 Balance += 2 * LOT;
                 result = "W";
                 WeeklyProfit[N] += LOT;
+                MonthlyProfit[M] += LOT;
             }
             else {
                 WeeklyProfit[N] -= LOT;
+                MonthlyProfit[M] -= LOT;
             }
         }
         else {
@@ -238,31 +251,34 @@ int GetEntry(bool is_am_market)
 //+------------------------------------------------------------------+
 double OnTester()
 {
-    SharpeRatio = SharpeRatioWeekly();
+    double SharpeRatioWeekly = SharpeRatio(WeeklyProfit, WeeklyBalance);
+    double SharpeRatioMonthly = SharpeRatio(MonthlyProfit, MonthlyBalance);
     if (logger != INVALID_HANDLE) {
-        FileWrite(logger, Balance, SharpeRatio);
+        FileWrite(logger, Balance, SharpeRatioWeekly, SharpeRatioMonthly);
         FileClose(logger);
     }
-    return SharpeRatio * Balance;
+    return SharpeRatioMonthly * Balance;
 }
 
 //+------------------------------------------------------------------+
 //| https://qiita.com/LitopsQ/items/494be412b3f96d26784b             |
 //+------------------------------------------------------------------+
-double SharpeRatioWeekly()
+double SharpeRatio(const double& Profits[], const double& Balances[])
 {
-    ++N;
-    double WeeklyEarningRate[];
-    ArrayResize(WeeklyEarningRate, N);
+    int n = ArraySize(Profits);
+    double EarningRates[];
+    ArrayResize(EarningRates, n);
     double SumMER = 0;
 
-    for (int i = 0; i < N; ++i) {
-        WeeklyEarningRate[i] = WeeklyProfit[i] / WeeklyBalance[i];
-        SumMER += WeeklyEarningRate[i];
+    for (int i = 0; i < n; ++i) {
+        if (Balances[i] != 0) {
+            EarningRates[i] = Profits[i] / Balances[i];
+        }
+        SumMER += EarningRates[i];
     }
 
-    double MER_Average = SumMER / N;
-    double MER_SD = CalcSD(WeeklyEarningRate);
+    double MER_Average = SumMER / n;
+    double MER_SD = CalcSD(EarningRates);
     double SR = 0;
     if (MER_SD != 0) {
         SR = MER_Average / MER_SD; // ゼロ割を回避
