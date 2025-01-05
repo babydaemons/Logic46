@@ -128,6 +128,7 @@ void OnTick()
         ++N;
         ArrayResize(WeeklyProfit, N + 1);
         ArrayResize(WeeklyBalance, N + 1);
+        WeeklyProfit[N] = 0;
         WeeklyBalance[N] = Balance;
         int m = (int)(10 * Balance / (double)INIT_BALANCE);
         if (m < 10) { m = 10; }
