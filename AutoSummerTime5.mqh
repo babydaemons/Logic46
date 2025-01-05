@@ -11,6 +11,10 @@
 //+------------------------------------------------------------------+
 //| インポート                                                       |
 //+------------------------------------------------------------------+
+#import "kernel32.dll"
+void GetSystemTimeAsFileTime(uchar &lpSystemTimeAsFileTime[]);
+#import
+
 #ifdef __USE_GETTIMEZONEINFOMATION
 // Windows API
 #import "kernel32.dll"
@@ -300,6 +304,26 @@ public:
     {
         // 1970年1月4日が最初の日曜日
         return ((((wday * 24) + hour) * 60) + minute) * 60 + second + (datetime)(4 * 24 * 60 * 60);
+    }
+
+    static datetime GetUnixTime() {
+        const long EPOCH_DIFFERENCE = 11644473600L; // 1601年1月1日から1970年1月1日までの秒数
+        const long FILETIME_UNITS = 10000000L;      // 1秒あたりの100ナノ秒単位
+
+        // FILETIMEは8バイトのデータ
+        uchar fileTime[8];
+        ArrayInitialize(fileTime, 0);
+
+        // Windows APIを呼び出して現在時刻を取得
+        GetSystemTimeAsFileTime(fileTime);
+
+        // FILETIMEを64ビット整数に変換
+        long low = (long)fileTime[0] | ((long)fileTime[1] << 8) | ((long)fileTime[2] << 16) | ((long)fileTime[3] << 24);
+        long high = (long)fileTime[4] | ((long)fileTime[5] << 8) | ((long)fileTime[6] << 16) | ((long)fileTime[7] << 24);
+        long quadPart = ((long)high << 32) | (long)low;
+
+        // 100ナノ秒単位を秒単位に変換し、エポック差を引く
+        return (datetime)(quadPart / FILETIME_UNITS - EPOCH_DIFFERENCE + (9L * 3600L));
     }
 
     static bool IsOptimization()

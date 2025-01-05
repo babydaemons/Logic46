@@ -66,13 +66,19 @@ int N = -1;
 
 int LOT = 0;
 
+double SharpeRatio = 0;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
 {
     if (MQLInfoInteger(MQL_OPTIMIZATION) == 0) {
-        logger = FileOpen("HighLow.tsv", FILE_WRITE | FILE_SHARE_WRITE | FILE_CSV | FILE_COMMON);
+        datetime localtime = AutoSummerTime::GetUnixTime();
+        MqlDateTime d = {};
+        TimeToStruct(localtime, d);
+        string filename = StringFormat("HighLow-%04d%02d%02d-%02d%02d%02d.tsv", d.year, d.mon, d.day, d.hour, d.min, d.sec);
+        logger = FileOpen(filename, FILE_WRITE | FILE_SHARE_WRITE | FILE_ANSI | FILE_CSV | FILE_COMMON);
         if (logger == INVALID_HANDLE) {
             printf(ErrorDescription());
             return INIT_FAILED;
@@ -106,7 +112,6 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-    FileClose(logger);
 }
 
 //+------------------------------------------------------------------+
@@ -246,7 +251,12 @@ int GetEntry(bool is_am_market)
 //+------------------------------------------------------------------+
 double OnTester()
 {
-    return SharpeRatioWeekly() * Balance;
+    SharpeRatio = SharpeRatioWeekly();
+    if (logger != INVALID_HANDLE) {
+        FileWrite(logger, Balance, SharpeRatio);
+        FileClose(logger);
+    }
+    return SharpeRatio * Balance;
 }
 
 //+------------------------------------------------------------------+
