@@ -1,25 +1,45 @@
 using System.Diagnostics;
-using TradeTransmitterServer;
-namespace TradeTransmitter;
+namespace TradeTransmitterServer;
 
-class Program
+public class Program
 {
-    static async Task Main(string[] args)
+    [Obsolete]
+    public static async Task Main(string[] args)
     {
-        ServerLogger.WriteLine($"トレード受信サーバーが起動しました。");
+        ILogger<Program>? logger = null;
+        var host = Host.CreateDefaultBuilder(args)
+            .ConfigureLogging(logging =>
+            {
+                // 既存のログプロバイダーをクリア
+                logging.ClearProviders();
 
-        var builder = WebApplication.CreateBuilder(args);
+                // Kestrel (Microsoft.*) ログをファイルに出力
+                logging.AddFilter("Microsoft", LogLevel.Information); // Microsoft 系のログレベルを設定
+                logging.AddFile("Logs/kestrel-{Date}.log", LogLevel.Information); // ファイルに出力
 
-        builder.Services.AddControllers();
-
-        var app = builder.Build();
-
-        app.UseRouting();
-
-        app.MapControllers();
+                // アプリケーション固有のログをコンソールに出力
+                logging.AddFilter("TradeTransmitter", LogLevel.Information); // アプリ名でフィルタリング
+                logging.AddConsole(configure => configure.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ");
+            })
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                // Webアプリケーションの設定
+                webBuilder.Configure(app =>
+                {
+                    app.UseRouting();
+                    logger = app.ApplicationServices.GetService<ILogger<Program>>();
+                    logger?.LogInformation($"トレード受信サーバーが起動しました。");
+                    app.Run(async context =>
+                    {
+                        logger?.LogInformation("HTTP request received at {Time}", DateTime.Now);
+                        await context.Response.WriteAsync("Hello, World!");
+                    });
+                });
+            })
+            .Build();
 
         // サーバーを非同期で実行
-        var hostTask = app.RunAsync();
+        var task = host.RunAsync();
 
         // 次の中旬の週末の深夜2時を計算
         var targetTime = GetNextMidMonthWeekendMidnight();
@@ -28,34 +48,31 @@ class Program
         var delay = targetTime - DateTime.Now;
         if (delay < TimeSpan.Zero)
         {
-            ServerLogger.WriteLine("指定した時刻はすでに過ぎています。");
+            logger?.LogInformation("指定した時刻はすでに過ぎています。");
             return;
         }
 
-        Console.WriteLine($"トレード受信サーバーは {targetTime} に終了します。");
+        logger?.LogInformation($"トレード受信サーバーは {targetTime} に終了します。");
 
         // 指定時刻まで待機
         await Task.Delay(delay);
 
         // サーバーを停止
-        ServerLogger.WriteLine("サーバーを終了します...");
-        await app.StopAsync();
-
-        // サーバータスクを待機して完全に終了
-        await hostTask;
+        logger?.LogInformation("サーバーを終了します...");
+        task.Wait();
 
         // certbot.exe を実行
-        Console.WriteLine("Certbot を実行中...");
+        logger?.LogInformation("Certbot を実行中...");
         var certbotExitCode = RunCertbot();
         if (certbotExitCode != 0)
         {
-            Console.WriteLine($"Certbot 実行中にエラーが発生しました。終了コード: {certbotExitCode}");
+            logger?.LogInformation($"Certbot 実行中にエラーが発生しました。終了コード: {certbotExitCode}");
             return;
         }
-        Console.WriteLine("Certbot の実行が完了しました。");
+        logger?.LogInformation("Certbot の実行が完了しました。");
 
         // OS を再起動
-        Console.WriteLine("OS を再起動します...");
+        logger?.LogInformation("OS を再起動します...");
         RestartOS();
     }
 
