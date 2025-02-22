@@ -10,4 +10,5 @@ WWW_ROOT = f"{APP_DIR}/wwwroot"
 CHALLENGE_FOLDER = f"{WWW_ROOT}/.well-known/acme-challenge"
 WIN_ACME_DIR = f"{APP_DIR}/win-acme"
 
-FXTF_MT4 = "https://www.fxtrade.co.jp/system/download/fxtf4setup.exe"
+FXTF_MT4_URL = "https://www.fxtrade.co.jp/system/download/fxtf4setup.exe"
+FXTF_MT4_PATH = "C:/Program Files (x86)/FXTF MT4/terminal.exe"

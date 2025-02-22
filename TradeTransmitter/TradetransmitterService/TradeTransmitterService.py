@@ -1,7 +1,7 @@
 import os
 import threading
 from app import app, init_db
-from init import set_firewall_rules, install_win_acme, resolve_ini_config, get_ssl_certificate
+from init import set_firewall_rules, install_win_acme, resolve_ini_config, get_ssl_certificate, install_fxtf_mt4
 from startup import schedule_reboot
 from config import CERT_DIR, DB_PATH
 from util import write_log, ini_path

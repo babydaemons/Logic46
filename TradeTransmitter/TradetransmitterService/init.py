@@ -3,7 +3,7 @@ import subprocess
 import zipfile
 import requests
 from util import download, exit_on_error, mkdir, write_log, log_file
-from config import CERT_DIR, WIN_ACME_DIR, WWW_ROOT, CHALLENGE_FOLDER, DOWNLOAD_DIR
+from config import CERT_DIR, WIN_ACME_DIR, WWW_ROOT, CHALLENGE_FOLDER, DOWNLOAD_DIR, FXTF_MT4_URL, FXTF_MT4_PATH
 
 def set_firewall_rules():
     """ファイアウォール設定 (HTTP:80, HTTPS:443の開放)"""
@@ -41,8 +41,6 @@ def install_win_acme():
         zip_path = os.path.join(DOWNLOAD_DIR, "win-acme.zip")
         download(download_url, zip_path)
         
-        write_log("win-acme のダウンロードが完了しました。")
-
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             for file in zip_ref.namelist():
                 zip_ref.extract(file, WIN_ACME_DIR)
@@ -95,15 +93,12 @@ def get_ssl_certificate(config):
         "--pemfilespath", CERT_DIR
     ]
     
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", text=True)
-
     # リアルタイムで出力を表示
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", text=True)
     output = ""
     for line in process.stdout:
         print(line, end="")
         output += line
-    process = subprocess.Popen(command)
-
     process.wait()
 
     with open(log_file, "a", encoding="utf-8") as log:
@@ -119,4 +114,18 @@ def get_ssl_certificate(config):
 
 def install_fxtf_mt4():
     """ FXTF MT4をインストール """
-    pass
+    if os.path.exists(FXTF_MT4_PATH):
+        write_log("FXTF MT4 がインストール済みです。インストール処理をスキップします。")
+        return
+
+    installer_path = f"{DOWNLOAD_DIR}/fxtf4setup.exe"
+    download(FXTF_MT4_URL, installer_path)
+
+    # setup.exeを起動し、インストール完了まで待機
+    write_log("FXTF MT4 のインストールをしています...")
+    subprocess.run([installer_path])
+    if os.path.exists(FXTF_MT4_PATH):
+        write_log("インストールが正常に完了しました。")
+    else:
+        write_log("インストールしたFXTF MT4が見つかりません。", is_error=True)
+        exit_on_error()
