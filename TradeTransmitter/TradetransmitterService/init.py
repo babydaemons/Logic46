@@ -2,7 +2,7 @@ import os
 import subprocess
 import zipfile
 import requests
-from util import mkdir, write_log, log_file
+from util import exit_on_error, mkdir, write_log, log_file
 from config import CERT_DIR, WIN_ACME_DIR, WWW_ROOT, CHALLENGE_FOLDER
 
 def set_firewall_rules():
@@ -15,9 +15,14 @@ def set_firewall_rules():
         subprocess.run(["netsh", "advfirewall", "firewall", "add", "rule", "name=HTTPS Port 443", "dir=in", "action=allow", "protocol=TCP", "localport=443"], check=True)
     except subprocess.CalledProcessError as e:
         write_log(f"ファイアウォール設定に失敗しました: {e}", is_error=True)
+        exit_on_error()
 
 def install_win_acme():
     """win-acmeをインストール"""
+    if os.path.exists(f"{WIN_ACME_DIR}/wacs.exe"):
+        write_log("win-acme がインストール済みです。インストール処理をスキップします。")
+        return
+
     write_log("最新の win-acme バージョンを取得中...")
     win_acme_api_url = "https://api.github.com/repos/win-acme/win-acme/releases/latest"
     
@@ -54,32 +59,34 @@ def install_win_acme():
 
 def resolve_ini_config(ini_path):
     """ INIファイルから設定を取得 """
-    if not os.path.exists(ini_path):
-        raise FileNotFoundError("TradeTransmitterInstaller.ini が見つかりません。")
-    
-    config = {}
-    with open(ini_path, "r", encoding="utf-8") as file:
-        for line in file:
-            if "=" in line:
-                key, value = line.strip().split("=", 1)
-                config[key.strip().upper()] = value.strip()
-    
-    if "DOMAIN" not in config:
-        raise ValueError("ドメイン名がINIファイルに正しく設定されていません。")
-    if "EMAIL" not in config:
-        raise ValueError("メールアドレスがINIファイルに正しく設定されていません。")
-    
+    try:
+        if not os.path.exists(ini_path):
+            write_log(f"{ini_path} が見つかりません。", is_error=True)
+            exit_on_error()
+        
+        config = {}
+        with open(ini_path, "r", encoding="utf-8") as file:
+            for line in file:
+                if "=" in line:
+                    key, value = line.strip().split("=", 1)
+                    config[key.strip().upper()] = value.strip()
+        
+        if "DOMAIN" not in config:
+            write_log(f"ドメイン名が {ini_path} に正しく設定されていません。", is_error=True)
+            exit_on_error()
+
+        if "EMAIL" not in config:
+            write_log(f"メールアドレスが {ini_path} に正しく設定されていません。", is_error=True)
+            exit_on_error()
+    except (FileNotFoundError, ValueError) as e:
+        write_log(f"エラー: {str(e)}", is_error=True)
+        exit_on_error()
+
     write_log(f"ドメイン名: {config['DOMAIN']}, メールアドレス: {config['EMAIL']} を読み込みました。")
     return config
 
-def get_ssl_certificate(ini_path):
+def get_ssl_certificate(config):
     """ win-acme を使用して SSL 証明書を発行 """
-    try:
-        config = resolve_ini_config(ini_path)
-    except (FileNotFoundError, ValueError) as e:
-        write_log(f"エラー: {str(e)}", is_error=True)
-        return {}
-    
     write_log("win-acme を実行してSSL証明書を発行しています...")
     
     command = [
@@ -111,6 +118,6 @@ def get_ssl_certificate(ini_path):
         write_log("SSL証明書の発行とインストールに成功しました。")
     else:
         write_log("win-acme によるSSL証明書の発行に失敗しました。", is_error=True)
-        exit(-1)
+        exit_on_error()
     
     return config

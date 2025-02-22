@@ -1,9 +1,14 @@
 import os
+from sys import exit
 import logging
 import shutil
 from datetime import datetime
+import requests
 from colorama import Fore, Style, init
-from config import APP_NAME, APP_DIR
+from config import APP_NAME, APP_DIR, LOG_DIR
+
+os.makedirs(APP_DIR, exist_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 
 # 現在時刻を取得
 now = datetime.now()
@@ -41,6 +46,23 @@ def write_log(message, is_error=False):
     else:
         logger.info(message, stacklevel=2)  # 呼び出し元のファイル・行番号を取得
         print(Fore.GREEN + console_message + Style.RESET_ALL)  # コンソールは緑色
+
+def download(uri, path):
+    try:
+        write_log(f"ダウンロード中({uri} ⇒ {path})...")
+        with requests.get(uri, stream=True) as r:
+            r.raise_for_status()
+            with open(path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+    except Exception as err:
+        write_log("ダウンロードに失敗しました。", is_error=True)
+        exit_on_error()
+    write_log("ダウンロードが完了しました。")
+
+def exit_on_error():
+    write_log("※プログラムを終了します。続行するには[Enter]を押してください...", is_error=True)
+    exit(-1)
 
 def mkdir(dir):
     shutil.rmtree(dir, ignore_errors=True)

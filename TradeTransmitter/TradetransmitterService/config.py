@@ -1,5 +1,6 @@
 APP_NAME = "TradeTransmitterService"
 APP_DIR = f"C:/{APP_NAME}"
+LOG_DIR = f"{APP_DIR}/log"
 
 CERT_DIR = f"{APP_DIR}/certificate"
 DB_PATH = f"{APP_DIR}/{APP_NAME}.sqlite3"
