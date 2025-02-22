@@ -23,6 +23,9 @@ if __name__ == '__main__':
     if (os.path.exists(cert_path) == False) or (os.path.exists(key_path) == False):
         get_ssl_certificate(config)
 
+    # FXTF MT4のインストール
+    install_fxtf_mt4()
+
     # OS再起動用のスレッドを開始
     threading.Thread(target=schedule_reboot, daemon=True).start()
 
@@ -31,5 +34,5 @@ if __name__ == '__main__':
     init_db()
 
     # HTTPSサーバーを起動
-    write_log("HTTPSプロトコルの受け付けを開始します...")
+    write_log("生徒さんのトレード受信の受け付けを開始します...")
     app.run(ssl_context=(cert_path, key_path), host="0.0.0.0", port=443)

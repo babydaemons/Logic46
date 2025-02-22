@@ -2,8 +2,8 @@ import os
 import subprocess
 import zipfile
 import requests
-from util import exit_on_error, mkdir, write_log, log_file
-from config import CERT_DIR, WIN_ACME_DIR, WWW_ROOT, CHALLENGE_FOLDER
+from util import download, exit_on_error, mkdir, write_log, log_file
+from config import CERT_DIR, WIN_ACME_DIR, WWW_ROOT, CHALLENGE_FOLDER, DOWNLOAD_DIR
 
 def set_firewall_rules():
     """ファイアウォール設定 (HTTP:80, HTTPS:443の開放)"""
@@ -31,7 +31,6 @@ def install_win_acme():
         response.raise_for_status()
         release_info = response.json()
         download_url = next(asset["browser_download_url"] for asset in release_info["assets"] if asset["name"].endswith(".x64.trimmed.zip"))
-        write_log(f"win-acme ダウンロードURL: {download_url}")
 
         mkdir(WIN_ACME_DIR)
         mkdir(CERT_DIR)
@@ -39,12 +38,8 @@ def install_win_acme():
         mkdir(CHALLENGE_FOLDER)
        
         # ダウンロード処理（PowerShellを使用せず、requestsで処理）
-        zip_path = os.path.join(WIN_ACME_DIR, "win-acme.zip")
-        with requests.get(download_url, stream=True) as r:
-            r.raise_for_status()
-            with open(zip_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
+        zip_path = os.path.join(DOWNLOAD_DIR, "win-acme.zip")
+        download(download_url, zip_path)
         
         write_log("win-acme のダウンロードが完了しました。")
 
@@ -121,3 +116,7 @@ def get_ssl_certificate(config):
         exit_on_error()
     
     return config
+
+def install_fxtf_mt4():
+    """ FXTF MT4をインストール """
+    pass

@@ -5,10 +5,11 @@ import shutil
 from datetime import datetime
 import requests
 from colorama import Fore, Style, init
-from config import APP_NAME, APP_DIR, LOG_DIR
+from config import APP_NAME, APP_DIR, LOG_DIR, DOWNLOAD_DIR
 
 os.makedirs(APP_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # 現在時刻を取得
 now = datetime.now()
