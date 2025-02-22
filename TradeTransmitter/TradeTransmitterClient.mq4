@@ -8,7 +8,8 @@
 #property version   "1.00"
 #property strict
 
-input string  URL = "http://127.0.0.1/api/position/www.fxtrade.co.jp/201916737";    // ポジション情報を送信先のサーバーのURL
+input string  EMAIL = "babydaemons@gmail.com"; // 証券会社のWebサイトのドメイン名
+input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp"; // トレードポジションを受信するサーバー
 input string  SYMBOL_REMOVE_SUFFIX = "-cd"; // ポジションコピー時にシンボル名から削除するサフィックス
 
 #include "ErrorDescriptionMT4.mqh"

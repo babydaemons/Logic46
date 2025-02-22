@@ -65,22 +65,27 @@ ulong ClientBrokerID = 0;
 // 口座番号です
 ulong SenderAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
 
+string URL = TRADE_TRANSMITTER_SERVER + "/push";
+
 datetime StartServerTimeEA;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    string broker_name = AccountInfoString(ACCOUNT_COMPANY);
-    int shift_bytes = 3;
-    for (int i = 0; i < StringLen(broker_name); ++i) {
-        uchar byte = (uchar)StringGetChar(broker_name, i);
+    URL += StringFormat("?email=%s&account=%d", UrlEncode(EMAIL), SenderAccountNumber);
+
+    int shift_bytes = 3; // 32bitの整数値を作る: 0オリジンで0～3
+    for (int i = 0; i < StringLen(EMAIL); ++i) {
+        uchar byte = (uchar)StringGetChar(EMAIL, i);
         ClientBrokerID ^= byte << (8 * shift_bytes);
         --shift_bytes;
         if (shift_bytes < 0) {
             shift_bytes = 3;
         }
     }
+
+    ExecuteRequest(+1, +1, "USDJPY", 0.01, 12345689);
 
     // 100ミリ秒の周期でポジションコピーを行います
     if (!EventSetMillisecondTimer(100)) {
@@ -299,16 +304,20 @@ void SendPositionRequest(int change_count) {
     for (int i = 0; i < change_count; ++i) {
         string symbol = Output.SymbolValue[i];
         StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
-
-        string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, Output.Tickets[i]);
-        string json = StringFormat("{\"Command\":\"%s\",\"Type\":\"%s\",\"Symbol\":\"%s\",\"Lots\":%.2lf,\"PositionId\":\"%s\"}",
-            Output.Change[i] == +1 ? "entry" : "exit", Output.Command[i] == +1 ? "buy" : "sell", symbol,  Output.Lots[i], position_id);
-
-        string trade = "";
-        for (int j = 0; j < StringLen(json); ++j) {
-            trade += StringFormat("%02x", json[j]);
-        }
-        Get(URL + "?trade=" + trade);
+        ExecuteRequest(Output.Change[i], Output.Command[i], symbol, Output.Lots[i], Output.Tickets[i]);
         break;
     }
+}
+
+void ExecuteRequest(int change, int command, string symbol, double lots, int ticket)
+{
+     string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, ticket);
+
+     string uri = URL;
+     uri += StringFormat("&change=%d", change);
+     uri += StringFormat("&command=%d", command);
+     uri += StringFormat("&symbol=%s", symbol);
+     uri += StringFormat("&lots=%.2f", lots);
+     uri += StringFormat("&position_id=%s", position_id);
+     Get(uri);
 }
