@@ -1,0 +1,116 @@
+import os
+import subprocess
+import zipfile
+import requests
+from util import mkdir, write_log, log_file
+from config import CERT_DIR, WIN_ACME_DIR, WWW_ROOT, CHALLENGE_FOLDER
+
+def set_firewall_rules():
+    """ファイアウォール設定 (HTTP:80, HTTPS:443の開放)"""
+    write_log("ファイアウォールの設定を行っています...")
+    try:
+        write_log("HTTP(80)ポートの開放を実行しています...")
+        subprocess.run(["netsh", "advfirewall", "firewall", "add", "rule", "name=HTTP Port 80", "dir=in", "action=allow", "protocol=TCP", "localport=80"], check=True)
+        write_log("HTTPS(443)ポートの開放を実行しています...")
+        subprocess.run(["netsh", "advfirewall", "firewall", "add", "rule", "name=HTTPS Port 443", "dir=in", "action=allow", "protocol=TCP", "localport=443"], check=True)
+    except subprocess.CalledProcessError as e:
+        write_log(f"ファイアウォール設定に失敗しました: {e}", is_error=True)
+
+def install_win_acme():
+    """win-acmeをインストール"""
+    write_log("最新の win-acme バージョンを取得中...")
+    win_acme_api_url = "https://api.github.com/repos/win-acme/win-acme/releases/latest"
+    
+    try:
+        response = requests.get(win_acme_api_url)
+        response.raise_for_status()
+        release_info = response.json()
+        download_url = next(asset["browser_download_url"] for asset in release_info["assets"] if asset["name"].endswith(".x64.trimmed.zip"))
+        write_log(f"win-acme ダウンロードURL: {download_url}")
+
+        mkdir(WIN_ACME_DIR)
+        mkdir(CERT_DIR)
+        mkdir(WWW_ROOT)
+        mkdir(CHALLENGE_FOLDER)
+       
+        # ダウンロード処理（PowerShellを使用せず、requestsで処理）
+        zip_path = os.path.join(WIN_ACME_DIR, "win-acme.zip")
+        with requests.get(download_url, stream=True) as r:
+            r.raise_for_status()
+            with open(zip_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        
+        write_log("win-acme のダウンロードが完了しました。")
+
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            for file in zip_ref.namelist():
+                zip_ref.extract(file, WIN_ACME_DIR)
+                write_log(f"展開中です: {file}...")
+        write_log("win-acme のインストールが完了しました。")
+
+    except requests.RequestException as e:
+        write_log(f"win-acme の取得に失敗しました: {e}", is_error=True)
+
+def resolve_ini_config(ini_path):
+    """ INIファイルから設定を取得 """
+    if not os.path.exists(ini_path):
+        raise FileNotFoundError("TradeTransmitterInstaller.ini が見つかりません。")
+    
+    config = {}
+    with open(ini_path, "r", encoding="utf-8") as file:
+        for line in file:
+            if "=" in line:
+                key, value = line.strip().split("=", 1)
+                config[key.strip().upper()] = value.strip()
+    
+    if "DOMAIN" not in config:
+        raise ValueError("ドメイン名がINIファイルに正しく設定されていません。")
+    if "EMAIL" not in config:
+        raise ValueError("メールアドレスがINIファイルに正しく設定されていません。")
+    
+    write_log(f"ドメイン名: {config['DOMAIN']}, メールアドレス: {config['EMAIL']} を読み込みました。")
+    return config
+
+def get_ssl_certificate(ini_path):
+    """ win-acme を使用して SSL 証明書を発行 """
+    try:
+        config = resolve_ini_config(ini_path)
+    except (FileNotFoundError, ValueError) as e:
+        write_log(f"エラー: {str(e)}", is_error=True)
+        return {}
+    
+    write_log("win-acme を実行してSSL証明書を発行しています...")
+    
+    command = [
+       f"{WIN_ACME_DIR}\\wacs.exe",
+        "--target", "manual",
+        "--host", config["DOMAIN"],
+        "--emailaddress", config["EMAIL"],
+        "--accepttos",
+        "--webroot", WWW_ROOT,
+        "--store", "pemFiles",
+        "--pemfilespath", CERT_DIR
+    ]
+    
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", text=True)
+
+    # リアルタイムで出力を表示
+    output = ""
+    for line in process.stdout:
+        print(line, end="")
+        output += line
+    process = subprocess.Popen(command)
+
+    process.wait()
+
+    with open(log_file, "a", encoding="utf-8") as log:
+        log.write(output)
+    
+    if process.returncode == 0:
+        write_log("SSL証明書の発行とインストールに成功しました。")
+    else:
+        write_log("win-acme によるSSL証明書の発行に失敗しました。", is_error=True)
+        exit(-1)
+    
+    return config
