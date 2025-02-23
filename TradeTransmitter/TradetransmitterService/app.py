@@ -27,8 +27,7 @@ def init_db():
                 symbol TEXT NOT NULL,
                 lots NUMBER NOT NULL,
                 create_at TEXT NOT NULL,
-                delete_at TEXT NULL,
-                PRIMARY KEY (email, account, position_id)
+                delete_at TEXT NULL
             )
         ''')
         conn.commit()
