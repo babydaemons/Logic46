@@ -1,5 +1,6 @@
 import os
 import threading
+from installer import install
 from app import app, init_db
 from init import set_firewall_rules, install_win_acme, resolve_ini_config, get_ssl_certificate, start_fxtf_mt4
 from startup import schedule_reboot
@@ -7,6 +8,9 @@ from config import CERT_DIR, DB_PATH
 from util import write_log, ini_path
 
 if __name__ == '__main__':
+    # アプリのインストール
+    install()
+
     # INIファイル読み込み
     config = resolve_ini_config(ini_path)
 
