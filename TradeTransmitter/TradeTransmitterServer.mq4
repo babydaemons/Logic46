@@ -59,12 +59,13 @@ void OnTick() {
 //| Timer function                                                   |
 //+------------------------------------------------------------------+
 void OnTimer() {
-    string csv_text = Get(URL);
+    int res = 0;
+    string csv_text = Get(URL, res);
     if (STOPPED_BY_HTTP_ERROR || csv_text == HTTP_ERROR) {
         if (TimerEnabled) {
             EventKillTimer();
             TimerEnabled = false;
-            Exit(ENDPOINT);
+            Exit(ENDPOINT, res);
         }
         ExpertRemove();
         return;
