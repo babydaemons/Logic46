@@ -1,7 +1,7 @@
 import os
 import threading
 from app import app, init_db
-from init import set_firewall_rules, install_win_acme, resolve_ini_config, get_ssl_certificate, install_fxtf_mt4
+from init import set_firewall_rules, install_win_acme, resolve_ini_config, get_ssl_certificate, start_fxtf_mt4
 from startup import schedule_reboot
 from config import CERT_DIR, DB_PATH
 from util import write_log, ini_path
@@ -23,8 +23,8 @@ if __name__ == '__main__':
     if (os.path.exists(cert_path) == False) or (os.path.exists(key_path) == False):
         get_ssl_certificate(config)
 
-    # FXTF MT4のインストール
-    install_fxtf_mt4()
+    # FXTF MT4のインストール/起動
+    start_fxtf_mt4()
 
     # OS再起動用のスレッドを開始
     threading.Thread(target=schedule_reboot, daemon=True).start()

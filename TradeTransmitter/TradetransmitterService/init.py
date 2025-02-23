@@ -112,12 +112,21 @@ def get_ssl_certificate(config):
     
     return config
 
-def install_fxtf_mt4():
-    """ FXTF MT4をインストール """
+def start_fxtf_mt4():
+    """ FXTF MT4をインストール/起動 """
     if os.path.exists(FXTF_MT4_PATH):
-        write_log("FXTF MT4 がインストール済みです。インストール処理をスキップします。")
-        return
+        write_log("FXTF MT4 がインストール済みです。インストール処理をスキップしてMT4を起動します。")
+        # Windowsでプロセスを親プロセスから切り離すためのフラグ
+        DETACHED_PROCESS = 0x00000008
+        try:
+            # creationflagsにDETACHED_PROCESSを指定することで、バックグラウンドで起動
+            subprocess.Popen([FXTF_MT4_PATH], creationflags=DETACHED_PROCESS, close_fds=True)
+            return
+        except Exception as e:
+            write_log(f"アプリの起動に失敗しました: {e}", is_error=True)
+            exit_on_error()
 
+    # インストーラをダウンロード
     installer_path = f"{DOWNLOAD_DIR}/fxtf4setup.exe"
     download(FXTF_MT4_URL, installer_path)
 
