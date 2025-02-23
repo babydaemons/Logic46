@@ -24,7 +24,10 @@ string GetSourcePath()
     return __FILE__;
 }
 
-string URL = TRADE_TRANSMITTER_SERVER + "/pull";
+string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/pull";
+string URL = ENDPOINT;
+
+bool TimerEnabled = false;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -32,6 +35,7 @@ string URL = TRADE_TRANSMITTER_SERVER + "/pull";
 int OnInit() {
     URL += StringFormat("?email=%s&account=%d", UrlEncode(EMAIL), ACCOUNT);
     EventSetMillisecondTimer(100);
+    TimerEnabled = true;
     return INIT_SUCCEEDED;
 }
 
@@ -39,7 +43,10 @@ int OnInit() {
 //| Expert deinitialization function                                 |
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason) {
-    EventKillTimer();
+    if (TimerEnabled) {
+        EventKillTimer();
+        TimerEnabled = false;
+    }
 }
 
 //+------------------------------------------------------------------+
@@ -53,6 +60,15 @@ void OnTick() {
 //+------------------------------------------------------------------+
 void OnTimer() {
     string csv_text = Get(URL);
+    if (STOPPED_BY_HTTP_ERROR || csv_text == HTTP_ERROR) {
+        if (TimerEnabled) {
+            EventKillTimer();
+            TimerEnabled = false;
+            Exit(ENDPOINT);
+        }
+        ExpertRemove();
+        return;
+    }
     string lines[];
     int n = StringSplit(csv_text, '\n', lines) - 1;
     // MessageBox(csv_text);
