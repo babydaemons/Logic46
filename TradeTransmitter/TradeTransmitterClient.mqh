@@ -85,7 +85,7 @@ int OnInit() {
         }
     }
 
-    ExecuteRequest(+1, +1, "USDJPY", 0.01, 12345689);
+    // ExecuteRequest(+1, +1, "USDJPY", 0.01, 12345689); // XXX: テストコード
 
     // 100ミリ秒の周期でポジションコピーを行います
     if (!EventSetMillisecondTimer(100)) {

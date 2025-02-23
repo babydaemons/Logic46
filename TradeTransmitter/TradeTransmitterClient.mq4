@@ -8,9 +8,13 @@
 #property version   "1.00"
 #property strict
 
-input string  EMAIL = "babydaemons@gmail.com"; // 証券会社のWebサイトのドメイン名
+input string  EMAIL = "babydaemons@gmail.com"; // メールアドレス
 input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp"; // トレードポジションを受信するサーバー
 input string  SYMBOL_REMOVE_SUFFIX = "-cd"; // ポジションコピー時にシンボル名から削除するサフィックス
 
-#include "ErrorDescriptionMT4.mqh"
+string GetSourcePath()
+{
+    return __FILE__;
+}
+
 #include "TradeTransmitterClient.mqh"
