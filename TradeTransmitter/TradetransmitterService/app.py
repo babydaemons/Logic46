@@ -117,8 +117,8 @@ def push():
         write_log(f"▷▷▷▷▷▷ {ex}", is_error=True)
         return jsonify({"error": str(ex)}), 500
 
-@app.route('/pop', methods=['GET'])
-def pop():
+@app.route('/pull', methods=['GET'])
+def pull():
     params = request.args.to_dict()
 
     try:
