@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 import sqlite3
 from flask import Flask, jsonify, request, Response, send_from_directory, abort
+import waitress
 from util import write_log
 from config import APP_NAME, APP_DIR, CHALLENGE_FOLDER, DB_PATH
 
@@ -127,7 +128,7 @@ def pull():
         positions = get_positions(email, account)
 
         if not positions:
-            return Response(status=204)  # 204 No Content を返す
+            return Response("", mimetype="text/csv; charset=utf-8")  # CSVの mimetype を適用
 
         delete_at = get_timestamp()
         position_ids = [position["position_id"] for position in positions]
@@ -156,3 +157,13 @@ def acme_challenge(filename):
 
     # ファイルが存在する場合、返す
     return send_from_directory(CHALLENGE_FOLDER, filename)
+
+if __name__ == '__main__':
+    # *.sqlte3を作成
+    write_log(f"データベースファイル {DB_PATH} を作成します...")
+    init_db()
+
+    # HTTPSサーバーを起動
+    write_log("生徒さんのトレード受信の受け付けを開始します...")
+    #app.run(ssl_context=(cert_path, key_path), host="0.0.0.0", port=443)
+    waitress.serve(app, host="0.0.0.0", port=80)

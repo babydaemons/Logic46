@@ -1,5 +1,6 @@
 import os
 import threading
+import waitress
 from app import app, init_db
 from init import set_firewall_rules, install_win_acme, resolve_ini_config, get_ssl_certificate, start_fxtf_mt4
 from startup import schedule_reboot
@@ -35,4 +36,5 @@ if __name__ == '__main__':
 
     # HTTPSサーバーを起動
     write_log("生徒さんのトレード受信の受け付けを開始します...")
-    app.run(ssl_context=(cert_path, key_path), host="0.0.0.0", port=443)
+    #app.run(ssl_context=(cert_path, key_path), host="0.0.0.0", port=443)
+    waitress.serve(app, host="0.0.0.0", port=80)
