@@ -8,7 +8,11 @@
 #property version   "1.00"
 #property strict
 
-#include "ErrorDescriptionMT4.mqh"
+#ifdef __MQL5__
+    #include "ErrorDescriptionMT5.mqh"
+#else
+    #include "ErrorDescriptionMT4.mqh"
+#endif 
 
 #define API_KEY    "a17f532eb443b7e6713054ba5839b26b383ee3fd498922fe6ca173b0705dd8369fa1ecd2ef9d8dcd0c529612fee0012fb5431d598918d4dec785e5aad11b281aee76d5438df23a2e8f6cd5a543de93e6bebcab08ff526855aae98cf5085c8b613bdbd8fa5ca45ab58d9cea00e10af19def70cda175c3af75511c187f4b229815"
 #define HTTP_ERROR "※※※※※※※※※※※※※※※※※※※※"
@@ -32,21 +36,21 @@ string Get(string uri, int& res) {
         }
         else if (res >= 400) {
             string error_message = StringFormat("HTTP ERROR! %d %s %s", res, uri, ErrorDescription());
-            Alert(error_message);
-            printf(uri);
-            if (retry_count <= 5) {
-                Sleep(100 << retry_count);
+            // Alert(error_message);
+            printf(error_message);
+            if (retry_count <= 3) {
+                Sleep(250 << retry_count);
                 ++retry_count;
                 continue;
             }
-            string expert_name = GetSourcePath();
-            if (StringFind(expert_name, "Server") != -1) {
-                MessageBox("エラー: TradeTransmitterClientを終了します", "エラー", MB_OK);
-                ExpertRemove();
-            }
-            else {
+            //string expert_name = GetSourcePath();
+            //if (StringFind(expert_name, "Server") != -1) {
+            //    MessageBox("エラー: TradeTransmitterClientを終了します", "エラー", MB_OK);
+            //    ExpertRemove();
+            //}
+            //else {
                 return "";
-            }
+            //}
         }
         else if (res > 200) {
             return "";

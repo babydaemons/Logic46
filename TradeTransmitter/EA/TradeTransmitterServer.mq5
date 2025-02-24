@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                       TradeTransmitterServer.mq4 |
+//|                                       TradeTransmitterServer.mq5 |
 //|                          Copyright 2024, Kazuya Quartet Academy. |
 //|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
@@ -14,12 +14,13 @@
 input string  EMAIL = "babydaemons@gmail.com"; // 生徒さんのメールアドレス
 input int     ACCOUNT = 201942661;             // 生徒さんの口座番号
 input string  TRADE_TRANSMITTER_SERVER = "http://localhost"; // トレードポジションを受信するサーバー
-input int     FETCH_INTERVAL = 200;      // オーダー取得時のインターバル
-input int     RETRY_COUNT_MAX = 5;       // オーダー失敗時のリトライ回数
-input int     RETRY_INTERVAL = 100;      // オーダー失敗時のリトライ時間インターバル
 input string  SYMBOL_APPEND_SUFFIX = ""; // ポジションコピー時にシンボル名に追加するサフィックス
 input double  LOTS_MULTIPLY = 2.0;       // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;             // スリッページ(ポイント)
+
+const int     FETCH_INTERVAL = 500;      // オーダー取得時のインターバル
+const int     RETRY_COUNT_MAX = 4;       // オーダー失敗時のリトライ回数
+const int     RETRY_INTERVAL = 250;      // オーダー失敗時のリトライ時間インターバル
 
 string GetSourcePath()
 {
