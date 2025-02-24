@@ -30,6 +30,9 @@ string Get(string uri, int& res, int retry_max, int retry_interval) {
     string url_with_key = uri;// + "&apikey=" + API_KEY;
     while (true) {
         res = WebRequest("GET", url_with_key, NULL, 1000, data, result, result_headers);
+        if (res == 200) {
+            break;
+        }
         if (res == 404 || res == -1) {
             STOPPED_BY_HTTP_ERROR = true;
             return HTTP_ERROR;
