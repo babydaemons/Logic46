@@ -7,6 +7,13 @@ using System.Text.Json;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 
+const string ESCAPE = "\x1b";
+const string RESET = ESCAPE + "[0m";
+const string GREEN = ESCAPE + "[32m";
+const string YELLOW = ESCAPE + "[33m";
+
+string GetTimestamp() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 var app = builder.Build();
@@ -26,7 +33,8 @@ app.MapGet("/push", (HttpRequest request) => {
     var lots = double.Parse(request.Query["lots"].ToString());
     var position_id = request.Query["position_id"].ToString();
     positions.AddPosition(email, account, new Position { change = change, command = command, symbol = symbol, lots = lots, position_id = position_id });
-    Console.WriteLine($"▷▷▷▷▷▷ 生徒さん[{email}], 口座番号[{account}], 売買[{change}], ポジション[{command}], 通貨ペア[{symbol}], 売買ロット[{lots}], ポジション識別子[{position_id}]");
+    string message = $"生徒さん[{email}], 口座番号[{account}], 売買[{change}], ポジション[{command}], 通貨ペア[{symbol}], 売買ロット[{lots}], ポジション識別子[{position_id}]";
+    Console.WriteLine($"{YELLOW}[{GetTimestamp()}]≫≫≫≫≫ {message}{RESET}");
 });
 
 // 例3: POST "/pull"
@@ -40,7 +48,8 @@ app.MapGet("/pull", (HttpContext request) =>
     {
         var line = $"{position.change},{position.command},{position.symbol},{position.lots},{position.position_id}\n";
         lines += line;
-        Console.WriteLine($"◀◀◀◀◀◀ 生徒さん[{email}], 口座番号[{account}], 売買[{position.change}], ポジション[{position.command}], 通貨ペア[{position.symbol}], 売買ロット[{position.lots}], ポジション識別子[{position.position_id}]");
+        string message = $"生徒さん[{email}], 口座番号[{account}], 売買[{position.change}], ポジション[{position.command}], 通貨ペア[{position.symbol}], 売買ロット[{position.lots}], ポジション識別子[{position.position_id}]";
+        Console.WriteLine($"{GREEN}[{GetTimestamp()}]≪≪≪≪≪ {message}{RESET}");
     }
     return Results.Text(lines, "text/csv; charset=utf-8");
 });
