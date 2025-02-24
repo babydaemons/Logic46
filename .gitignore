@@ -8,10 +8,11 @@
 *.tsv
 bin/
 obj/
+*.obj
+*.pdb
 Properties/
 orig/
 .vscode/
-dist/
 build/
 venv*/
 __pycache__/

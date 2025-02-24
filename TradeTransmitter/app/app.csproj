@@ -7,11 +7,16 @@
     <Nullable>enable</Nullable>
     <PublishAot>false</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="9.0.2" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
   </ItemGroup>
 
 </Project>
