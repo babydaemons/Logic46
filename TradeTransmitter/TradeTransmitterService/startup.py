@@ -1,12 +1,11 @@
 import os
 import datetime
-import ssl
 import time
 import subprocess
 from util import write_log
-from config import CERT_DIR, WIN_ACME_DIR
+from config import WIN_ACME_DIR
 
-def update_certificate(log_file):
+def update_certificate():
     """
     win-acmeによる証明書更新を行う関数。
     ※ 実行ファイルのパスやオプションは環境に合わせて調整してください。

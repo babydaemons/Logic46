@@ -1,8 +1,7 @@
 import os
 import threading
-import waitress
-from app import app, init_db
-from init import set_firewall_rules, install_win_acme, resolve_ini_config, get_ssl_certificate, start_fxtf_mt4
+import time
+from init import set_firewall_rules, install_win_acme, resolve_ini_config, get_ssl_certificate, install_aspcore, start_fxtf_mt4
 from startup import schedule_reboot
 from config import CERT_DIR, DB_PATH
 from util import write_log, ini_path
@@ -24,17 +23,14 @@ if __name__ == '__main__':
     if (os.path.exists(cert_path) == False) or (os.path.exists(key_path) == False):
         get_ssl_certificate(config)
 
+    # .NET Core Hosting Bundleのインストール
+    install_aspcore()
+
     # FXTF MT4のインストール/起動
     start_fxtf_mt4()
 
     # OS再起動用のスレッドを開始
     threading.Thread(target=schedule_reboot, daemon=True).start()
 
-    # *.sqlte3を作成
-    write_log(f"データベースファイル {DB_PATH} を作成します...")
-    init_db()
-
-    # HTTPSサーバーを起動
-    write_log("生徒さんのトレード受信の受け付けを開始します...")
-    #app.run(ssl_context=(cert_path, key_path), host="0.0.0.0", port=443)
-    waitress.serve(app, host="0.0.0.0", port=80)
+    while True:
+        time.sleep(1)

@@ -1,6 +1,4 @@
 colorama
-flask
 requests
-waitress
 pywin32
 pyinstaller

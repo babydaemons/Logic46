@@ -112,6 +112,28 @@ def get_ssl_certificate(config):
     
     return config
 
+def install_aspcore():
+    """ .NET Core Hosting Bundleのインストール """
+
+    # インストールする.NET Core Hosting BundleのURL
+    hosting_bundle_url = "https://download.visualstudio.microsoft.com/download/pr/450a6e4e-e4e3-4ed6-86a2-6a6f840e5a51/3629f0822ccc2ce265cf5e88b5b567cb/dotnet-hosting-9.0.1-win.exe"
+
+    # ダウンロード先のパス
+    installer_path = f"{DOWNLOAD_DIR}/dotnet-hosting-installer.exe"
+
+    write_log(".NET Core Hosting Bundle をダウンロードしています...")
+    download(hosting_bundle_url, installer_path)
+
+    # サイレントインストールの実行
+    write_log(".NET Core Hosting Bundle をインストールしています...")
+    process = subprocess.Popen([installer_path, "/quiet"])
+    process.wait()
+
+    # インストール確認
+    write_log("インストールされた .NET Core ランタイムのバージョンを確認します...")
+    process = subprocess.Popen(['C:/Program Files/dotnet/dotnet.exe', "--list-runtimes"])
+    process.wait()
+
 def start_fxtf_mt4():
     """ FXTF MT4をインストール/起動 """
     if os.path.exists(FXTF_MT4_PATH):
