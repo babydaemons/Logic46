@@ -163,9 +163,9 @@ string Base64Encode(const string data) {
 }
 
 //+------------------------------------------------------------------+
-//|EA終了関数                                                         |
+//| EA終了関数                                                      |
 //+------------------------------------------------------------------+
-void Exit(string url, int res)
+void ExitEA(string url, int res)
 {
     string message = StringFormat(
         "エラー[%d]: 下記のいずれかの問題が発生しました。EAを終了します。\n" +

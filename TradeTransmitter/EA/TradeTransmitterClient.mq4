@@ -329,10 +329,12 @@ void ExecuteRequest(int change, int command, string symbol, double lots, int tic
     uri += StringFormat("&symbol=%s", symbol);
     uri += StringFormat("&lots=%.2f", lots);
     uri += StringFormat("&position_id=%s", position_id);
-    string response = Get(uri);
+
+    int res = 0;
+    string response = Get(uri, res);
 
     if (STOPPED_BY_HTTP_ERROR || response == HTTP_ERROR) {
-        Exit(ENDPOINT);
+        ExitEA(ENDPOINT, res);
         return;
     }
 }
