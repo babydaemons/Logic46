@@ -115,6 +115,11 @@ def get_ssl_certificate(config):
 def install_aspcore():
     """ .NET Core Hosting Bundleのインストール """
 
+    ASPNET_CORE_DIR = "C:/Program Files/dotnet/shared/Microsoft.AspNetCore.App"
+    if os.path.exists(ASPNET_CORE_DIR):
+        write_log(".NET Core Hosting Bundle がインストール済みです。インストール処理をスキップします。")
+        return
+
     # インストールする.NET Core Hosting BundleのURL
     hosting_bundle_url = "https://download.visualstudio.microsoft.com/download/pr/450a6e4e-e4e3-4ed6-86a2-6a6f840e5a51/3629f0822ccc2ce265cf5e88b5b567cb/dotnet-hosting-9.0.1-win.exe"
 
