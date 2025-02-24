@@ -22,12 +22,12 @@ bool STOPPED_BY_HTTP_ERROR = false;
 //+------------------------------------------------------------------+
 //| HTTP GET function                                                |
 //+------------------------------------------------------------------+
-string Get(string uri, int& res) {
+string Get(string uri, int& res, int retry_max, int retry_interval) {
     char data[];
     char result[];
     string result_headers;
     int retry_count = 0;
-    string url_with_key = uri + "&apikey=" + API_KEY;
+    string url_with_key = uri;// + "&apikey=" + API_KEY;
     while (true) {
         res = WebRequest("GET", url_with_key, NULL, 1000, data, result, result_headers);
         if (res == 404 || res == -1) {
@@ -35,11 +35,11 @@ string Get(string uri, int& res) {
             return HTTP_ERROR;
         }
         else if (res >= 400) {
-            string error_message = StringFormat("HTTP ERROR! %d %s %s", res, uri, ErrorDescription());
+            string error_message = StringFormat("HTTP ERROR! [%d] \"%s\" %s", res, Replace(uri, "%40", "@"), ErrorDescription());
             // Alert(error_message);
             printf(error_message);
-            if (retry_count <= 3) {
-                Sleep(250 << retry_count);
+            if (retry_count < retry_max - 1) {
+                Sleep(retry_interval << retry_count);
                 ++retry_count;
                 continue;
             }
@@ -184,3 +184,8 @@ void ExitEA(string url, int res)
     ExpertRemove();
 }
 
+string Replace(string value, string search, string reolacement)
+{
+    StringReplace(value, search, reolacement);
+    return value;
+}

@@ -12,13 +12,13 @@
 #include "TradeTransmitter.mqh"
 
 input string  EMAIL = "babydaemons@gmail.com"; // 生徒さんのメールアドレス
-input int     ACCOUNT = 201942661;             // 生徒さんの口座番号
+input int     ACCOUNT = 201942679;             // 生徒さんの口座番号
 input string  TRADE_TRANSMITTER_SERVER = "http://localhost"; // トレードポジションを受信するサーバー
 input string  SYMBOL_APPEND_SUFFIX = ""; // ポジションコピー時にシンボル名に追加するサフィックス
 input double  LOTS_MULTIPLY = 2.0;       // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;             // スリッページ(ポイント)
 
-const int     FETCH_INTERVAL = 500;      // オーダー取得時のインターバル
+const int     FETCH_INTERVAL = 15000;      // オーダー取得時のインターバル
 const int     RETRY_COUNT_MAX = 4;       // オーダー失敗時のリトライ回数
 const int     RETRY_INTERVAL = 250;      // オーダー失敗時のリトライ時間インターバル
 
@@ -65,7 +65,7 @@ void OnTick() {
 //+------------------------------------------------------------------+
 void OnTimer() {
     int res = 0;
-    string csv_text = Get(URL, res);
+    string csv_text = Get(URL, res, 0, 1000);
     if (STOPPED_BY_HTTP_ERROR || csv_text == HTTP_ERROR) {
         if (TimerEnabled) {
             EventKillTimer();

@@ -331,7 +331,7 @@ void ExecuteRequest(int change, int command, string symbol, double lots, int tic
     uri += StringFormat("&position_id=%s", position_id);
 
     int res = 0;
-    string response = Get(uri, res);
+    string response = Get(uri, res, 3, 500);
 
     if (STOPPED_BY_HTTP_ERROR || response == HTTP_ERROR) {
         ExitEA(ENDPOINT, res);
