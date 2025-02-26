@@ -20,8 +20,8 @@ var app = builder.Build();
 
 var positionDao = new PositionDao(@"C:\TradeTransmitterService\TradeTransmitterService.sqlite3");
 
-// 例1: GET "/"
-app.MapGet("/", () => "ok");
+// 例1: GET "/helthcheck"
+app.MapGet("/helthcheck", () => "ok");
 
 // 例2: GET "/push"
 app.MapGet("/push", (HttpRequest request) => {
@@ -39,8 +39,9 @@ app.MapGet("/push", (HttpRequest request) => {
         string message = $"生徒さん[{email}], 口座番号[{account}], 売買[{change}], ポジション[{command}], 通貨ペア[{symbol}], 売買ロット[{lots}], ポジション識別子[{position_id}]";
         Console.WriteLine($"{YELLOW}[{created_at}]≫≫≫≫≫ {message}{RESET}");
     }
-    catch (Exception)
+    catch (Exception ex)
     {
+        Console.Error.WriteLine($"########## {ex}");
     }
 });
 
@@ -61,8 +62,9 @@ app.MapGet("/pull", (HttpContext request) =>
             Console.WriteLine($"{GREEN}[{GetTimestamp()}]≪≪≪≪≪ {message}{RESET}");
         }
     }
-    catch (Exception)
+    catch (Exception ex)
     {
+        Console.Error.WriteLine($"########## {ex}");
     }
     return Results.Text(lines, "text/csv; charset=utf-8");
 });
