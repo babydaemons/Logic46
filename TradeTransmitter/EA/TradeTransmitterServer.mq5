@@ -18,7 +18,7 @@ input string  SYMBOL_APPEND_SUFFIX = ""; // ポジションコピー時にシン
 input double  LOTS_MULTIPLY = 2.0;       // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;             // スリッページ(ポイント)
 
-const int     FETCH_INTERVAL = 15000;      // オーダー取得時のインターバル
+const int     FETCH_INTERVAL = 250;      // オーダー取得時のインターバル
 const int     RETRY_COUNT_MAX = 4;       // オーダー失敗時のリトライ回数
 const int     RETRY_INTERVAL = 250;      // オーダー失敗時のリトライ時間インターバル
 
@@ -65,7 +65,7 @@ void OnTick() {
 //+------------------------------------------------------------------+
 void OnTimer() {
     int res = 0;
-    string csv_text = Get(URL, res, 0, 1000);
+    string csv_text = Get(URL, res, -1, 1000);
     if (STOPPED_BY_HTTP_ERROR || csv_text == HTTP_ERROR) {
         if (TimerEnabled) {
             EventKillTimer();
@@ -98,7 +98,7 @@ void OnTimer() {
         string position_id = field[6];
         // マジックナンバー：口座番号で代用
         int magic_number = (int)StringToInteger(accountNumber);
-        if (change == "entry") {
+        if (change == "Entry") {
             Entry(command, symbol, lots, magic_number, position_id);
         }
         else {
@@ -146,7 +146,7 @@ void Entry(string command, string symbol, double lots, int magic_number, string 
 
     color arrow = clrNONE;
     int cmd = 0;
-    if (command == "buy") {
+    if (command == "Buy") {
         cmd = OP_BUY;
         arrow = clrBlue;
     }

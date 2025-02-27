@@ -8,7 +8,6 @@
     <PublishAot>false</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
     <PublishSingleFile>true</PublishSingleFile>
-    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>
