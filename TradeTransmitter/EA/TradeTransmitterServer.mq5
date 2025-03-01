@@ -18,9 +18,9 @@ input string  SYMBOL_APPEND_SUFFIX = ""; // ポジションコピー時にシン
 input double  LOTS_MULTIPLY = 2.0;       // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;             // スリッページ(ポイント)
 
-const int     FETCH_INTERVAL = 250;      // オーダー取得時のインターバル
+const int     FETCH_INTERVAL = 100;      // オーダー取得時のインターバル
 const int     RETRY_COUNT_MAX = 4;       // オーダー失敗時のリトライ回数
-const int     RETRY_INTERVAL = 250;      // オーダー失敗時のリトライ時間インターバル
+const int     RETRY_INTERVAL = 100;      // オーダー失敗時のリトライ時間インターバル
 
 string GetSourcePath()
 {
