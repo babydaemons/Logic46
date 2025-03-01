@@ -59,9 +59,9 @@ app.MapGet("/push", (HttpRequest request) => {
 
         lastTimestamp = GetTimestamp();
         var position = new Position { email = email, account = account, change = change, command = command, symbol = symbol, lots = lots, position_id = position_id, create_at = lastTimestamp };
-        var Change = position.change == +1 ? "Entry" : "Exit";
-        var Command = position.command == +1 ? "Buy" : "Sell";
-        string message = $"生徒さん[{email}], 口座番号[{account}], 売買[{Change}], ポジション[{Command}], 通貨ペア[{position.symbol}], 売買ロット[{position.lots}], ポジション識別子[{position.position_id}]";
+        var Change = position.change == +1 ? "[Entry]," : "[Exit], ";
+        var Command = position.command == +1 ? "[Buy], " : "[Sell],";
+        string message = $"生徒さん[{email}], 口座番号[{account}], 売買{Change} ポジション{Command} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジション識別子[{position.position_id}]";
         if (change == +1)
         {
             Console.WriteLine($"{YELLOW}[{lastTimestamp}] ≫≫≫≫≫ {message}{RESET}");
@@ -94,7 +94,9 @@ app.MapGet("/pull", (HttpRequest request) =>
             var command = position.command == +1 ? "Buy" : "Sell";
             var line = $"{email},{account},{change},{command},{position.symbol},{position.lots},{position.position_id}\n";
             lines += line;
-            string message = $"生徒さん[{email}], 口座番号[{account}], 売買[{change}], ポジション[{command}], 通貨ペア[{position.symbol}], 売買ロット[{position.lots}], ポジション識別子[{position.position_id}]";
+            var Change = position.change == +1 ? "[Entry]," : "[Exit], ";
+            var Command = position.command == +1 ? "[Buy], " : "[Sell],";
+            string message = $"生徒さん[{email}], 口座番号[{account}], 売買{Change} ポジション{Command} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジション識別子[{position.position_id}]";
             if (position.change == +1)
             {
                 Console.WriteLine($"{GREEN}[{lastTimestamp}] ≫≫≫≫≫ {message}{RESET}");
