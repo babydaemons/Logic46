@@ -38,7 +38,7 @@ MQL45_APPLICATION_START
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    URL += StringFormat("?email=%s&account=%d", UrlEncode(EMAIL), ACCOUNT);
+    URL = StringFormat("%s?email=%s&account=%d", ENDPOINT, UrlEncode(EMAIL), ACCOUNT);
     EventSetMillisecondTimer(FETCH_INTERVAL);
     TimerEnabled = true;
     return INIT_SUCCEEDED;

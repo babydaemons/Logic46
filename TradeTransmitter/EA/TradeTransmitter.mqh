@@ -29,7 +29,6 @@ string Get(string uri, int& res, int retry_max, int retry_interval) {
     int retry_count = 0;
     string url_with_key = uri;// + "&apikey=" + API_KEY;
 
-#ifdef __DISABLED__
     while (true) {
         res = WebRequest("GET", url_with_key, NULL, 1000, data, result, result_headers);
         if (res == 200) {
@@ -61,9 +60,7 @@ string Get(string uri, int& res, int retry_max, int retry_interval) {
             return "";
         }
     }
-#endif // __DISABLED__
 
-    res = WebRequest("GET", url_with_key, NULL, 1000, data, result, result_headers);
     int size = ArraySize(result);
     uchar result_data[];
     ArrayResize(result_data, size);

@@ -75,7 +75,7 @@ ulong ClientBrokerID = 0;
 ulong SenderAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
 
 string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/push";
-string URL = ENDPOINT;
+string URL;
 
 datetime StartServerTimeEA;
 
@@ -83,7 +83,7 @@ datetime StartServerTimeEA;
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    URL += StringFormat("?email=%s&account=%d", UrlEncode(EMAIL), SenderAccountNumber);
+    URL = StringFormat("%s?email=%s&account=%d", ENDPOINT, UrlEncode(EMAIL), SenderAccountNumber);
 
     int shift_bytes = 3; // 32bitの整数値を作る: 0オリジンで0～3
     for (int i = 0; i < StringLen(EMAIL); ++i) {
