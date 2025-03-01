@@ -68,7 +68,7 @@ app.MapGet("/push", (HttpRequest request) => {
         }
         else
         {
-            positionDao.UpdatePosition(position_id);
+            positionDao.MovePosition(position_id);
             Console.WriteLine($"{YELLOW}[{lastTimestamp}] ≪≪≪≪≪ {message}{RESET}");
         }
     }
