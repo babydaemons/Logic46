@@ -8,17 +8,15 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
-const string ESCAPE = "\x1b";
-const string RESET = ESCAPE + "[0m";
-const string GREEN = ESCAPE + "[32m";
-const string YELLOW = ESCAPE + "[33m";
-const string RED = ESCAPE + "[31m";
+const string RESET = Installer.RESET;
+const string GREEN = Installer.GREEN;
+const string YELLOW = Installer.YELLOW;
+const string RED = Installer.RED;
 
-DateTime startAt = DateTime.Now;
-Stopwatch stopwatch = Stopwatch.StartNew();
-
-string GetTimestamp() => (startAt + stopwatch.Elapsed).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
+string GetTimestamp() => Installer.GetTimestamp();
 string lastTimestamp = GetTimestamp();
+
+Installer.SetupFirewallRule();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
