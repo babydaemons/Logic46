@@ -13,9 +13,9 @@
 input string  EMAIL = "babydaemons@gmail.com";                  // 生徒さんのメールアドレス
 input int     ACCOUNT = 201942679;                              // 生徒さんの口座番号
 input string  TRADE_TRANSMITTER_SERVER = "http://localhost";    // トレードポジションを受信するサーバー
-input int     FETCH_INTERVAL = 200;                             // オーダー取得時のインターバル
+input int     FETCH_INTERVAL = 500;                             // オーダー取得時のインターバル
 input int     RETRY_COUNT_MAX = 3;                              // オーダー失敗時のリトライ回数
-input int     RETRY_INTERVAL = 200;                             // オーダー失敗時のリトライ時間インターバル
+input int     RETRY_INTERVAL = 500;                             // オーダー失敗時のリトライ時間インターバル
 input string  SYMBOL_APPEND_SUFFIX = "-cd";                     // ポジションコピー時にシンボル名に追加するサフィックス
 input double  LOTS_MULTIPLY = 2.0;                              // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;                                    // スリッページ(ポイント)
@@ -72,11 +72,11 @@ void OnTimer() {
         return;
     }
     string lines[];
-    int n = StringSplit(csv_text, '\n', lines) - 1;
+    int n = StringSplit(csv_text, '\n', lines);
     if (n < 0) {
         return;
     }
-    for (int i = 1; i < n; ++i) {
+    for (int i = 0; i < n - 1; ++i) {
         string field[];
         StringSplit(lines[i], ',', field);
         // タブ区切りファイルの仕様

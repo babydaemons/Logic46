@@ -16,4 +16,9 @@ internal class PositionDao
     {
         _positions.GetOrAdd(position.email, new ConcurrentQueue<Position>()).Enqueue(position);
     }
+
+    internal bool ExistPosition(string email, string position_id)
+    {
+       return _positions.GetOrAdd(email, new ConcurrentQueue<Position>()).Any(position => position.position_id == position_id);
+    }
 }

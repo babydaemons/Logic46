@@ -29,88 +29,98 @@ app.MapGet("/helthcheck", () => "ok");
 
 // 例2: GET "/push"
 app.MapGet("/push", (HttpRequest request) => {
-    try
+    lock (positionDao)
     {
-        var email = request.Query["email"].ToString();
-        var account = int.Parse(request.Query["account"].ToString());
-        var change = int.Parse(request.Query["change"].ToString());
-        var command = int.Parse(request.Query["command"].ToString());
-        var symbol = request.Query["symbol"].ToString();
-        var lots = double.Parse(request.Query["lots"].ToString());
-        var position_id = request.Query["position_id"].ToString();
-        if (change != +1 && change != -1)
+        try
         {
-            throw new Exception($"changeは+1か-1のみ許可されています: {change}");
-        }
-        if (command != +1 && command != -1)
-        {
-            throw new Exception($"commandは+1か-1のみ許可されています: {command}");
-        }
-        if (lots <= 0)
-        {
-            throw new Exception($"lotsは0より大きい値のみ許可されています: {lots}");
-        }
-        if (symbol == null)
-        {
-            throw new Exception("symbolは必須です");
-        }
+            var email = request.Query["email"].ToString();
+            var position_id = request.Query["position_id"].ToString();
+            if (positionDao.ExistPosition(email, position_id))
+            {
+                return;
+            }
+            var account = int.Parse(request.Query["account"].ToString());
+            var change = int.Parse(request.Query["change"].ToString());
+            var command = int.Parse(request.Query["command"].ToString());
+            var symbol = request.Query["symbol"].ToString();
+            var lots = double.Parse(request.Query["lots"].ToString());
+            if (change != +1 && change != -1)
+            {
+                throw new Exception($"changeは+1か-1のみ許可されています: {change}");
+            }
+            if (command != +1 && command != -1)
+            {
+                throw new Exception($"commandは+1か-1のみ許可されています: {command}");
+            }
+            if (lots <= 0)
+            {
+                throw new Exception($"lotsは0より大きい値のみ許可されています: {lots}");
+            }
+            if (symbol == null)
+            {
+                throw new Exception("symbolは必須です");
+            }
 
-        lastTimestamp = GetTimestamp();
-        var position = new Position { email = email, account = account, change = change, command = command, symbol = symbol, lots = lots, position_id = position_id, create_at = lastTimestamp };
-        var Change = position.change == +1 ? "[Entry]," : "[Exit], ";
-        var Command = position.command == +1 ? "[Buy], " : "[Sell],";
-        string message = $"生徒さん[{email}], 口座番号[{account}], 売買{Change} ポジション{Command} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジション識別子[{position.position_id}]";
-        if (change == +1)
-        {
-            Console.WriteLine($"{YELLOW}[{lastTimestamp}] ≫≫≫≫≫ {message}{RESET}");
+            lastTimestamp = GetTimestamp();
+            var position = new Position { email = email, account = account, change = change, command = command, symbol = symbol, lots = lots, position_id = position_id, create_at = lastTimestamp };
+            var Change = position.change == +1 ? "[Entry]," : "[Exit], ";
+            var Command = position.command == +1 ? "[Buy], " : "[Sell],";
+            string message = $"生徒さん[{email}], 口座番号[{account}], 売買{Change} ポジション{Command} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジション識別子[{position.position_id}]";
+            if (change == +1)
+            {
+                Console.WriteLine($"{YELLOW}[{lastTimestamp}] ≫≫≫≫≫ {message}{RESET}");
+            }
+            else
+            {
+                Console.WriteLine($"{YELLOW}[{lastTimestamp}] ≪≪≪≪≪ {message}{RESET}");
+            }
+            positionDao.InsertPosition(position);
         }
-        else
+        catch (Exception ex)
         {
-            Console.WriteLine($"{YELLOW}[{lastTimestamp}] ≪≪≪≪≪ {message}{RESET}");
+            Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {ex}{RESET}");
+            Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {request.QueryString}{RESET}");
         }
-        positionDao.InsertPosition(position);
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {ex}{RESET}");
-        Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {request.QueryString}{RESET}");
     }
 });
 
 // 例3: POST "/pull"
 app.MapGet("/pull", (HttpRequest request) =>
 {
-    var lines = string.Empty;
-    try
+    lock (positionDao)
     {
-        var email = request.Query["email"].ToString();
-        var account = int.Parse(request.Query["account"].ToString());
-        while (positionDao.GetPositions(email, out var position))
+        var lines = string.Empty;
+        try
         {
-            lastTimestamp = GetTimestamp();
-            var change = position.change == +1 ? "Entry" : "Exit";
-            var command = position.command == +1 ? "Buy" : "Sell";
-            var line = $"{email},{account},{change},{command},{position.symbol},{position.lots},{position.position_id}\n";
-            lines += line;
-            var Change = position.change == +1 ? "[Entry]," : "[Exit], ";
-            var Command = position.command == +1 ? "[Buy], " : "[Sell],";
-            string message = $"生徒さん[{email}], 口座番号[{account}], 売買{Change} ポジション{Command} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジション識別子[{position.position_id}]";
-            if (position.change == +1)
+            var email = request.Query["email"].ToString();
+            var account = int.Parse(request.Query["account"].ToString());
+            while (positionDao.GetPositions(email, out var position))
             {
-                Console.WriteLine($"{GREEN}[{lastTimestamp}] ≫≫≫≫≫ {message}{RESET}");
-            }
-            else
-            {
-                Console.WriteLine($"{GREEN}[{lastTimestamp}] ≪≪≪≪≪ {message}{RESET}");
+                lastTimestamp = GetTimestamp();
+                var change = position.change == +1 ? "Entry" : "Exit";
+                var command = position.command == +1 ? "Buy" : "Sell";
+                var line = $"{email},{account},{change},{command},{position.symbol},{position.lots},{position.position_id}\n";
+                lines += line;
+                var Change = position.change == +1 ? "[Entry]," : "[Exit], ";
+                var Command = position.command == +1 ? "[Buy], " : "[Sell],";
+                string message = $"生徒さん[{email}], 口座番号[{account}], 売買{Change} ポジション{Command} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジション識別子[{position.position_id}]";
+                if (position.change == +1)
+                {
+                    Console.WriteLine($"{GREEN}[{lastTimestamp}] ≫≫≫≫≫ {message}{RESET}");
+                }
+                else
+                {
+                    Console.WriteLine($"{GREEN}[{lastTimestamp}] ≪≪≪≪≪ {message}{RESET}");
+                }
             }
         }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {ex}{RESET}");
+            Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {request.QueryString}{RESET}");
+        }
+        return Results.Text(lines, "text/csv; charset=utf-8");
     }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {ex}{RESET}");
-        Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {request.QueryString}{RESET}");
-    }
-    return Results.Text(lines, "text/csv; charset=utf-8");
 });
 
 app.Run();
