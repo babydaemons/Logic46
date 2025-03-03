@@ -10,15 +10,15 @@
 
 #include "TradeTransmitter.mqh"
 
-input string  EMAIL = "babydaemons@gmail.com"; // 生徒さんのメールアドレス
-input int     ACCOUNT = 201942661;             // 生徒さんの口座番号
-input string  TRADE_TRANSMITTER_SERVER = "http://localhost"; // トレードポジションを受信するサーバー
-input int     FETCH_INTERVAL = 200;      // オーダー取得時のインターバル
-input int     RETRY_COUNT_MAX = 5;       // オーダー失敗時のリトライ回数
-input int     RETRY_INTERVAL = 100;      // オーダー失敗時のリトライ時間インターバル
-input string  SYMBOL_APPEND_SUFFIX = ""; // ポジションコピー時にシンボル名に追加するサフィックス
-input double  LOTS_MULTIPLY = 2.0;       // ポジションコピー時のロット数の係数
-input int     SLIPPAGE = 30;             // スリッページ(ポイント)
+input string  EMAIL = "babydaemons@gmail.com";                  // 生徒さんのメールアドレス
+input int     ACCOUNT = 201942679;                              // 生徒さんの口座番号
+input string  TRADE_TRANSMITTER_SERVER = "http://localhost";    // トレードポジションを受信するサーバー
+input int     FETCH_INTERVAL = 200;                             // オーダー取得時のインターバル
+input int     RETRY_COUNT_MAX = 3;                              // オーダー失敗時のリトライ回数
+input int     RETRY_INTERVAL = 200;                             // オーダー失敗時のリトライ時間インターバル
+input string  SYMBOL_APPEND_SUFFIX = "-cd";                     // ポジションコピー時にシンボル名に追加するサフィックス
+input double  LOTS_MULTIPLY = 2.0;                              // ポジションコピー時のロット数の係数
+input int     SLIPPAGE = 30;                                    // スリッページ(ポイント)
 
 string GetSourcePath()
 {
@@ -62,7 +62,6 @@ void OnTick() {
 void OnTimer() {
     int res = 0;
     string csv_text = Get(URL, res, 0, 1000);
-    //printf(csv_text);
     if (STOPPED_BY_HTTP_ERROR || csv_text == HTTP_ERROR) {
         if (TimerEnabled) {
             EventKillTimer();
@@ -74,7 +73,9 @@ void OnTimer() {
     }
     string lines[];
     int n = StringSplit(csv_text, '\n', lines) - 1;
-    // MessageBox(csv_text);
+    if (n < 0) {
+        return;
+    }
     for (int i = 1; i < n; ++i) {
         string field[];
         StringSplit(lines[i], ',', field);
@@ -88,7 +89,7 @@ void OnTimer() {
         // 3列目："long": 買い建て ／ "short": 売り建て
         string command = field[3];
         // 4列目：シンボル名
-        string symbol = field[4];
+        string symbol = field[4] + SYMBOL_APPEND_SUFFIX;
         // 5列目：ポジションサイズ
         double lots = RoundLots(symbol, StringToDouble(field[5]) * LOTS_MULTIPLY);
         // 6列目：ポジションID(送信元証券会社名/口座番号)
@@ -135,7 +136,7 @@ void Entry(string command, string symbol, double lots, int magic_number, string 
 
     color arrow = clrNONE;
     int cmd = 0;
-    if (command == "buy") {
+    if (command == "Buy") {
         cmd = OP_BUY;
         arrow = clrBlue;
     }
@@ -144,12 +145,10 @@ void Entry(string command, string symbol, double lots, int magic_number, string 
         arrow = clrRed;
     }
 
-    symbol += SYMBOL_APPEND_SUFFIX;
-
     string error_message = "";
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
         double price = 0;
-        if (command == "buy") {
+        if (command == "Buy") {
             price = SymbolInfoDouble(symbol, SYMBOL_ASK);
         } else {
             price = SymbolInfoDouble(symbol, SYMBOL_BID);
@@ -178,7 +177,7 @@ void Entry(string command, string symbol, double lots, int magic_number, string 
 void Exit(string command, string symbol, double lots, int magic_number, string position_id)
 {
     color arrow = clrNONE;
-    if (command == "buy") {
+    if (command == "Buy") {
         arrow = clrBlue;
     } else {
         arrow = clrRed;
@@ -200,7 +199,7 @@ void Exit(string command, string symbol, double lots, int magic_number, string p
         double ordered_lots = OrderLots();
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
             double price = 0;
-            if (command == "entry") {
+            if (command == "Buy") {
                 price = SymbolInfoDouble(symbol, SYMBOL_ASK);
             } else {
                 price = SymbolInfoDouble(symbol, SYMBOL_BID);
