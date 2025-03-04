@@ -15,9 +15,13 @@ input string  EMAIL = "babydaemons@gmail.com"; // メールアドレス
 input string  TRADE_TRANSMITTER_SERVER = "http://babydaemons.jp"; // トレードポジションを受信するサーバー
 input string  SYMBOL_REMOVE_SUFFIX = "-cd"; // ポジションコピー時にシンボル名から削除するサフィックス
 
-string GetSourcePath()
+string GetEmail(string path)
 {
-    return __FILE__;
+    string items[];
+    int n = StringSplit(path, '\\', items);
+    string email = items[n - 1];
+    StringReplace(email, ".mq4", "");
+    return email;
 }
 
 #include "TradeTransmitter.mqh"

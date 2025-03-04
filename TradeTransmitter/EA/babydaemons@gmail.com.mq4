@@ -8,16 +8,7 @@
 #property version   "1.00"
 #property strict
 
-string GetEmail()
-{
-    string path = __FILE__;
-    string items[];
-    int n = StringSplit(path, '\\', items);
-    string email = items[n - 1];
-    StringReplace(email, ".mq4", "");
-    return email;
-}
-
-#define EMAIL GetEmail()
+const string EMAIL_EXPERT_ADVISER_PATH = __FILE__;
+#define EMAIL GetEmail(EMAIL_EXPERT_ADVISER_PATH)
 
 #include "TradeTransmitterClient.mq4"
