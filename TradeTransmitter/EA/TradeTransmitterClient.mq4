@@ -8,7 +8,10 @@
 #property version   "1.00"
 #property strict
 
+#ifndef EMAIL
 input string  EMAIL = "babydaemons@gmail.com"; // メールアドレス
+#endif
+
 input string  TRADE_TRANSMITTER_SERVER = "http://babydaemons.jp"; // トレードポジションを受信するサーバー
 input string  SYMBOL_REMOVE_SUFFIX = "-cd"; // ポジションコピー時にシンボル名から削除するサフィックス
 
