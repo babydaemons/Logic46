@@ -10,8 +10,14 @@
 
 #include "TradeTransmitter.mqh"
 
+#ifndef EMAIL
 input string  EMAIL = "babydaemons@gmail.com";                  // 生徒さんのメールアドレス
+#endif
+
+#ifndef ACCOUNT
 input int     ACCOUNT = 201942679;                              // 生徒さんの口座番号
+#endif
+
 input string  TRADE_TRANSMITTER_SERVER = "http://localhost";    // トレードポジションを受信するサーバー
 input int     FETCH_INTERVAL = 500;                             // オーダー取得時のインターバル
 input int     RETRY_COUNT_MAX = 3;                              // オーダー失敗時のリトライ回数
@@ -20,9 +26,27 @@ input string  SYMBOL_APPEND_SUFFIX = "-cd";                     // ポジショ�
 input double  LOTS_MULTIPLY = 2.0;                              // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;                                    // スリッページ(ポイント)
 
-string GetSourcePath()
+int GetPathValues(string path, string& values[])
 {
-    return __FILE__;
+    string items[];
+    int n = StringSplit(path, '\\', items);
+    string filename = items[n - 1];
+    StringReplace(filename, ".mq4", "");
+    return StringSplit(filename, '+', values);
+}
+
+string GetEmail(string path)
+{
+    string values[];
+    GetPathValues(path, values);
+    return values[0];
+}
+
+int GetAccount(string path)
+{
+    string values[];
+    GetPathValues(path, values);
+    return (int)StringToInteger(values[1]);
 }
 
 string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/pull";
