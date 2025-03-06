@@ -68,18 +68,18 @@ app.MapGet("/push", (HttpRequest request) => {
             string message = $"生徒さん[{email}], 口座番号[{account}], 売買{Change} ポジション{Command} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジション識別子[{position.position_id}]";
             if (change == +1)
             {
-                Console.WriteLine($"{YELLOW}[{lastTimestamp}] ≫≫≫≫≫ {message}{RESET}");
+                Logger.Log(Color.YELLOW, $"[{lastTimestamp}] ≫≫≫≫≫ {message}");
             }
             else
             {
-                Console.WriteLine($"{YELLOW}[{lastTimestamp}] ≪≪≪≪≪ {message}{RESET}");
+                Logger.Log(Color.YELLOW, $"[{lastTimestamp}] ≪≪≪≪≪ {message}");
             }
             positionDao.InsertPosition(position);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {ex}{RESET}");
-            Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {request.QueryString}{RESET}");
+            Logger.Log(Color.RED, $"[{lastTimestamp}] ########## {ex}");
+            Logger.Log(Color.RED, $"[{lastTimestamp}] ########## {request.QueryString}");
         }
     }
 });
@@ -106,18 +106,18 @@ app.MapGet("/pull", (HttpRequest request) =>
                 string message = $"生徒さん[{email}], 口座番号[{account}], 売買{Change} ポジション{Command} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジション識別子[{position.position_id}]";
                 if (position.change == +1)
                 {
-                    Console.WriteLine($"{GREEN}[{lastTimestamp}] ≫≫≫≫≫ {message}{RESET}");
+                    Logger.Log(Color.GREEN, $"[{lastTimestamp}] ≫≫≫≫≫ {message}");
                 }
                 else
                 {
-                    Console.WriteLine($"{GREEN}[{lastTimestamp}] ≪≪≪≪≪ {message}{RESET}");
+                    Logger.Log(Color.GREEN, $"[{lastTimestamp}] ≪≪≪≪≪ {message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {ex}{RESET}");
-            Console.Error.WriteLine($"{RED}[{lastTimestamp}] ########## {request.QueryString}{RESET}");
+            Logger.Log(Color.RED, $"[{lastTimestamp}] ########## {ex}");
+            Logger.Log(Color.RED, $"[{lastTimestamp}] ########## {request.QueryString}");
         }
         return Results.Text(lines, "text/csv; charset=utf-8");
     }
