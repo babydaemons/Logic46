@@ -20,7 +20,7 @@ input int     ACCOUNT = 201942679;                              // 生徒さん�
 
 input string  TRADE_TRANSMITTER_SERVER = "http://localhost";    // トレードポジションを受信するサーバー
 input int     FETCH_INTERVAL = 500;                             // オーダー取得時のインターバル
-input int     RETRY_COUNT_MAX = 3;                              // オーダー失敗時のリトライ回数
+input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
 input int     RETRY_INTERVAL = 500;                             // オーダー失敗時のリトライ時間インターバル
 input string  SYMBOL_APPEND_SUFFIX = "-cd";                     // ポジションコピー時にシンボル名に追加するサフィックス
 input double  LOTS_MULTIPLY = 2.0;                              // ポジションコピー時のロット数の係数
@@ -104,13 +104,13 @@ void OnTimer() {
         string field[];
         StringSplit(lines[i], ',', field);
         // タブ区切りファイルの仕様
-        // 0列目：証券会社のWebサイトのドメイン名
-        string brokerSite = field[0];
+        // 0列目：メールアドレス
+        string email = field[0];
         // 1列目：口座番号
         string accountNumber = field[1];
-        // 2列目："entry": ポジション追加 ／ "exit": ポジション削除
+        // 2列目："Entry": ポジション追加 ／ "Exit": ポジション削除
         string change = field[2];
-        // 3列目："long": 買い建て ／ "short": 売り建て
+        // 3列目："Buy": 買い建て ／ "Sell": 売り建て
         string command = field[3];
         // 4列目：シンボル名
         string symbol = field[4] + SYMBOL_APPEND_SUFFIX;
