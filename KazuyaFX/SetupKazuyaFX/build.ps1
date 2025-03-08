@@ -52,17 +52,17 @@ try {
     Write-Host "✅ EXE のビルドが完了しました！" -ForegroundColor Green
 
     # === EXE を実行 ===
-    Write-Host "▶️ SetupKazuyaFX.exe を実行します..." -ForegroundColor Yellow
+    Write-Host "`n▶️▶️▶️▶️▶️ SetupKazuyaFX.exe を実行します..." -ForegroundColor Yellow
     Start-Process -FilePath ".\SetupKazuyaFX.exe" -NoNewWindow
 
-    Write-Host "🎉 ビルド と 実行が完了しました！ 🎉" -ForegroundColor Cyan
+    Write-Host "`n🎉🎉🎉🎉🎉 実行が完了しました！ 🎉🎉🎉🎉🎉" -ForegroundColor Cyan
 
 } catch {
     Write-Host "❌ エラーが発生しました: $_" -ForegroundColor Red
     Write-Host "📄 詳細なエラーログは $logFile に記録されています。" -ForegroundColor Red
 } finally {
     # === ユーザーに終了操作を促す ===
-    Write-Host "⏳ Enterキーを押して終了してください..." -ForegroundColor Cyan
+    Write-Host "⏳ ビルドとテストが完了しました。Enterキーを押して終了してください..." -ForegroundColor Cyan
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     Stop-Transcript
 }
