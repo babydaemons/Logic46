@@ -231,6 +231,79 @@ function Install-WinAcme {
     }
 }
 
+function Create-Certificate {
+    param (
+        [string]$logFile
+    )
+
+    Write-Host "#### Let's Encrypt の証明書を取得しています..." -ForegroundColor Cyan
+    $winAcmeExe = "$WinAcmeDir\wacs.exe"
+    Stop-Transcript | Out-Null
+    Start-Process -FilePath $winAcmeExe -ArgumentList "--target manual --host $DomainName --emailaddress $MailAddress --accepttos --store pemFiles --pemfilespath $CertDir --webroot $WebRoot" -NoNewWindow -Wait *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
+    Start-Transcript -Path $logFile -Append -Force | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Let's Encrypt 証明書の取得に失敗しました。"
+    }
+    Write-Host "#### 証明書の取得が完了しました。" -ForegroundColor Blue
+
+    # 設定内容を変数に格納
+    $nginxConfig = @"
+server {
+    listen 443 ssl;
+    server_name $DomainName;
+
+    # 証明書の設定
+    ssl_certificate     C:/KazuyaFX/certificate/$DomainName-crt.pem;
+    ssl_certificate_key C:/KazuyaFX/certificate/$DomainName-key.pem;
+    ssl_trusted_certificate C:/KazuyaFX/certificate/$DomainName-chain.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # セキュリティ強化設定
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options DENY;
+    add_header X-XSS-Protection "1; mode=block";
+
+    # ① Host が $DomainName でなければ遮断
+    if (\$host != "$DomainName") {
+        return 403;
+    }
+
+    # ② クエリパラメータ apikey のチェック
+    set \$valid_apikey 0;
+    if (\$arg_apikey = "a17f532eb443b7e6713054ba5839b26b383ee3fd498922fe6ca173b0705dd8369fa1ecd2ef9d8dcd0c529612fee0012fb5431d598918d4dec785e5aad11b281aee76d5438df23a2e8f6cd5a543de93e6bebcab08ff526855aae98cf5085c8b613bdbd8fa5ca45ab58d9cea00e10af19def70cda175c3af75511c187f4b229815") {
+        set \$valid_apikey 1;
+    }
+
+    if (\$valid_apikey = 0) {
+        return 403;
+    }
+
+    # ③ 転送先 (apikeyを削除)
+    location / {
+        set \$query \$request_uri;
+        if (\$query ~* "(.*)(\\?|&)apikey=[^&]*(.*)") {
+            set \$query \$1\$3;
+        }
+
+        proxy_pass http://127.0.0.1:5000\$query;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    }
+}
+"@
+
+    # 出力先ファイルのパス
+    $outputPath = "$NginxDir\conf\nginx.conf"
+    # 設定ファイルを書き出し
+    $nginxConfig | Set-Content -Path $outputPath -Encoding UTF8
+    Write-Host "#### nginx.conf が $outputPath に作成されました。" -ForegroundColor Blue
+}
+    
 try {
     # === ポート80の確認 ===
     Stop-Process -logFile $logFile
@@ -250,19 +323,7 @@ try {
     Install-WinAcme -logFile $logFile
 
     # === Let's Encrypt 証明書の取得 (win-acme) ===
-    Write-Host "#### Let's Encrypt の証明書を取得しています..." -ForegroundColor Cyan
-    $winAcmeExe = "C:\KazuyaFX\win-acme\wacs.exe"
-    $domainName = "babydaemons.jp"
-    $emailAddress = "babydaemons@gmail.com"
-    $certDir = "C:\KazuyaFX\certificate"
-    $webroot = "C:\KazuyaFX\webroot"
-    Stop-Transcript | Out-Null
-    Start-Process -FilePath $winAcmeExe -ArgumentList "--target manual --host $domainName --emailaddress $emailAddress --accepttos --store pemFiles --pemfilespath $certDir --webroot $webroot" -NoNewWindow -Wait *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
-    Start-Transcript -Path $logFile -Append -Force | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Let's Encrypt 証明書の取得に失敗しました。"
-    }
-    Write-Host "#### 証明書の取得が完了しました。" -ForegroundColor Blue
+    Create-Certificate -logFile $logFile
 
     # === Nginx サービスとして登録 ===
     Write-Host "#### Nginx を Windows サービスとして登録しています..." -ForegroundColor Cyan
