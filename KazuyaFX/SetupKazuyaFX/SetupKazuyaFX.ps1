@@ -52,18 +52,21 @@ Start-Transcript -Path $logFile -Append -Force | Out-Null
 
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
-Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Cyan
+Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Magenta
 
 # win-acme のインストール関数
 function Install-WinAcme {
     param (
         [string]$logFile
     )
-    $WorkDir = "C:\KazuyaFX\win-acme"
-    $winAcmeUrl = "https://github.com/win-acme/win-acme/releases/download/v2.2.9.1701/win-acme.v2.2.9.1701.x64.trimmed.zip"
+    $winAcmeDir = "C:\KazuyaFX\win-acme"
+    if (Test-Path "$winAcmeDir\wacs.exe") {
+        Write-Host "#### win-acme はインストールされています。" -ForegroundColor Blue
+    }
 
+    $winAcmeUrl = "https://github.com/win-acme/win-acme/releases/download/v2.2.9.1701/win-acme.v2.2.9.1701.x64.trimmed.zip"
     if ($winAcmeUrl) {
-        Write-Host "#### 最新の win-acme バージョンURL: $winAcmeUrl" -ForegroundColor Yellow
+        Write-Host "#### 最新の win-acme バージョンURL: $winAcmeUrl" -ForegroundColor Blue
     } else {
         throw "win-acme バージョンの取得に失敗しました。"
     }
@@ -72,12 +75,12 @@ function Install-WinAcme {
     $winAcmeDir = $WorkDir
     Get-File -Url $winAcmeUrl -OutputPath $zipFilePath
 
-    Write-Host "#### win-acme を解凍中..." -ForegroundColor Yellow
+    Write-Host "#### win-acme を解凍中..." -ForegroundColor Blue
     $null = Expand-Archive -Path $zipFilePath -DestinationPath $winAcmeDir -Force -Verbose:$false
     Remove-Item $zipFilePath -Force
 
     if (Test-Path "$winAcmeDir\wacs.exe") {
-        Write-Host "#### win-acme のインストールに成功しました。" -ForegroundColor Yellow
+        Write-Host "#### win-acme のインストールに成功しました。" -ForegroundColor Cyan
     } else {
         throw "win-acme 実行ファイルが見つかりません。"
     }
@@ -97,7 +100,7 @@ function Stop-Process {
         $processInfo = netstat -ano | Select-String ":$port"
     
         if ($processInfo) {
-            Write-Host "#### ポート $port を使用しているアプリがあります。停止を試みます... (試行 $attempts / $maxAttempts)" -ForegroundColor Yellow
+            Write-Host "#### ポート $port を使用しているアプリがあります。停止を試みます... (試行 $attempts / $maxAttempts)" -ForegroundColor Cyan
     
             # PID を抽出（最後の列にある数値が PID）
             $processIds = $processInfo | ForEach-Object {
@@ -144,31 +147,28 @@ try {
     Stop-Process -logFile $logFile
 
     # === NGINX のインストール ===
-    Write-Host "#### NGINX（ウェブサーバー）をインストールしています..." -ForegroundColor Yellow
+    Write-Host "#### NGINX（ウェブサーバー）をインストールしています..." -ForegroundColor Cyan
     Stop-Transcript | Out-Null
     choco install nginx -y --no-progress *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
     Start-Transcript -Path $logFile -Append -Force | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "NGINX のインストールに失敗しました。"
     }
-    Write-Host "#### NGINX のインストールが完了しました。" -ForegroundColor Green
+    Write-Host "#### NGINX のインストールが完了しました。" -ForegroundColor Blue
 
     # === ファイアウォール設定 ===
-    Write-Host "#### ファイアウォールの 80/443 ポートを開放しています..." -ForegroundColor Yellow
+    Write-Host "#### ファイアウォールの 80/443 ポートを開放しています..." -ForegroundColor Cyan
     Stop-Transcript | Out-Null
     netsh advfirewall firewall add rule name="Allow HTTP" dir=in action=allow protocol=TCP localport=80 *>>$logFile 2>&1
     netsh advfirewall firewall add rule name="Allow HTTPS" dir=in action=allow protocol=TCP localport=443 *>>$logFile 2>&1
     Start-Transcript -Path $logFile -Append -Force | Out-Null
-    Write-Host "#### ファイアウォール設定が完了しました。" -ForegroundColor Green
+    Write-Host "#### ファイアウォール設定が完了しました。" -ForegroundColor Blue
 
     # === Let's Encrypt 証明書の取得アプリ (win-acme) のインストール ===
     Install-WinAcme -logFile $logFile
 
     # === Let's Encrypt 証明書の取得 (win-acme) ===
-    #Write-Host "#### Let's Encrypt の証明書を取得しています..." -ForegroundColor Yellow
-    #Start-Process -FilePath "C:\KazuyaFX\win-acme\wacs.exe" -ArgumentList "--install" -NoNewWindow -Wait
-    
-    Write-Host "#### Let's Encrypt の証明書を取得しています..." -ForegroundColor Yellow
+    Write-Host "#### Let's Encrypt の証明書を取得しています..." -ForegroundColor Cyan
     $winAcmeExe = "C:\KazuyaFX\win-acme\wacs.exe"
     $domainName = "babydaemons.jp"
     $emailAddress = "babydaemons@gmail.com"
@@ -180,10 +180,10 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Let's Encrypt 証明書の取得に失敗しました。"
     }
-    Write-Host "#### 証明書の取得が完了しました。" -ForegroundColor Green
+    Write-Host "#### 証明書の取得が完了しました。" -ForegroundColor Blue
 
     # === NGINX サービスとして登録 ===
-    Write-Host "#### NGINX を Windows サービスとして登録しています..." -ForegroundColor Yellow
+    Write-Host "#### NGINX を Windows サービスとして登録しています..." -ForegroundColor Cyan
     # サービスの作成（binPath 修正）
     $serviceName = "Nginx for KazuyaFX"
     $exePath = "C:\KazuyaFX\nginx\nginx.exe"
@@ -193,18 +193,21 @@ try {
             throw "NGINX サービスの登録に失敗しました。"
         }
     }
-    Write-Host "#### NGINX サービスが正常に登録・起動されました。" -ForegroundColor Green
+    Write-Host "#### NGINX サービスが正常に登録・起動されました。" -ForegroundColor Blue
 
-    Write-Host "#### セットアップが完了しました！ " -ForegroundColor Cyan
+    Write-Host "#### セットアップが完了しました！ " -ForegroundColor Magenta
 
 } catch {
     Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Red
     Write-Host "!!!! 詳細なエラーログは $logFile に記録されています。" -ForegroundColor Red
 } finally {
     # === 確実にトランスクリプトを停止 ===
-    Stop-Transcript | Out-Null
+    # トランスクリプトの処理（エラーチェック）
+    if ($global:Transcribing) {
+        Stop-Transcript | Out-Null
+    }
 
     # === ユーザーに終了操作を促す ===
-    Write-Host "#### Enterキーを押して終了してください..." -ForegroundColor Cyan
+    Write-Host "#### Enterキーを押して終了してください..." -ForegroundColor Magenta
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
