@@ -60,18 +60,7 @@ function Install-WinAcme {
         [string]$logFile
     )
     $WorkDir = "C:\KazuyaFX\win-acme"
-
-    Write-Host "#### 最新の win-acme バージョンを取得中..." -ForegroundColor Yellow
-    $winAcmeApiUrl = "https://api.github.com/repos/win-acme/win-acme/releases/latest"
-    $jsonFilePath = "$WorkDir\win-acme-release.json"
-
-    Get-File -Url $winAcmeApiUrl -OutputPath $jsonFilePath
-
-    $winAcmeReleaseData = Get-Content $jsonFilePath | ConvertFrom-Json
-    Remove-Item $jsonFilePath -Force
-
-    $winAcmeAsset = $winAcmeReleaseData.assets | Where-Object { $_.name -like '*x64.trimmed.zip' } | Select-Object -First 1
-    $winAcmeUrl = $winAcmeAsset.browser_download_url
+    $winAcmeUrl = "https://github.com/win-acme/win-acme/releases/download/v2.2.9.1701/win-acme.v2.2.9.1701.x64.trimmed.zip"
 
     if ($winAcmeUrl) {
         Write-Host "#### 最新の win-acme バージョンURL: $winAcmeUrl" -ForegroundColor Yellow
