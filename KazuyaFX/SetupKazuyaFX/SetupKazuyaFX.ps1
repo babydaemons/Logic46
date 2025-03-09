@@ -100,20 +100,43 @@ function Install-WinAcme {
     Start-Transcript -Path $logFile -Append -Force | Out-Null
 }
 
+function Stop-Process {
+    param (
+        [string] $logFile
+    )
+
+    # ポート 80 を使用しているプロセスを取得
+    $port = 80
+    $processInfo = netstat -ano | Select-String ":$port"
+
+    if ($processInfo) {
+        Write-Host "#### ポート $port を使用しているアプリがあります。停止を試みます..." -ForegroundColor Yellow
+        
+        # PID を抽出（最後の列にある数値が PID）
+        $processIds = $processInfo | ForEach-Object {
+            ($_ -split '\s+')[-1]  # 最後の要素が PID
+        } | Where-Object { $_ -match '^\d+$' }  # 数値のみ取得
+        
+        if ($processIds) {
+            foreach ($processId in $processIds) {
+                try {
+                    Stop-Process -Id $processId -Force -ErrorAction Stop
+                    Write-Host "プロセス $processId を停止しました。" -ForegroundColor Green
+                } catch {
+                    throw "プロセス $processId の停止に失敗しました: $_"
+                }
+            }
+        } else {
+            throw "有効なプロセス ID が見つかりませんでした。"
+        }
+    } else {
+        Write-Host "#### ポート $port を使用しているアプリはありません。" -ForegroundColor Green
+    }
+}
+
 try {
     # === ポート80の確認 ===
-    Write-Host "#### 他のアプリがポート80を使用していないか確認中..." -ForegroundColor Yellow
-    $portCheck = netstat -ano | Select-String ":80"
-    if ($portCheck) {
-        Write-Host "#### ポート80を使用しているアプリがあります。停止を試みます..." -ForegroundColor Red
-        $chechPids = $portCheck -replace '.*LISTENING\s+', ''
-        foreach ($chechPid in $chechPids) {
-            Stop-Process -Id $chechPid -Force -ErrorAction SilentlyContinue
-        }
-        Write-Host "#### ポート80を開放しました。" -ForegroundColor Green
-    } else {
-        Write-Host "#### ポート80は使用されていません。" -ForegroundColor Green
-    }
+    Stop-Process -logFile $logFile
 
     # === NGINX のインストール ===
     Write-Host "#### NGINX（ウェブサーバー）をインストールしています..." -ForegroundColor Yellow
