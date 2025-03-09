@@ -47,19 +47,37 @@ function Get-File {
     }
 }
 
+function Ensure-FolderExists {
+    param (
+        [string]$FolderPath
+    )
+
+    if (!(Test-Path $FolderPath)) {
+        New-Item -ItemType Directory -Path $FolderPath -Force | Out-Null
+        Write-Host "#### フォルダを作成しました: $FolderPath" -ForegroundColor Green
+        return $true  # フォルダを新規作成した
+    } else {
+        Write-Host "#### フォルダは既に存在します: $FolderPath" -ForegroundColor Yellow
+        return $false  # 既に存在
+    }
+}
+
 $logFile = Get-AvailablelogFile -baseName $logFile
 Start-Transcript -Path $logFile -Append -Force | Out-Null
 
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
 Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Magenta
+$AppDir = "C:\KazuyaFX"; Ensure-FolderExists -FolderPath $AppDir
+$WebRoot = "$AppDir\webroot"; Ensure-FolderExists -FolderPath $WebRoot
+$CertDir = "$AppDir\certificate"; Ensure-FolderExists -FolderPath $CertDir
 
 # win-acme のインストール関数
 function Install-WinAcme {
     param (
         [string]$logFile
     )
-    $winAcmeDir = "C:\KazuyaFX\win-acme"
+    $winAcmeDir = "$AppDir\win-acme"
     if (Test-Path "$winAcmeDir\wacs.exe") {
         Write-Host "#### win-acme はインストールされています。" -ForegroundColor Blue
     }
@@ -146,15 +164,15 @@ try {
     # === ポート80の確認 ===
     Stop-Process -logFile $logFile
 
-    # === NGINX のインストール ===
-    Write-Host "#### NGINX（ウェブサーバー）をインストールしています..." -ForegroundColor Cyan
+    # === Nginx のインストール ===
+    Write-Host "#### Nginx(ウェブサーバー)をインストールしています..." -ForegroundColor Cyan
     Stop-Transcript | Out-Null
-    choco install nginx -y --no-progress *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
+    choco install Nginx -y --no-progress *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
     Start-Transcript -Path $logFile -Append -Force | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        throw "NGINX のインストールに失敗しました。"
+        throw "Nginx のインストールに失敗しました。"
     }
-    Write-Host "#### NGINX のインストールが完了しました。" -ForegroundColor Blue
+    Write-Host "#### Nginx のインストールが完了しました。" -ForegroundColor Blue
 
     # === ファイアウォール設定 ===
     Write-Host "#### ファイアウォールの 80/443 ポートを開放しています..." -ForegroundColor Cyan
@@ -182,18 +200,18 @@ try {
     }
     Write-Host "#### 証明書の取得が完了しました。" -ForegroundColor Blue
 
-    # === NGINX サービスとして登録 ===
-    Write-Host "#### NGINX を Windows サービスとして登録しています..." -ForegroundColor Cyan
+    # === Nginx サービスとして登録 ===
+    Write-Host "#### Nginx を Windows サービスとして登録しています..." -ForegroundColor Cyan
     # サービスの作成（binPath 修正）
     $serviceName = "Nginx for KazuyaFX"
-    $exePath = "C:\KazuyaFX\nginx\nginx.exe"
+    $exePath = "C:\KazuyaFX\Nginx\Nginx.exe"
     if (!(Get-Service -Name $serviceName -ErrorAction SilentlyContinue)) {
         sc.exe create $serviceName binPath= "$exePath" DisplayName= "KazuyaFX Service" start= auto
         if ($LASTEXITCODE -ne 0) {
-            throw "NGINX サービスの登録に失敗しました。"
+            throw "Nginx サービスの登録に失敗しました。"
         }
     }
-    Write-Host "#### NGINX サービスが正常に登録・起動されました。" -ForegroundColor Blue
+    Write-Host "#### Nginx サービスが正常に登録・起動されました。" -ForegroundColor Blue
 
     Write-Host "#### セットアップが完了しました！ " -ForegroundColor Magenta
 
