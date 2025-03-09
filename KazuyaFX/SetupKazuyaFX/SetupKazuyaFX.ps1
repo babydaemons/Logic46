@@ -32,6 +32,39 @@ public class FileDownloader
 }
 "@ -Language CSharp
 
+# INIファイル読み込み
+function Read-IniFile {
+    param (
+        [string]$iniPath
+    )
+
+    if (-Not (Test-Path $iniPath)) {
+        Write-Error "File not found: $iniPath"
+        return $null
+    }
+
+    $iniContent = Get-Content $iniPath
+    $iniData = @{}
+    $section = ""
+
+    foreach ($line in $iniContent) {
+        if ($line -match "^\s*;|^\s*$") { continue }
+        if ($line -match "^\[(.+)\]$") {
+            $section = $matches[1]
+            $iniData[$section] = @{}
+        }
+        elseif ($line -match "^(.+?)\s*=\s*(.*)$") {
+            $key = $matches[1].Trim()
+            $value = $matches[2].Trim()
+            if ($section -ne "") {
+                $iniData[$section][$key] = $value
+            }
+        }
+    }
+
+    return $iniData
+}
+
 # PowerShell で利用できる関数を定義
 function Get-File {
     param (
@@ -66,6 +99,10 @@ function Create-Folder {
 
 $logFile = Get-AvailablelogFile -baseName $logFile
 Start-Transcript -Path $logFile -Append -Force | Out-Null
+
+$Config = Read-IniFile -iniPath "C:\Users\shingo\Desktop\KazuyaFX.ini"
+$DomainName = $Config["KazuyaFX"]["DomainName"]
+$MailAddress = $Config["KazuyaFX"]["MailAddress"]
 
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
