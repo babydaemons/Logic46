@@ -173,8 +173,9 @@ try {
     $domainName = "babydaemons.jp"
     $emailAddress = "babydaemons@gmail.com"
     $certDir = "C:\KazuyaFX\certificate"
+    $webroot = "C:\KazuyaFX\webroot"
     Stop-Transcript | Out-Null
-    Start-Process -FilePath $winAcmeExe -ArgumentList "--target manual --host $domainName --emailaddress $emailAddress --accepttos --store pemFiles --pemfilespath $certDir --validation http-01" -NoNewWindow -Wait *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
+    Start-Process -FilePath $winAcmeExe -ArgumentList "--target manual --host $domainName --emailaddress $emailAddress --accepttos --store pemFiles --pemfilespath $certDir --webroot $webroot" -NoNewWindow -Wait *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
     Start-Transcript -Path $logFile -Append -Force | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Let's Encrypt 証明書の取得に失敗しました。"
