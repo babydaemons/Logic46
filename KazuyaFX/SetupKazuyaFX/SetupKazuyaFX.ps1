@@ -54,10 +54,10 @@ function Ensure-FolderExists {
 
     if (!(Test-Path $FolderPath)) {
         New-Item -ItemType Directory -Path $FolderPath -Force | Out-Null
-        Write-Host "#### フォルダを作成しました: $FolderPath" -ForegroundColor Green
+        Write-Host "#### フォルダを作成しました: $FolderPath" -ForegroundColor Cyan
         return $true  # フォルダを新規作成した
     } else {
-        Write-Host "#### フォルダは既に存在します: $FolderPath" -ForegroundColor Yellow
+        Write-Host "#### フォルダは既に存在します: $FolderPath" -ForegroundColor Blue
         return $false  # 既に存在
     }
 }
