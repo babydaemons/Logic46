@@ -94,32 +94,50 @@ function Stop-Process {
         [string] $logFile
     )
 
-    # ポート 80 を使用しているプロセスを取得
     $port = 80
-    $processInfo = netstat -ano | Select-String ":$port"
-
-    if ($processInfo) {
-        Write-Host "#### ポート $port を使用しているアプリがあります。停止を試みます..." -ForegroundColor Yellow
-        
-        # PID を抽出（最後の列にある数値が PID）
-        $processIds = $processInfo | ForEach-Object {
-            ($_ -split '\s+')[-1]  # 最後の要素が PID
-        } | Where-Object { $_ -match '^\d+$' }  # 数値のみ取得
-        
-        if ($processIds) {
-            foreach ($processId in $processIds) {
-                try {
-                    Stop-Process -Id $processId -Force -ErrorAction Stop
-                    Write-Host "プロセス $processId を停止しました。" -ForegroundColor Green
-                } catch {
-                    throw "プロセス $processId の停止に失敗しました: $_"
+    $maxAttempts = 5
+    $attempts = 0
+    
+    while ($attempts -lt $maxAttempts) {
+        $attempts++
+        $processInfo = netstat -ano | Select-String ":$port"
+    
+        if ($processInfo) {
+            Write-Host "#### ポート $port を使用しているアプリがあります。停止を試みます... (試行 $attempts / $maxAttempts)" -ForegroundColor Yellow
+    
+            # PID を抽出（最後の列にある数値が PID）
+            $processIds = $processInfo | ForEach-Object {
+                ($_ -split '\s+')[-1]  # 最後の要素が PID
+            } | Where-Object { $_ -match '^\d+$' }  # 数値のみ取得
+            
+            if ($processIds) {
+                foreach ($processId in $processIds) {
+                    try {
+                        # taskkill.exe を使用してプロセスを強制終了
+                        $taskkillResult = & taskkill.exe /PID $processId /F 2>&1
+    
+                        if ($taskkillResult -match "成功") {
+                            Write-Host "#### プロセス $processId を停止しました。" -ForegroundColor Green
+                        } else {
+                            Write-Host "!!!! プロセス $processId の停止に失敗しました: $taskkillResult" -ForegroundColor Red
+                        }
+                    } catch {
+                        Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Red
+                    }
                 }
+            } else {
+                Write-Host "!!!! 有効なプロセス ID が見つかりませんでした。" -ForegroundColor Red
             }
+    
+            Start-Sleep -Seconds 2  # 2秒待機
         } else {
-            throw "有効なプロセス ID が見つかりませんでした。"
+            Write-Host "ポート $port を使用しているアプリはありません。" -ForegroundColor Green
+            break  # ループを抜ける
         }
-    } else {
-        Write-Host "#### ポート $port を使用しているアプリはありません。" -ForegroundColor Green
+    }
+    
+    if ($attempts -ge $maxAttempts) {
+        throw "ポート $port を使用しているアプリの停止に失敗しました。手動で確認してください。"
     }
 }
 
