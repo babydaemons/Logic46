@@ -184,12 +184,14 @@ try {
 
     # === NGINX サービスとして登録 ===
     Write-Host "#### NGINX を Windows サービスとして登録しています..." -ForegroundColor Yellow
-    Stop-Transcript | Out-Null
-    sc create NGINX binPath= "C:\KazuyaFX\nginx\nginx.exe" start= auto *>>$logFile 2>&1
-    sc start NGINX *>>$logFile 2>&1
-    Start-Transcript -Path $logFile -Append -Force | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "NGINX サービスの登録に失敗しました。"
+    # サービスの作成（binPath 修正）
+    $serviceName = "Nginx for KazuyaFX"
+    $exePath = "C:\KazuyaFX\nginx\nginx.exe"
+    if (!(Get-Service -Name $serviceName -ErrorAction SilentlyContinue)) {
+        sc.exe create $serviceName binPath= "$exePath" DisplayName= "KazuyaFX Service" start= auto
+        if ($LASTEXITCODE -ne 0) {
+            throw "NGINX サービスの登録に失敗しました。"
+        }
     }
     Write-Host "#### NGINX サービスが正常に登録・起動されました。" -ForegroundColor Green
 
