@@ -81,12 +81,6 @@ function Install-WinAcme {
     } else {
         throw "win-acme 実行ファイルが見つかりません。"
     }
-
-    Write-Host "#### win-acme を実行してドメイン名を設定します..." -ForegroundColor Yellow
-    $winAcmeExe = "$winAcmeDir\wacs.exe"
-    Stop-Transcript | Out-Null
-    Start-Process -FilePath $winAcmeExe -ArgumentList "--target manual --host babydaemons.jp --email babydaemons@gmail.com --accepttos --renew --validation http-01" -NoNewWindow -Wait *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
-    Start-Transcript -Path $logFile -Append -Force | Out-Null
 }
 
 function Stop-Process {
@@ -118,6 +112,9 @@ function Stop-Process {
     
                         if ($taskkillResult -match "成功") {
                             Write-Host "#### プロセス $processId を停止しました。" -ForegroundColor Green
+                        } elseif ($taskkillResult -match "理由: これは重要なシステム プロセスです。Taskkill でこのプロセスを終了できません。") {
+                            Write-Host "**** プロセスを停止しました: $taskkillResult" -ForegroundColor Red
+                            return
                         } else {
                             Write-Host "!!!! プロセス $processId の停止に失敗しました: $taskkillResult" -ForegroundColor Red
                         }
@@ -125,6 +122,7 @@ function Stop-Process {
                         Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Red
                     }
                 }
+                return
             } else {
                 Write-Host "!!!! 有効なプロセス ID が見つかりませんでした。" -ForegroundColor Red
             }
@@ -167,8 +165,17 @@ try {
     Install-WinAcme -logFile $logFile
 
     # === Let's Encrypt 証明書の取得 (win-acme) ===
+    #Write-Host "#### Let's Encrypt の証明書を取得しています..." -ForegroundColor Yellow
+    #Start-Process -FilePath "C:\KazuyaFX\win-acme\wacs.exe" -ArgumentList "--install" -NoNewWindow -Wait
+    
     Write-Host "#### Let's Encrypt の証明書を取得しています..." -ForegroundColor Yellow
-    Start-Process -FilePath "C:\KazuyaFX\win-acme\wacs.exe" -ArgumentList "--install" -NoNewWindow -Wait
+    $winAcmeExe = "C:\KazuyaFX\win-acme\wacs.exe"
+    $domainName = "babydaemons.jp"
+    $emailAddress = "babydaemons@gmail.com"
+    $certDir = "C:\KazuyaFX\certificate"
+    Stop-Transcript | Out-Null
+    Start-Process -FilePath $winAcmeExe -ArgumentList "--target manual --host $domainName --emailaddress $emailAddress --accepttos --store pemFiles --pemfilespath $certDir --validation http-01" -NoNewWindow -Wait *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
+    Start-Transcript -Path $logFile -Append -Force | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Let's Encrypt 証明書の取得に失敗しました。"
     }
