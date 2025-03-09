@@ -14,6 +14,39 @@ function Get-AvailablelogFile {
     return $logFile
 }
 
+# C# の WebClient を使用してファイルをダウンロードする関数を追加
+Add-Type -TypeDefinition @"
+using System;
+using System.Net;
+using System.IO;
+
+public class FileDownloader
+{
+    public static void GetFile(string url, string outputPath)
+    {
+        using (WebClient client = new WebClient())
+        {
+            client.DownloadFile(url, outputPath);
+        }
+    }
+}
+"@ -Language CSharp
+
+# PowerShell で利用できる関数を定義
+function Get-File {
+    param (
+        [string]$Url,
+        [string]$OutputPath
+    )
+
+    try {
+        [FileDownloader]::GetFile($Url, $OutputPath)
+        Write-Host "ダウンロードが完了しました: $OutputPath" -ForegroundColor Green
+    } catch {
+        Write-Host "エラーが発生しました: $_" -ForegroundColor Red
+    }
+}
+
 $logFile = Get-AvailablelogFile -baseName $logFile
 Start-Transcript -Path $logFile -Append -Force | Out-Null
 
@@ -32,7 +65,7 @@ function Install-WinAcme {
     $winAcmeApiUrl = "https://api.github.com/repos/win-acme/win-acme/releases/latest"
     $jsonFilePath = "$WorkDir\win-acme-release.json"
 
-    Get-File $winAcmeApiUrl $jsonFilePath
+    Get-File -Url $winAcmeApiUrl -OutputPath $jsonFilePath
 
     $winAcmeReleaseData = Get-Content $jsonFilePath | ConvertFrom-Json
     Remove-Item $jsonFilePath -Force
@@ -48,7 +81,7 @@ function Install-WinAcme {
 
     $zipFilePath = "$WorkDir\win-acme.zip"
     $winAcmeDir = $WorkDir
-    Get-File $winAcmeUrl $zipFilePath $logFile
+    Get-File -Url $winAcmeUrl -OutputPath $zipFilePath
 
     Write-Host "#### win-acme を解凍中..." -ForegroundColor Yellow
     $null = Expand-Archive -Path $zipFilePath -DestinationPath $winAcmeDir -Force -Verbose:$false
