@@ -15,6 +15,12 @@ public class TradeController : ControllerBase
 
     private PositionDao _positionDao = new PositionDao();
 
+    [HttpGet("helthcheck")]
+    public IActionResult HelthCheck()
+    {
+        return Ok("KazuyaFX_Server: OK");
+    }
+
     [HttpGet("student")]
     public async Task<IActionResult> Student([FromQuery] string email, [FromQuery] int account, [FromQuery] int entry, [FromQuery] int buy, [FromQuery] string symbol, [FromQuery] double lots, [FromQuery] int command, [FromQuery] string position_id)
     {

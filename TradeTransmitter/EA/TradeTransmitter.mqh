@@ -14,7 +14,7 @@
     #include "ErrorDescriptionMT4.mqh"
 #endif 
 
-#define API_KEY    "a17f532eb443b7e6713054ba5839b26b383ee3fd498922fe6ca173b0705dd8369fa1ecd2ef9d8dcd0c529612fee0012fb5431d598918d4dec785e5aad11b281aee76d5438df23a2e8f6cd5a543de93e6bebcab08ff526855aae98cf5085c8b613bdbd8fa5ca45ab58d9cea00e10af19def70cda175c3af75511c187f4b229815"
+#define API_KEY    "0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17"
 #define HTTP_ERROR "※※※※※※※※※※※※※※※※※※※※"
 
 bool STOPPED_BY_HTTP_ERROR = false;
@@ -27,7 +27,7 @@ string Get(string uri, int& res, int retry_max, int retry_interval) {
     char result[];
     string result_headers;
     int retry_count = 0;
-    string url_with_key = uri;// + "&apikey=" + API_KEY;
+    string url_with_key = uri + "&session_id=" + API_KEY;
 
     while (true) {
         res = WebRequest("GET", url_with_key, NULL, 1000, data, result, result_headers);
