@@ -3,7 +3,7 @@ $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $logFile = "SetupKazuyaFX-$timestamp.log"
 
 # ログファイルが使用中なら、新しいファイル名を作成
-function Get-AvailableLogFile {
+function Get-AvailablelogFile {
     param ([string]$baseName)
     $index = 1
     $logFile = $baseName
@@ -14,12 +14,58 @@ function Get-AvailableLogFile {
     return $logFile
 }
 
-$logFile = Get-AvailableLogFile -baseName $logFile
+$logFile = Get-AvailablelogFile -baseName $logFile
 Start-Transcript -Path $logFile -Append -Force | Out-Null
 
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
 Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Cyan
+
+# win-acme のインストール関数
+function Install-WinAcme {
+    param (
+        [string]$logFile
+    )
+    $WorkDir = "C:\KazuyaFX\win-acme"
+
+    Write-Host "#### 最新の win-acme バージョンを取得中..." -ForegroundColor Yellow
+    $winAcmeApiUrl = "https://api.github.com/repos/win-acme/win-acme/releases/latest"
+    $jsonFilePath = "$WorkDir\win-acme-release.json"
+
+    Get-File $winAcmeApiUrl $jsonFilePath
+
+    $winAcmeReleaseData = Get-Content $jsonFilePath | ConvertFrom-Json
+    Remove-Item $jsonFilePath -Force
+
+    $winAcmeAsset = $winAcmeReleaseData.assets | Where-Object { $_.name -like '*x64.trimmed.zip' } | Select-Object -First 1
+    $winAcmeUrl = $winAcmeAsset.browser_download_url
+
+    if ($winAcmeUrl) {
+        Write-Host "#### 最新の win-acme バージョンURL: $winAcmeUrl" -ForegroundColor Yellow
+    } else {
+        throw "win-acme バージョンの取得に失敗しました。"
+    }
+
+    $zipFilePath = "$WorkDir\win-acme.zip"
+    $winAcmeDir = $WorkDir
+    Get-File $winAcmeUrl $zipFilePath $logFile
+
+    Write-Host "#### win-acme を解凍中..." -ForegroundColor Yellow
+    $null = Expand-Archive -Path $zipFilePath -DestinationPath $winAcmeDir -Force -Verbose:$false
+    Remove-Item $zipFilePath -Force
+
+    if (Test-Path "$winAcmeDir\wacs.exe") {
+        Write-Host "#### win-acme のインストールに成功しました。" -ForegroundColor Yellow
+    } else {
+        throw "win-acme 実行ファイルが見つかりません。"
+    }
+
+    Write-Host "#### win-acme を実行してドメイン名を設定します..." -ForegroundColor Yellow
+    $winAcmeExe = "$winAcmeDir\wacs.exe"
+    Stop-Transcript | Out-Null
+    Start-Process -FilePath $winAcmeExe -ArgumentList "--target manual --host babydaemons.jp --email babydaemons@gmail.com --accepttos --renew --validation http-01" -NoNewWindow -Wait *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
+    Start-Transcript -Path $logFile -Append -Force | Out-Null
+}
 
 try {
     # === ポート80の確認 ===
@@ -53,6 +99,9 @@ try {
     netsh advfirewall firewall add rule name="Allow HTTPS" dir=in action=allow protocol=TCP localport=443 *>>$logFile 2>&1
     Start-Transcript -Path $logFile -Append -Force | Out-Null
     Write-Host "#### ファイアウォール設定が完了しました。" -ForegroundColor Green
+
+    # === Let's Encrypt 証明書の取得アプリ (win-acme) のインストール ===
+    Install-WinAcme -logFile $logFile
 
     # === Let's Encrypt 証明書の取得 (win-acme) ===
     Write-Host "#### Let's Encrypt の証明書を取得しています..." -ForegroundColor Yellow
