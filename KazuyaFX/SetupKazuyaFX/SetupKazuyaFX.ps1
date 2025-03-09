@@ -39,8 +39,11 @@ function Read-IniFile {
     )
 
     if (-Not (Test-Path $iniPath)) {
-        Write-Error "File not found: $iniPath"
-        return $null
+        Write-Host "!!!! エラー: INIファイルが見つかりません: $iniPath" -ForegroundColor Red
+        # === ユーザーに終了操作を促す ===
+        Write-Host "!!!! Enterキーを押して終了してください..." -ForegroundColor Red
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        exit 1
     }
 
     $iniContent = Get-Content $iniPath
@@ -100,7 +103,7 @@ function Create-Folder {
 $logFile = Get-AvailablelogFile -baseName $logFile
 Start-Transcript -Path $logFile -Append -Force | Out-Null
 
-$Config = Read-IniFile -iniPath "C:\Users\shingo\Desktop\KazuyaFX.ini"
+$Config = Read-IniFile -iniPath "C:\Users\Administrator\Desktop\KazuyaFX.ini"
 $DomainName = $Config["KazuyaFX"]["DomainName"]
 $MailAddress = $Config["KazuyaFX"]["MailAddress"]
 
@@ -343,6 +346,9 @@ try {
 } catch {
     Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Red
     Write-Host "!!!! 詳細なエラーログは $logFile に記録されています。" -ForegroundColor Red
+    Write-Host "!!!! Enterキーを押して終了してください..." -ForegroundColor Red
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
 } finally {
     # === 確実にトランスクリプトを停止 ===
     # トランスクリプトの処理（エラーチェック）
@@ -353,4 +359,5 @@ try {
     # === ユーザーに終了操作を促す ===
     Write-Host "#### Enterキーを押して終了してください..." -ForegroundColor Red
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 0
 }
