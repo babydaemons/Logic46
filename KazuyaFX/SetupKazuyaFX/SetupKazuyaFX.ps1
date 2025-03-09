@@ -41,13 +41,17 @@ function Get-File {
 
     try {
         [FileDownloader]::GetFile($Url, $OutputPath)
-        Write-Host "ダウンロードが完了しました: $OutputPath" -ForegroundColor Green
+        if (Test-Path $OutputPath) {
+            Write-Host "#### ダウンロードが完了しました: $OutputPath" -ForegroundColor Blue
+        } else {
+            throw "ダウンロードしたファイルが見つかりません: $OutputPath"
+        }
     } catch {
-        Write-Host "エラーが発生しました: $_" -ForegroundColor Red
+        throw "エラーが発生しました: $_"
     }
 }
 
-function Ensure-FolderExists {
+function Create-Folder {
     param (
         [string]$FolderPath
     )
@@ -55,10 +59,8 @@ function Ensure-FolderExists {
     if (!(Test-Path $FolderPath)) {
         New-Item -ItemType Directory -Path $FolderPath -Force | Out-Null
         Write-Host "#### フォルダを作成しました: $FolderPath" -ForegroundColor Cyan
-        return $true  # フォルダを新規作成した
     } else {
         Write-Host "#### フォルダは既に存在します: $FolderPath" -ForegroundColor Blue
-        return $false  # 既に存在
     }
 }
 
@@ -67,42 +69,15 @@ Start-Transcript -Path $logFile -Append -Force | Out-Null
 
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
-Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Magenta
-$AppDir = "C:\KazuyaFX"; Ensure-FolderExists -FolderPath $AppDir
-$WebRoot = "$AppDir\webroot"; Ensure-FolderExists -FolderPath $WebRoot
-$CertDir = "$AppDir\certificate"; Ensure-FolderExists -FolderPath $CertDir
-
-# win-acme のインストール関数
-function Install-WinAcme {
-    param (
-        [string]$logFile
-    )
-    $winAcmeDir = "$AppDir\win-acme"
-    if (Test-Path "$winAcmeDir\wacs.exe") {
-        Write-Host "#### win-acme はインストールされています。" -ForegroundColor Blue
-    }
-
-    $winAcmeUrl = "https://github.com/win-acme/win-acme/releases/download/v2.2.9.1701/win-acme.v2.2.9.1701.x64.trimmed.zip"
-    if ($winAcmeUrl) {
-        Write-Host "#### 最新の win-acme バージョンURL: $winAcmeUrl" -ForegroundColor Blue
-    } else {
-        throw "win-acme バージョンの取得に失敗しました。"
-    }
-
-    $zipFilePath = "$WorkDir\win-acme.zip"
-    $winAcmeDir = $WorkDir
-    Get-File -Url $winAcmeUrl -OutputPath $zipFilePath
-
-    Write-Host "#### win-acme を解凍中..." -ForegroundColor Blue
-    $null = Expand-Archive -Path $zipFilePath -DestinationPath $winAcmeDir -Force -Verbose:$false
-    Remove-Item $zipFilePath -Force
-
-    if (Test-Path "$winAcmeDir\wacs.exe") {
-        Write-Host "#### win-acme のインストールに成功しました。" -ForegroundColor Cyan
-    } else {
-        throw "win-acme 実行ファイルが見つかりません。"
-    }
-}
+Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Yellow
+$AppDir = "C:\KazuyaFX"
+Remove-Item $AppDir -Recurse -Force -Verbose:$false; Create-Folder -FolderPath $AppDir
+$ArchiveDir = "$AppDir\archive"; Create-Folder -FolderPath $ArchiveDir
+$WebRoot = "$AppDir\webroot"; Create-Folder -FolderPath $WebRoot
+$CertDir = "$AppDir\certificate"; Create-Folder -FolderPath $CertDir
+$NginxDir = "$AppDir\nginx"; Create-Folder -FolderPath $NginxDir
+$NginxLogDir = "$NginxDir\log"; Create-Folder -FolderPath $NginxLogDir
+$WinAcmeDir = "$AppDir\win-acme"; Create-Folder -FolderPath $WinAcmeDir
 
 function Stop-Process {
     param (
@@ -132,7 +107,7 @@ function Stop-Process {
                         $taskkillResult = & taskkill.exe /PID $processId /F 2>&1
     
                         if ($taskkillResult -match "成功") {
-                            Write-Host "#### プロセス $processId を停止しました。" -ForegroundColor Green
+                            Write-Host "#### プロセス $processId を停止しました。" -ForegroundColor Blue
                         } elseif ($taskkillResult -match "理由: これは重要なシステム プロセスです。Taskkill でこのプロセスを終了できません。") {
                             Write-Host "**** プロセスを停止しました: $taskkillResult" -ForegroundColor Red
                             return
@@ -160,19 +135,68 @@ function Stop-Process {
     }
 }
 
+# Nginx のインストール関数
+function Install-Nginx {
+    param (
+        [string]$logFile
+    )
+    if (Test-Path "$NginxDir\nginx.exe") {
+        Write-Host "#### Nginx はインストールされています。" -ForegroundColor Blue
+    }
+
+    $nginxUrl = "https://nginx.org/download/nginx-1.27.4.zip"
+    if ($nginxUrl) {
+        Write-Host "#### 最新の Nginx バージョンURL: $nginxUrl" -ForegroundColor Blue
+    } else {
+        throw "Nginx バージョンの取得に失敗しました。"
+    }
+
+    $zipFilePath = "$ArchiveDir\nginx-1.27.4.zip"
+    Get-File -Url $nginxUrl -OutputPath $zipFilePath
+
+    Write-Host "#### Nginx を解凍中..." -ForegroundColor Blue
+    Expand-Archive -Path $zipFilePath -DestinationPath $AppDir -Force -Verbose:$false | Out-Null
+    Move-Item "$AppDir\nginx-1.27.4\*" $NginxDir -Verbose:$false | Out-Null
+
+    if (Test-Path "$NginxDir\nginx.exe") {
+        Write-Host "#### Nginx のインストールに成功しました。" -ForegroundColor Cyan
+    } else {
+        throw "Nginx 実行ファイルが見つかりません。"
+    }
+}
+
+# win-acme のインストール関数
+function Install-WinAcme {
+    param (
+        [string]$logFile
+    )
+    if (Test-Path "$WinAcmeDir\wacs.exe") {
+        Write-Host "#### win-acme はインストールされています。" -ForegroundColor Blue
+    }
+
+    $winAcmeUrl = "https://github.com/win-acme/win-acme/releases/download/v2.2.9.1701/win-acme.v2.2.9.1701.x64.trimmed.zip"
+    if ($winAcmeUrl) {
+        Write-Host "#### 最新の win-acme バージョンURL: $winAcmeUrl" -ForegroundColor Blue
+    } else {
+        throw "win-acme バージョンの取得に失敗しました。"
+    }
+
+    $zipFilePath = "$ArchiveDir\win-acme.v2.2.9.1701.x64.trimmed.zip"
+    Get-File -Url $winAcmeUrl -OutputPath $zipFilePath
+
+    Write-Host "#### win-acme を解凍中..." -ForegroundColor Blue
+    Expand-Archive -Path $zipFilePath -DestinationPath $WinAcmeDir -Force -Verbose:$false | Out-Null
+
+    if (Test-Path "$WinAcmeDir\wacs.exe") {
+        Write-Host "#### win-acme のインストールに成功しました。" -ForegroundColor Cyan
+    } else {
+        throw "win-acme 実行ファイルが見つかりません。"
+    }
+}
+
 try {
     # === ポート80の確認 ===
     Stop-Process -logFile $logFile
-
-    # === Nginx のインストール ===
-    Write-Host "#### Nginx(ウェブサーバー)をインストールしています..." -ForegroundColor Cyan
-    Stop-Transcript | Out-Null
-    choco install Nginx -y --no-progress *>>$logFile 2>&1  # ログファイルに追記（標準エラー出力も含む）
-    Start-Transcript -Path $logFile -Append -Force | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Nginx のインストールに失敗しました。"
-    }
-    Write-Host "#### Nginx のインストールが完了しました。" -ForegroundColor Blue
 
     # === ファイアウォール設定 ===
     Write-Host "#### ファイアウォールの 80/443 ポートを開放しています..." -ForegroundColor Cyan
@@ -181,6 +205,9 @@ try {
     netsh advfirewall firewall add rule name="Allow HTTPS" dir=in action=allow protocol=TCP localport=443 *>>$logFile 2>&1
     Start-Transcript -Path $logFile -Append -Force | Out-Null
     Write-Host "#### ファイアウォール設定が完了しました。" -ForegroundColor Blue
+    
+    # === Nginx のインストール ===
+    Install-Nginx -logFile $logFile
 
     # === Let's Encrypt 証明書の取得アプリ (win-acme) のインストール ===
     Install-WinAcme -logFile $logFile
@@ -213,7 +240,7 @@ try {
     }
     Write-Host "#### Nginx サービスが正常に登録・起動されました。" -ForegroundColor Blue
 
-    Write-Host "#### セットアップが完了しました！ " -ForegroundColor Magenta
+    Write-Host "#### セットアップが完了しました！ " -ForegroundColor Yellow
 
 } catch {
     Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Red
@@ -226,6 +253,6 @@ try {
     }
 
     # === ユーザーに終了操作を促す ===
-    Write-Host "#### Enterキーを押して終了してください..." -ForegroundColor Magenta
+    Write-Host "#### Enterキーを押して終了してください..." -ForegroundColor Red
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
