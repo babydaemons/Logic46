@@ -1,18 +1,15 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<PositionDao>();
 var app = builder.Build();
 
 ConcurrentDictionary<string, string> positionIds = new();
-DateTime startAt = DateTime.Now;
-Stopwatch stopwatch = Stopwatch.StartNew();
-string Timestamp => (startAt + stopwatch.Elapsed).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
 
 /// <summary>
 /// ヘルスチェック用のエンドポイント。
