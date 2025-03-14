@@ -12,7 +12,7 @@
 input string  EMAIL = "babydaemons@gmail.com"; // メールアドレス
 #endif
 
-input string  TRADE_TRANSMITTER_SERVER = "http://babydaemons.jp"; // トレードポジションを受信するサーバー
+input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp"; // トレードポジションを受信するサーバー
 input string  SYMBOL_REMOVE_SUFFIX = "-cd"; // ポジションコピー時にシンボル名から削除するサフィックス
 
 string GetEmail(string path)
@@ -81,7 +81,7 @@ ulong ClientBrokerID = 0;
 // 口座番号です
 ulong SenderAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
 
-string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/push";
+string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/api/student";
 string URL;
 
 datetime StartServerTimeEA;
@@ -210,24 +210,24 @@ int ScanCurrentPositions(POSITION_LIST& Current) {
         }
 #endif // __DISABLED
 
-        int command = 0;
+        int buy = 0;
         switch (OrderType()) {
         case OP_BUY:
         case OP_BUYLIMIT:
         case OP_BUYSTOP:
-            command = +1;
+            buy = 1;
             break;
         case OP_SELL:
         case OP_SELLLIMIT:
         case OP_SELLSTOP:
-            command = -1;
+            buy = 0;
             break;
         default:
             continue;
         }
 
         Current.Change[position_count] = INT_MAX;
-        Current.Command[position_count] = command;
+        Current.Command[position_count] = buy;
         Current.EntryPrice[position_count] = OrderOpenPrice();
         Current.SymbolValue[position_count] = OrderSymbol();
         Current.Tickets[position_count] = OrderTicket();
@@ -261,7 +261,7 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
 
         // チケット番号が不一致のとき、ポジション追加です
         if (added) {
-            added_count = AppendChangedPosition(Current, +1, added_count, current);
+            added_count = AppendChangedPosition(Current, 1, added_count, current);
         }
     }
 
@@ -288,7 +288,7 @@ int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int po
 
         // チケット番号が不一致のとき、ポジション削除です
         if (removed) {
-            change_count = AppendChangedPosition(Previous, -1, change_count, previous);
+            change_count = AppendChangedPosition(Previous, 0, change_count, previous);
         }
     }
 
@@ -298,8 +298,8 @@ int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int po
 //+------------------------------------------------------------------+
 //| 出力する差分情報構造体にポジションの要素を追記します             |
 //+------------------------------------------------------------------+
-int AppendChangedPosition(POSITION_LIST& Current, int change, int dst, int src) {
-    Output.Change[dst] = change;
+int AppendChangedPosition(POSITION_LIST& Current, int entry, int dst, int src) {
+    Output.Change[dst] = entry;
     Output.Command[dst] = Current.Command[src];
     Output.Tickets[dst] = Current.Tickets[src];
     Output.EntryDate[dst] = Current.EntryDate[src];
@@ -324,13 +324,13 @@ void SendPositionRequest(int change_count) {
     }
 }
 
-void ExecuteRequest(int change, int command, string symbol, double lots, int ticket)
+void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
 {
     string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, ticket);
     
     string uri = URL;
-    uri += StringFormat("&change=%d", change);
-    uri += StringFormat("&command=%d", command);
+    uri += StringFormat("&entry=%d", entry);
+    uri += StringFormat("&buy=%d", buy);
     uri += StringFormat("&symbol=%s", symbol);
     uri += StringFormat("&lots=%.2f", lots);
     uri += StringFormat("&position_id=%s", position_id);
@@ -342,4 +342,6 @@ void ExecuteRequest(int change, int command, string symbol, double lots, int tic
         ExitEA(ENDPOINT, res);
         return;
     }
+
+    printf("Order Request Sended: %s", uri);
 }

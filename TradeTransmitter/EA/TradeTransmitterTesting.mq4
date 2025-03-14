@@ -9,7 +9,7 @@
 #property strict
 
 input string  EMAIL = "babydaemons@gmail.com"; // メールアドレス
-input string  TRADE_TRANSMITTER_SERVER = "http://qta-kazuyafx.com"; // トレードポジションを受信するサーバー
+input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp"; // トレードポジションを受信するサーバー
 input string  SYMBOL_REMOVE_SUFFIX = "-cd"; // ポジションコピー時にシンボル名から削除するサフィックス
 
 string GetSourcePath()
