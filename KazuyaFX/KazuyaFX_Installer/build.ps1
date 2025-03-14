@@ -1,7 +1,6 @@
 ﻿# === ログファイル設定 ===
 $timestamp = Get-Date -Format "yyyyMMdd-HHmm"
 $logFile = "BuildKazuyaFX-$timestamp.log"
-Start-Transcript -Path $logFile -Append -Force
 
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX ビルドスクリプト"
@@ -28,7 +27,5 @@ try {
     Write-Host "!!!! 詳細なエラーログは $logFile に記録されています。" -ForegroundColor Red
 } finally {
     # === ユーザーに終了操作を促す ===
-    Write-Host "**** ビルドとテストが完了しました。Enterキーを押して終了してください..." -ForegroundColor Cyan
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    Stop-Transcript
+    Write-Host "**** ビルドが完了しました。" -ForegroundColor Cyan
 }

@@ -119,7 +119,7 @@ $ArchiveDir = "$AppDir\archive"; Create-Folder -FolderPath $ArchiveDir
 $WebRoot = "$AppDir\webroot"; Create-Folder -FolderPath $WebRoot
 $CertDir = "$AppDir\certificate"; Create-Folder -FolderPath $CertDir
 $NginxDir = "$AppDir\nginx"; Create-Folder -FolderPath $NginxDir
-$NginxLogDir = "$NginxDir\log"; Create-Folder -FolderPath $NginxLogDir
+$NginxLogDir = "$NginxDir\logs"; Create-Folder -FolderPath $NginxLogDir
 $WinAcmeDir = "$AppDir\win-acme"; Create-Folder -FolderPath $WinAcmeDir
 
 function Stop-Process {
@@ -255,51 +255,73 @@ function Create-Certificate {
 
     # 設定内容を変数に格納
     $nginxConfig = @"
-server {
-    listen 443 ssl;
-    server_name !!!DomainName!!!;
+worker_processes  1;
 
-    # 証明書の設定
-    ssl_certificate     C:/KazuyaFX/certificate/!!!DomainName!!!-crt.pem;
-    ssl_certificate_key C:/KazuyaFX/certificate/!!!DomainName!!!-key.pem;
-    ssl_trusted_certificate C:/KazuyaFX/certificate/!!!DomainName!!!-chain.pem;
+events {
+    worker_connections  1024;
+}
 
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
 
-    # セキュリティ強化設定
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Content-Type-Options nosniff;
-    add_header X-Frame-Options DENY;
-    add_header X-XSS-Protection "1; mode=block";
+    sendfile        on;
+    keepalive_timeout  65;
 
-    # ① Host が !!!DomainName!!! でなければ遮断
-    if (@host != "!!!DomainName!!!") {
-        return 403;
+    error_log C:/KazuyaFX/nginx/logs/error.log;
+
+    map @status @loggable {
+        ~^200@  0;  # ステータスコードが200ならログを無効化
+        default 1;  # それ以外はログを有効化
     }
 
-    # ② クエリパラメータ sessionId のチェック
-    set @valid_sessionId 0;
-    if (@arg_sessionId = "a17f532eb443b7e6713054ba5839b26b383ee3fd498922fe6ca173b0705dd8369fa1ecd2ef9d8dcd0c529612fee0012fb5431d598918d4dec785e5aad11b281aee76d5438df23a2e8f6cd5a543de93e6bebcab08ff526855aae98cf5085c8b613bdbd8fa5ca45ab58d9cea00e10af19def70cda175c3af75511c187f4b229815") {
-        set @valid_sessionId 1;
-    }
+    server {
+        listen 443 ssl;
+        server_name !!!DomainName!!!;
 
-    if (@valid_sessionId = 0) {
-        return 403;
-    }
+        # 証明書の設定
+        ssl_certificate     C:/KazuyaFX/certificate/!!!DomainName!!!-crt.pem;
+        ssl_certificate_key C:/KazuyaFX/certificate/!!!DomainName!!!-key.pem;
+        ssl_trusted_certificate C:/KazuyaFX/certificate/!!!DomainName!!!-chain.pem;
 
-    # ③ 転送先 (sessionIdを削除)
-    location / {
-        set @query @request_uri;
-        if (@query ~* "(.*)(\\?|&)sessionId=[^&]*(.*)") {
-            set @query @1@3;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+
+        # セキュリティ強化設定
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options nosniff;
+        add_header X-Frame-Options DENY;
+        add_header X-XSS-Protection "1; mode=block";
+
+        # 1. Host が !!!DomainName!!! でなければ遮断
+        if (@host != "!!!DomainName!!!") {
+            return 403;
         }
 
-        proxy_pass http://127.0.0.1:5000\@query;
-        proxy_set_header Host @host;
-        proxy_set_header X-Real-IP @remote_addr;
-        proxy_set_header X-Forwarded-For @proxy_add_x_forwarded_for;
+        # 2. クエリパラメータ sessionId のチェック
+        set @valid_sessionId 0;
+        if (@arg_sessionId = "0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17") {
+            set @valid_sessionId 1;
+        }
+
+        if (@valid_sessionId = 0) {
+            return 403;
+        }
+
+        # 3. 転送先 (sessionIdを削除)
+        location /api/ {
+            set @query @request_uri;
+            if (@query ~* "(.*)(\\?|&)sessionId=[^&]*(.*)") {
+                set @query @1@3;
+            }
+            proxy_pass http://127.0.0.1:5000@query;
+            proxy_set_header Host @host;
+            proxy_set_header X-Real-IP @remote_addr;
+            proxy_set_header X-Forwarded-For @proxy_add_x_forwarded_for;
+            # ログを制御 (200 & 認証成功ならログ出力しない)
+            access_log C:/KazuyaFX/nginx/logs/access.log combined if=@loggable;
+        }
     }
 }
 "@
@@ -307,7 +329,9 @@ server {
     # 出力先ファイルのパス
     $outputPath = "$NginxDir\conf\nginx.conf"
     # 設定ファイルを書き出し
-    $nginxConfig.Replace("!!!DomainName!!!", $DomainName).Replace("@", "$") | Set-Content -Path $outputPath -Encoding UTF8
+    $text = $nginxConfig.Replace("!!!DomainName!!!", $DomainName).Replace("@", "$")
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($outputPath, $text, $utf8NoBom)
     Write-Host "#### nginx.conf が $outputPath に作成されました。" -ForegroundColor Blue
 }
     

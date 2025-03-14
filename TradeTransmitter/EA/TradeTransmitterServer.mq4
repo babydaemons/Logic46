@@ -18,7 +18,7 @@ input string  EMAIL = "babydaemons@gmail.com";                  // 生徒さん�
 input int     ACCOUNT = 201942679;                              // 生徒さんの口座番号
 #endif
 
-input string  TRADE_TRANSMITTER_SERVER = "http://localhost";    // トレードポジションを受信するサーバー
+input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp";    // トレードポジションを受信するサーバー
 input int     FETCH_INTERVAL = 500;                             // オーダー取得時のインターバル
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
 input int     RETRY_INTERVAL = 500;                             // オーダー失敗時のリトライ時間インターバル
@@ -49,7 +49,7 @@ int GetAccount(string path)
     return (int)StringToInteger(values[1]);
 }
 
-string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/pull";
+string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/api/teacher";
 string URL = ENDPOINT;
 
 bool TimerEnabled = false;
@@ -58,7 +58,7 @@ bool TimerEnabled = false;
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    URL += StringFormat("?email=%s&account=%d", UrlEncode(EMAIL), ACCOUNT);
+    URL += StringFormat("?email=%s", UrlEncode(EMAIL));
     EventSetMillisecondTimer(FETCH_INTERVAL);
     TimerEnabled = true;
     return INIT_SUCCEEDED;
@@ -85,7 +85,7 @@ void OnTick() {
 //+------------------------------------------------------------------+
 void OnTimer() {
     int res = 0;
-    string csv_text = Get(URL, res, 0, 1000);
+    string csv_text = Get(URL + "&position_id=", res, 0, 1000);
     if (STOPPED_BY_HTTP_ERROR || csv_text == HTTP_ERROR) {
         if (TimerEnabled) {
             EventKillTimer();
@@ -125,6 +125,16 @@ void OnTimer() {
         }
         else {
             Exit(command, symbol, lots, magic_number, position_id);
+        }
+        string send_response = Get(URL + "&position_id=" + position_id, res, 0, 1000);
+        if (STOPPED_BY_HTTP_ERROR || send_response == HTTP_ERROR) {
+            if (TimerEnabled) {
+                EventKillTimer();
+                TimerEnabled = false;
+                ExitEA(ENDPOINT, res);
+            }
+            ExpertRemove();
+            return;
         }
     }
 }
