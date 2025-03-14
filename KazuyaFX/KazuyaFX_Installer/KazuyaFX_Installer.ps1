@@ -270,6 +270,11 @@ http {
 
     error_log C:/KazuyaFX/nginx/logs/error.log;
 
+    map @status @loggable {
+        ~^200@  0;  # ステータスコードが200ならログを無効化
+        default 1;  # それ以外はログを有効化
+    }
+
     server {
         listen 443 ssl;
         server_name !!!DomainName!!!;
@@ -289,12 +294,12 @@ http {
         add_header X-Frame-Options DENY;
         add_header X-XSS-Protection "1; mode=block";
 
-        # ① Host が !!!DomainName!!! でなければ遮断
+        # 1. Host が !!!DomainName!!! でなければ遮断
         if (@host != "!!!DomainName!!!") {
             return 403;
         }
 
-        # ② クエリパラメータ sessionId のチェック
+        # 2. クエリパラメータ sessionId のチェック
         set @valid_sessionId 0;
         if (@arg_sessionId = "0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17") {
             set @valid_sessionId 1;
@@ -304,17 +309,18 @@ http {
             return 403;
         }
 
-        # ③ 転送先 (sessionIdを削除)
-        location / {
+        # 3. 転送先 (sessionIdを削除)
+        location /api/ {
             set @query @request_uri;
             if (@query ~* "(.*)(\\?|&)sessionId=[^&]*(.*)") {
                 set @query @1@3;
             }
-
-            proxy_pass http://127.0.0.1:5000/@query;
+            proxy_pass http://127.0.0.1:5000@query;
             proxy_set_header Host @host;
             proxy_set_header X-Real-IP @remote_addr;
             proxy_set_header X-Forwarded-For @proxy_add_x_forwarded_for;
+            # ログを制御 (200 & 認証成功ならログ出力しない)
+            access_log C:/KazuyaFX/nginx/logs/access.log combined if=@loggable;
         }
     }
 }
