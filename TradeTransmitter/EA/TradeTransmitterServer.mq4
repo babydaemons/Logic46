@@ -85,7 +85,7 @@ void OnTick() {
 //+------------------------------------------------------------------+
 void OnTimer() {
     int res = 0;
-    string csv_text = Get(URL + "&position_id=", res, 0, 1000);
+    string csv_text = Get(URL, res, 0, 1000);
     if (STOPPED_BY_HTTP_ERROR || csv_text == HTTP_ERROR) {
         if (TimerEnabled) {
             EventKillTimer();
@@ -198,6 +198,8 @@ void Entry(string command, string symbol, double lots, int magic_number, string 
             Sleep(RETRY_INTERVAL << times);
             RefreshRates();
         } else {
+            int res = 0;
+            string response = Get(URL + "&ticket=" + IntegerToString(order_ticket), res, 0, 1000);
             return;
         }
     }
@@ -251,6 +253,8 @@ void Exit(string command, string symbol, double lots, int magic_number, string p
                 Sleep(RETRY_INTERVAL << times);
                 RefreshRates();
             } else {
+                int res = 0;
+                string response = Get(URL + "&ticket=" + IntegerToString(ticket), res, 0, 1000);
                 return;
             }
         }

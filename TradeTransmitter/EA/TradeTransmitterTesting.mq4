@@ -25,7 +25,7 @@ ulong ClientBrokerID = 0;
 // 口座番号です
 ulong SenderAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
 
-string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/push";
+string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/api/student";
 string URL;
 
 datetime StartServerTimeEA;
@@ -83,11 +83,11 @@ void OnDeinit(const int reason) {
 void OnTimer() {
     if ((++Counter & 0x00000001) == 0x00000001) {
         ++Ticket;
-        ExecuteRequest(+1, +Position, ConvertSymbol(Symbol()), 0.01 * Ticket, Ticket);
+        ExecuteRequest(1, Position, ConvertSymbol(Symbol()), 0.01 * Ticket, Ticket);
     }
     else {
-        ExecuteRequest(-1, -Position, ConvertSymbol(Symbol()), 0.01 * Ticket, Ticket);
-        Position = -Position;
+        ExecuteRequest(0, -Position, ConvertSymbol(Symbol()), 0.01 * Ticket, Ticket);
+        Position ^= 1;
     }
 }
 
@@ -99,8 +99,8 @@ void ExecuteRequest(int change, int command, string symbol, double lots, int tic
     string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, ticket);
     
     string uri = URL;
-    uri += StringFormat("&change=%d", change);
-    uri += StringFormat("&command=%d", command);
+    uri += StringFormat("&entry=%d", change);
+    uri += StringFormat("&buy=%d", command);
     uri += StringFormat("&symbol=%s", symbol);
     uri += StringFormat("&lots=%.2f", lots);
     uri += StringFormat("&position_id=%s", position_id);
