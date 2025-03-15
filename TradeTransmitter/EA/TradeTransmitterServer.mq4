@@ -22,7 +22,7 @@ input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp";    // トレ�
 input int     FETCH_INTERVAL = 500;                             // オーダー取得時のインターバル
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
 input int     RETRY_INTERVAL = 500;                             // オーダー失敗時のリトライ時間インターバル
-input string  SYMBOL_APPEND_SUFFIX = "-cd";                     // ポジションコピー時にシンボル名に追加するサフィックス
+input string  SYMBOL_APPEND_SUFFIX = "";                        // ポジションコピー時にシンボル名に追加するサフィックス
 input double  LOTS_MULTIPLY = 2.0;                              // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;                                    // スリッページ(ポイント)
 
