@@ -21,15 +21,32 @@ bool STOPPED_BY_HTTP_ERROR = false;
 //+------------------------------------------------------------------+
 //| HTTP GET function                                                |
 //+------------------------------------------------------------------+
-string Get(string uri, int& res, int retry_max, int retry_interval) {
+string GetRequest(string uri, int& res, int retry_max, int retry_interval) {
     char data[];
     char result[];
     string result_headers;
-    int retry_count = 0;
     string headers = "Authorization: Bearer 0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17";
+    res = WebRequest("GET", uri, headers, 1000, data, result, result_headers);
+    int size = ArraySize(result);
+    uchar result_data[];
+    ArrayResize(result_data, size);
+    for (int i = 0; i < size; ++i) {
+        result_data[i] = (uchar)result[i];
+    }
+    string text = CharArrayToString(result_data);
+    return text;
+}
+
+//+------------------------------------------------------------------+
+//| HTTP GET function                                                |
+//+------------------------------------------------------------------+
+string Get(string uri, int& res, int retry_max, int retry_interval) {
+
+    int retry_count = 0;
+    string text = "";
 
     while (true) {
-        res = WebRequest("GET", uri, headers, 1000, data, result, result_headers);
+        text = GetRequest(uri, res, retry_max, retry_interval);
         if (res == 200) {
             break;
         }
@@ -59,14 +76,6 @@ string Get(string uri, int& res, int retry_max, int retry_interval) {
             return "";
         }
     }
-
-    int size = ArraySize(result);
-    uchar result_data[];
-    ArrayResize(result_data, size);
-    for (int i = 0; i < size; ++i) {
-        result_data[i] = (uchar)result[i];
-    }
-    string text = CharArrayToString(result_data);
     return text;
 }
 

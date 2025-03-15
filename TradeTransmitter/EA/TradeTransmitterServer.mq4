@@ -262,4 +262,7 @@ void Exit(string command, string symbol, double lots, int magic_number, string p
         Alert(error_message);
         return;
     }
+
+    int res = 0;
+    string response = Get(URL + "&ticket=-1", res, 0, 1000);
 }
