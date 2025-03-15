@@ -29,7 +29,7 @@ app.MapGet("/api/check", () => Results.Text("KazuyaFX_Server: OK"));
 /// <remarks>
 /// GET /api/student?email={email}&account={account}&entry={entry}&buy={buy}&symbol={symbol}&lots={lots}&command={command}&position_id={position_id}
 /// </remarks>
-app.MapGet("/api/student", async ([FromServices] PositionDao positionDao, HttpContext context) =>
+app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext context) =>
 {
     var email = context.Request.Query["email"];
     var positionId = context.Request.Query["position_id"];
@@ -63,19 +63,18 @@ app.MapGet("/api/student", async ([FromServices] PositionDao positionDao, HttpCo
     Logger.Log(Color.YELLOW, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
 
     studentBusyFlags.Remove(email!, out var flag);
-    return Results.Text(await WaitForPositionId(email!));
+    return Results.Text("ok");
 });
 
 /// <summary>
 /// 先生が生徒のトレード状況を取得する。
 /// </summary>
 /// <remarks>
-/// GET /api/teacher?email={email}&ticket={ticket}
+/// GET /api/teacher?email={email}
 /// </remarks>
 app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
 {
     var email = context.Request.Query["email"];
-    var ticket = context.Request.Query["ticket"];
 
     if (teacherBusyFlags.ContainsKey(email!))
     {
@@ -83,12 +82,6 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
     }
 
     teacherBusyFlags.TryAdd(email!, 1);
-    if (!string.IsNullOrEmpty(ticket))
-    {
-        // チケット番号が渡されたら、生徒側に返すために保存しておく。
-        tickets[email!] = ticket!;
-        return Results.Text("ok");
-    }
 
     string lines = string.Empty;
 
@@ -115,21 +108,5 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
     teacherBusyFlags.Remove(email!, out var flag);
     return Results.Text(lines, "text/csv; charset=utf-8");
 });
-
-/// <summary>
-/// ポジションIDを非同期で待機する。
-/// </summary>
-async Task<string> WaitForPositionId(string email)
-{
-    for (int i = 0; i < 1000; i++)
-    {
-        if (tickets.TryRemove(email, out var ticket))
-        {
-            return ticket;
-        }
-        await Task.Delay(10);
-    }
-    return "!!!!!!!!!!!!";
-}
 
 app.Run();

@@ -198,8 +198,6 @@ void Entry(string buy, string symbol, double lots, int magic_number, string posi
             Sleep(RETRY_INTERVAL << times);
             RefreshRates();
         } else {
-            int res = 0;
-            string response = Get(URL + "&ticket=" + IntegerToString(order_ticket), res, 0, 1000);
             return;
         }
     }
@@ -253,8 +251,6 @@ void Exit(string buy, string symbol, double lots, int magic_number, string posit
                 Sleep(RETRY_INTERVAL << times);
                 RefreshRates();
             } else {
-                int res = 0;
-                string response = Get(URL + "&ticket=" + IntegerToString(ticket), res, 0, 1000);
                 return;
             }
         }
@@ -262,7 +258,4 @@ void Exit(string buy, string symbol, double lots, int magic_number, string posit
         Alert(error_message);
         return;
     }
-
-    int res = 0;
-    string response = Get(URL + "&ticket=-1", res, 0, 1000);
 }
