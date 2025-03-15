@@ -289,6 +289,8 @@ http {
         default 1;  # それ以外はログを有効化
     }
 
+    access_log C:/KazuyaFX/nginx/logs/access.log combined if=@loggable;
+
     server {
         listen 443 ssl;
         server_name !!!DomainName!!!;
