@@ -2,6 +2,20 @@
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $logFile = "KazuyaFX_Installer-$timestamp.log"
 
+# 管理者権限で実行されているかチェック
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Host "管理者として再実行します…" -ForegroundColor Yellow
+
+    # PowerShell を同じコンソールで管理者権限に昇格
+    $command = "Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command `"& { $([System.IO.File]::ReadAllText('$($MyInvocation.MyCommand.Path)')) }`"' -Verb RunAs"
+    Invoke-Expression $command
+    
+    Exit
+}
+
+# 管理者権限で実行されている場合の処理
+Write-Host "管理者権限で実行中..." -ForegroundColor Green
+
 # ログファイルが使用中なら、新しいファイル名を作成
 function Get-AvailablelogFile {
     param ([string]$baseName)
@@ -124,10 +138,10 @@ $WinAcmeDir = "$AppDir\win-acme"; Create-Folder -FolderPath $WinAcmeDir
 
 function Stop-Process {
     param (
+        [int]$port,
         [string] $logFile
     )
 
-    $port = 80
     $maxAttempts = 5
     $attempts = 0
     
@@ -299,28 +313,23 @@ http {
             return 403;
         }
 
-        # 2. クエリパラメータ sessionId のチェック
-        set @valid_sessionId 0;
-        if (@arg_sessionId = "0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17") {
-            set @valid_sessionId 1;
+        # 2. HTTP ヘッダー認証
+        set @valid_token 0;
+        
+        if (@http_authorization ~* "^Bearer\s+(0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17)$") {
+            set @valid_token 1;
         }
 
-        if (@valid_sessionId = 0) {
+        if (@valid_token = 0) {
             return 403;
         }
 
-        # 3. 転送先 (sessionIdを削除)
+        # 3. 転送先
         location /api/ {
-            set @query @request_uri;
-            if (@query ~* "(.*)(\\?|&)sessionId=[^&]*(.*)") {
-                set @query @1@3;
-            }
-            proxy_pass http://127.0.0.1:5000@query;
-            proxy_set_header Host @host;
+            proxy_pass http://127.0.0.1:5000;
+            proxy_set_header Host $host;
             proxy_set_header X-Real-IP @remote_addr;
             proxy_set_header X-Forwarded-For @proxy_add_x_forwarded_for;
-            # ログを制御 (200 & 認証成功ならログ出力しない)
-            access_log C:/KazuyaFX/nginx/logs/access.log combined if=@loggable;
         }
     }
 }
@@ -337,7 +346,9 @@ http {
     
 try {
     # === ポート80の確認 ===
-    Stop-Process -logFile $logFile
+    Stop-Process -port 80 -logFile $logFile
+    # === ポート443の確認 ===
+    Stop-Process -port 443 -logFile $logFile
 
     # === ファイアウォール設定 ===
     Write-Host "#### ファイアウォールの 80/443 ポートを開放しています..." -ForegroundColor Cyan
