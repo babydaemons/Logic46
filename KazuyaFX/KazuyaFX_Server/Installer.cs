@@ -1,21 +1,7 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 public static class Installer
 {
-    public const string ESCAPE = "\x1b";
-    public const string RESET = ESCAPE + "[0m";
-    public const string GREEN = ESCAPE + "[32m";
-    public const string YELLOW = ESCAPE + "[33m";
-    public const string RED = ESCAPE + "[31m";
-    public const string CYAN = ESCAPE + "[36m";
-    public const string BLUE = ESCAPE + "[34m";
-
-    private static DateTime startAt = DateTime.Now;
-    private static Stopwatch stopwatch = Stopwatch.StartNew();
-
-    public static string Timestamp => (startAt + stopwatch.Elapsed).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
-
     public static void SetupFirewallRule()
     {
         // ポート80,443用のルールを追加 (TCP)
@@ -35,7 +21,7 @@ public static class Installer
         var arguments = $"advfirewall firewall add rule name=\"{ruleName}\" " +
                         $"dir=in action=allow protocol={protocol} localport={port}";
 
-        Console.WriteLine($"{BLUE}[{Timestamp}] ファイアウォールの規則を追加しています: '{arguments}'{RESET}");
+        Logger.Log(Color.BLUE, $"ファイアウォールの規則を追加しています: '{arguments}'");
 
         // netsh を外部プロセスとして起動
         var startInfo = new ProcessStartInfo
@@ -53,7 +39,7 @@ public static class Installer
         {
             if (process == null)
             {
-                Console.WriteLine($"{RED}[{Timestamp}] Failed to start netsh process.{RESET}");
+                Logger.Log(Color.RED, "Failed to start netsh process.");
                 Environment.Exit(1);
             }
 
@@ -65,14 +51,14 @@ public static class Installer
             // 結果を表示
             if (process.ExitCode == 0)
             {
-                Console.WriteLine($"{BLUE}[{Timestamp}] ファイアウォールの規則を追加しました: '{ruleName}': {output.Trim()}{RESET}");
+                Logger.Log(Color.BLUE, $"ファイアウォールの規則を追加しました: '{ruleName}': {output.Trim()}");
             }
             else
             {
-                Console.WriteLine($"{RED}[{Timestamp}] Failed to add rule '{ruleName}'. ExitCode: {process.ExitCode}{RESET}");
+                Logger.Log(Color.RED, $"ファイアウォールの規則を追加しました: '{ruleName}'. ExitCode: {process.ExitCode}");
                 if (!string.IsNullOrWhiteSpace(error))
                 {
-                    Console.WriteLine($"{RED}[{Timestamp}] {error}{RESET}");
+                    Logger.Log(Color.RED, $"{error}");
                 }
                 Environment.Exit(1);
             }
