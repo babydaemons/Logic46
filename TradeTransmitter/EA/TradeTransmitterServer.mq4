@@ -105,26 +105,26 @@ void OnTimer() {
         StringSplit(lines[i], ',', field);
         // タブ区切りファイルの仕様
         // 0列目：メールアドレス
-        string email = field[0];
+        string email = RemoveQuote(field[0]);
         // 1列目：口座番号
-        string accountNumber = field[1];
-        // 2列目："Entry": ポジション追加 ／ "Exit": ポジション削除
-        string change = field[2];
-        // 3列目："Buy": 買い建て ／ "Sell": 売り建て
-        string command = field[3];
+        string accountNumber = RemoveQuote(field[1]);
+        // 2列目："1:Entry": ポジション追加 ／ "0:Exit": ポジション削除
+        string entry = RemoveQuote(field[2]);
+        // 3列目："1:Buy": 買い建て ／ "0:Sell": 売り建て
+        string buy = RemoveQuote(field[3]);
         // 4列目：シンボル名
-        string symbol = field[4] + SYMBOL_APPEND_SUFFIX;
+        string symbol = RemoveQuote(field[4]) + SYMBOL_APPEND_SUFFIX;
         // 5列目：ポジションサイズ
-        double lots = RoundLots(symbol, StringToDouble(field[5]) * LOTS_MULTIPLY);
+        double lots = RoundLots(symbol, StringToDouble(RemoveQuote(field[5])) * LOTS_MULTIPLY);
         // 6列目：ポジションID(送信元証券会社名/口座番号)
-        string position_id = field[6];
+        string position_id = RemoveQuote(field[6]);
         // マジックナンバー：口座番号で代用
         int magic_number = (int)StringToInteger(accountNumber);
-        if (change == "Entry") {
-            Entry(command, symbol, lots, magic_number, position_id);
+        if (entry == "1") {
+            Entry(buy, symbol, lots, magic_number, position_id);
         }
         else {
-            Exit(command, symbol, lots, magic_number, position_id);
+            Exit(buy, symbol, lots, magic_number, position_id);
         }
         string send_response = Get(URL + "&position_id=" + position_id, res, 0, 1000);
         if (STOPPED_BY_HTTP_ERROR || send_response == HTTP_ERROR) {
@@ -164,13 +164,13 @@ double RoundLots(string symbol, double lots)
 //+------------------------------------------------------------------+
 //| コピーするポジションを発注します                                 |
 //+------------------------------------------------------------------+
-void Entry(string command, string symbol, double lots, int magic_number, string position_id)
+void Entry(string buy, string symbol, double lots, int magic_number, string position_id)
 {
     lots = RoundLots(symbol, lots);
 
     color arrow = clrNONE;
     int cmd = 0;
-    if (command == "Buy") {
+    if (buy == "1") {
         cmd = OP_BUY;
         arrow = clrBlue;
     }
@@ -182,7 +182,7 @@ void Entry(string command, string symbol, double lots, int magic_number, string 
     string error_message = "";
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
         double price = 0;
-        if (command == "Buy") {
+        if (buy == "1") {
             price = SymbolInfoDouble(symbol, SYMBOL_ASK);
         } else {
             price = SymbolInfoDouble(symbol, SYMBOL_BID);
@@ -210,10 +210,10 @@ void Entry(string command, string symbol, double lots, int magic_number, string 
 //+------------------------------------------------------------------+
 //| コピーしたポジションを決済します                                 |
 //+------------------------------------------------------------------+
-void Exit(string command, string symbol, double lots, int magic_number, string position_id)
+void Exit(string buy, string symbol, double lots, int magic_number, string position_id)
 {
     color arrow = clrNONE;
-    if (command == "Buy") {
+    if (buy == "1") {
         arrow = clrBlue;
     } else {
         arrow = clrRed;
@@ -235,7 +235,7 @@ void Exit(string command, string symbol, double lots, int magic_number, string p
         double ordered_lots = OrderLots();
         for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
             double price = 0;
-            if (command == "Buy") {
+            if (buy == "1") {
                 price = SymbolInfoDouble(symbol, SYMBOL_ASK);
             } else {
                 price = SymbolInfoDouble(symbol, SYMBOL_BID);

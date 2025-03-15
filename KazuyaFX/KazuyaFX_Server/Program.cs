@@ -10,7 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<PositionDao>();
 var app = builder.Build();
 
-ConcurrentDictionary<string, string> ticketList = new();
+ConcurrentDictionary<string, string> tickets = new();
+ConcurrentDictionary<string, int> busyFlags = new();
 
 /// <summary>
 /// ヘルスチェック用のエンドポイント。
@@ -69,15 +70,21 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
     var email = context.Request.Query["email"];
     var ticket = context.Request.Query["ticket"];
 
+    if (busyFlags.ContainsKey(email!))
+    {
+        return Results.Text("", "text/csv; charset=utf-8");
+    }
+
+    busyFlags.TryAdd(email!, 1);
     if (!string.IsNullOrEmpty(ticket))
     {
         // チケット番号が渡されたら、生徒側に返すために保存しておく。
-        ticketList[email!] = ticket!;
+        tickets[email!] = ticket!;
         return Results.Text("ok");
     }
 
     var positions = positionDao.GetPositions(email!);
-    string lines = string.Join("\n", positions.Select(p => $"{email},{p.account},{p.entry},{p.buy},{p.symbol},{p.lots},{p.position_id}"));
+    string lines = string.Join("\n", positions.Select(p => $"\"{email}\",\"{p.account}\",\"{p.entry}\",\"{p.buy}\",\"{p.symbol}\",\"{p.lots}\",\"{p.position_id}\""));
 
     try
     {
@@ -106,6 +113,7 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
         Logger.Log(Color.RED, $"!!!!!!!!!! {context.Request.QueryString}");
     }
 
+    busyFlags.Remove(email!, out var flag);
     return Results.Text(lines, "text/csv; charset=utf-8");
 });
 
@@ -116,7 +124,7 @@ async Task<string> WaitForPositionId(string email)
 {
     for (int i = 0; i < 1000; i++)
     {
-        if (ticketList.TryRemove(email, out var ticket))
+        if (tickets.TryRemove(email, out var ticket))
         {
             return ticket;
         }

@@ -197,8 +197,20 @@ void ExitEA(string url, int res)
     ExpertRemove();
 }
 
-string Replace(string value, string search, string reolacement)
+//+------------------------------------------------------------------+
+//| 文字列置換関数                                                    |
+//+------------------------------------------------------------------+
+string Replace(string value, string search, string replacement)
 {
-    StringReplace(value, search, reolacement);
+    StringReplace(value, search, replacement);
+    return value;
+}
+
+//+------------------------------------------------------------------+
+//| 文字列置換関数                                                    |
+//+------------------------------------------------------------------+
+string RemoveQuote(string value)
+{
+    StringReplace(value, "\"", "");
     return value;
 }
