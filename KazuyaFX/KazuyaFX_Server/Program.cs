@@ -19,7 +19,7 @@ ConcurrentDictionary<string, int> teacherBusyFlags = new();
 /// サーバーの正常稼働を確認する。
 /// </summary>
 /// <remarks>
-/// GET /api/healthcheck
+/// GET /api/check
 /// </remarks>
 app.MapGet("/api/check", () => Results.Text("KazuyaFX_Server: OK"));
 
