@@ -7,9 +7,9 @@ internal class PositionDao
     {
     }
 
-    internal List<Position> GetPositions(string email)
+    internal bool GetPosition(string email, out Position position)
     {
-        return _positions.GetOrAdd(email, new ConcurrentQueue<Position>()).ToList();
+        return _positions.GetOrAdd(email, new ConcurrentQueue<Position>()).TryDequeue(out position);
     }
 
     internal void InsertPosition(Position position)

@@ -11,7 +11,8 @@ builder.Services.AddSingleton<PositionDao>();
 var app = builder.Build();
 
 ConcurrentDictionary<string, string> tickets = new();
-ConcurrentDictionary<string, int> busyFlags = new();
+ConcurrentDictionary<string, int> studentBusyFlags = new();
+ConcurrentDictionary<string, int> teacherBusyFlags = new();
 
 /// <summary>
 /// ヘルスチェック用のエンドポイント。
@@ -39,6 +40,11 @@ app.MapGet("/api/student", async ([FromServices] PositionDao positionDao, HttpCo
         return Results.Text("ok");
     }
 
+    if (studentBusyFlags.ContainsKey(email!))
+    {
+        return Results.Text("ok");
+    }
+
     var position = new Position
     {
         email = email!,
@@ -56,6 +62,7 @@ app.MapGet("/api/student", async ([FromServices] PositionDao positionDao, HttpCo
     var message = $"生徒さん[{email}], 口座番号[{position.account}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジションID[{position.position_id}]";
     Logger.Log(Color.YELLOW, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
 
+    studentBusyFlags.Remove(email!, out var flag);
     return Results.Text(await WaitForPositionId(email!));
 });
 
@@ -70,12 +77,12 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
     var email = context.Request.Query["email"];
     var ticket = context.Request.Query["ticket"];
 
-    if (busyFlags.ContainsKey(email!))
+    if (teacherBusyFlags.ContainsKey(email!))
     {
         return Results.Text("", "text/csv; charset=utf-8");
     }
 
-    busyFlags.TryAdd(email!, 1);
+    teacherBusyFlags.TryAdd(email!, 1);
     if (!string.IsNullOrEmpty(ticket))
     {
         // チケット番号が渡されたら、生徒側に返すために保存しておく。
@@ -83,28 +90,20 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
         return Results.Text("ok");
     }
 
-    var positions = positionDao.GetPositions(email!);
-    string lines = string.Join("\n", positions.Select(p => $"\"{email}\",\"{p.account}\",\"{p.entry}\",\"{p.buy}\",\"{p.symbol}\",\"{p.lots}\",\"{p.position_id}\""));
+    string lines = string.Empty;
 
     try
     {
-        foreach (var position in positions)
+        while (positionDao.GetPosition(email!, out var position))
         {
             var entry = position.entry == +1 ? "Entry" : "Exit";
             var buy = position.buy == +1 ? "Buy" : "Sell";
-            var line = $"{email},{position.account},{entry},{buy},{position.symbol},{position.lots},{position.position_id}\n";
+            var line = $"\"{email}\",\"{position.account}\",\"{position.entry}\",\"{position.buy}\",\"{position.symbol}\",\"{position.lots}\",\"{position.position_id}\"\n";
             lines += line;
             var Entry = position.entry == +1 ? "[Entry]," : "[Exit], ";
             var Buy = position.buy == +1 ? "[Buy], " : "[Sell],";
             string message = $"生徒さん[{email}], 口座番号[{position.account}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジションID[{position.position_id}]";
-            if (position.entry == +1)
-            {
-                Logger.Log(Color.GREEN, $">>>>>>>>>> {message}");
-            }
-            else
-            {
-                Logger.Log(Color.GREEN, $"<<<<<<<<<< {message}");
-            }
+            Logger.Log(Color.GREEN, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
         }
     }
     catch (Exception ex)
@@ -113,7 +112,7 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
         Logger.Log(Color.RED, $"!!!!!!!!!! {context.Request.QueryString}");
     }
 
-    busyFlags.Remove(email!, out var flag);
+    teacherBusyFlags.Remove(email!, out var flag);
     return Results.Text(lines, "text/csv; charset=utf-8");
 });
 
