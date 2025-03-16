@@ -19,9 +19,9 @@ input int     ACCOUNT = 201942679;                              // 生徒さん�
 #endif
 
 input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp";    // トレードポジションを受信するサーバー
-input int     FETCH_INTERVAL = 500;                             // オーダー取得時のインターバル
+input int     FETCH_INTERVAL = 100;                             // オーダー取得時のインターバル
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
-input int     RETRY_INTERVAL = 500;                             // オーダー失敗時のリトライ時間インターバル
+input int     RETRY_INTERVAL = 100;                             // オーダー失敗時のリトライ時間インターバル
 input string  SYMBOL_APPEND_SUFFIX = "";                        // ポジションコピー時にシンボル名に追加するサフィックス
 input double  LOTS_MULTIPLY = 2.0;                              // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;                                    // スリッページ(ポイント)
