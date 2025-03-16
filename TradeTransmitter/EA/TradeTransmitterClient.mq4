@@ -1,9 +1,9 @@
 //+------------------------------------------------------------------+
 //|                                       TradeTransmitterClient.mq4 |
-//|                          Copyright 2024, Kazuya Quartet Academy. |
+//|                          Copyright 2025, Kazuya Quartet Academy. |
 //|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2024, Kazuya Quartet Academy."
+#property copyright "Copyright 2025, Kazuya Quartet Academy."
 #property link      "https://www.fx-kazuya.com/"
 #property version   "1.00"
 #property strict
@@ -29,7 +29,7 @@ string GetEmail(string path)
 #define MAX_POSITION 1024
 
 //+------------------------------------------------------------------+
-//| ポジション全体を表す構造体です                                   |
+//| ポジション全体を表す構造体です                                      |
 //+------------------------------------------------------------------+
 struct POSITION_LIST {
     int Change[MAX_POSITION];
@@ -127,7 +127,7 @@ int OnInit() {
 }
 
 //+------------------------------------------------------------------+
-//| シンボル名の変換を行います                                       |
+//| シンボル名の変換を行います                                         |
 //+------------------------------------------------------------------+
 string ConvertSymbol(string symbol_before) {
     string symbol_after = symbol_before;
@@ -152,7 +152,7 @@ void OnTimer() {
 }
 
 //+------------------------------------------------------------------+
-//| ポジション全体の差分をHTTPリクエストで送信します                 |
+//| ポジション全体の差分をHTTPリクエストで送信します                     |
 //+------------------------------------------------------------------+
 void SendPositions() {
     // 出力するポジション全体の差分を表す構造体をクリアします
@@ -188,7 +188,7 @@ void SendPositions() {
 
 
 //+------------------------------------------------------------------+
-//| 現在のポジション全体の状態を走査します                           |
+//| 現在のポジション全体の状態を走査します                              |
 //+------------------------------------------------------------------+
 int ScanCurrentPositions(POSITION_LIST& Current) {
     // 現在のポジション状態を取得する前に
@@ -242,7 +242,7 @@ int ScanCurrentPositions(POSITION_LIST& Current) {
 }
 
 //+------------------------------------------------------------------+
-//| 追加されたポジション全体の状態を走査します                       |
+//| 追加されたポジション全体の状態を走査します                           |
 //+------------------------------------------------------------------+
 int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int added_count) {
     // 外側のカウンタ current のループで現在のポジション全体をスキャンします
@@ -269,7 +269,7 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
 }
 
 //+------------------------------------------------------------------+
-//| 削除されたポジション全体の状態を走査します                       |
+//| 削除されたポジション全体の状態を走査します                           |
 //+------------------------------------------------------------------+
 int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int change_count) {
     // 外側のカウンタ previous のループで前回のポジション全体をスキャンします
@@ -296,7 +296,7 @@ int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int po
 }
 
 //+------------------------------------------------------------------+
-//| 出力する差分情報構造体にポジションの要素を追記します             |
+//| 出力する差分情報構造体にポジションの要素を追記します                  |
 //+------------------------------------------------------------------+
 int AppendChangedPosition(POSITION_LIST& Current, int entry, int dst, int src) {
     Output.Change[dst] = entry;
@@ -324,6 +324,9 @@ void SendPositionRequest(int change_count) {
     }
 }
 
+//+------------------------------------------------------------------+
+//| ポジションの差分をHTTPリクエストで送信します                         |
+//+------------------------------------------------------------------+
 void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
 {
     string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, ticket);

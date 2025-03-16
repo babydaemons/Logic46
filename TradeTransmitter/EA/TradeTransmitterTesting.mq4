@@ -1,16 +1,16 @@
 //+------------------------------------------------------------------+
 //|                                       TradeTransmitterClient.mq4 |
-//|                          Copyright 2024, Kazuya Quartet Academy. |
+//|                          Copyright 2025, Kazuya Quartet Academy. |
 //|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2024, Kazuya Quartet Academy."
+#property copyright "Copyright 2025, Kazuya Quartet Academy."
 #property link      "https://www.fx-kazuya.com/"
 #property version   "1.00"
 #property strict
 
 input string  EMAIL = "babydaemons@gmail.com"; // メールアドレス
 input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp"; // トレードポジションを受信するサーバー
-input string  SYMBOL_REMOVE_SUFFIX = "-cd"; // ポジションコピー時にシンボル名から削除するサフィックス
+input string  SYMBOL_REMOVE_SUFFIX = ""; // ポジションコピー時にシンボル名から削除するサフィックス
 
 string GetSourcePath()
 {
@@ -61,7 +61,7 @@ int OnInit() {
 }
 
 //+------------------------------------------------------------------+
-//| シンボル名の変換を行います                                       |
+//| シンボル名の変換を行います                                         |
 //+------------------------------------------------------------------+
 string ConvertSymbol(string symbol_before) {
     string symbol_after = symbol_before;
@@ -92,24 +92,26 @@ void OnTimer() {
 }
 
 //+------------------------------------------------------------------+
-//| ポジションの差分をHTTPリクエストで送信します                     |
+//| ポジションの差分をHTTPリクエストで送信します                        |
 //+------------------------------------------------------------------+
-void ExecuteRequest(int change, int command, string symbol, double lots, int ticket)
+void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
 {
     string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, ticket);
     
     string uri = URL;
-    uri += StringFormat("&entry=%d", change);
-    uri += StringFormat("&buy=%d", command);
+    uri += StringFormat("&entry=%d", entry);
+    uri += StringFormat("&buy=%d", buy);
     uri += StringFormat("&symbol=%s", symbol);
     uri += StringFormat("&lots=%.2f", lots);
     uri += StringFormat("&position_id=%s", position_id);
 
     int res = 0;
-    string response = Get(uri, res, 3, 500);
+    string response = Get(uri, res, 4, 1000);
 
     if (STOPPED_BY_HTTP_ERROR || response == HTTP_ERROR) {
         ExitEA(ENDPOINT, res);
         return;
     }
+
+    printf("Order Request Sended: %s", uri);
 }
