@@ -123,8 +123,6 @@ $MailAddress = $Config["KazuyaFX"]["MailAddress"]
 
 $AppDir = "C:\KazuyaFX"
 Remove-Item $AppDir -Recurse -Force -Verbose:$false; Create-Folder -FolderPath $AppDir
-Write-Host "#### Nginx を解凍中..." -ForegroundColor Cyan
-Expand-Archive -Path ".\KazuyaFX_server.zip" -DestinationPath $AppDir -Force -Verbose:$false | Out-Null
 
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
@@ -135,6 +133,8 @@ $CertDir = "$AppDir\certificate"; Create-Folder -FolderPath $CertDir
 $NginxDir = "$AppDir\nginx"; Create-Folder -FolderPath $NginxDir
 $NginxLogDir = "$NginxDir\logs"; Create-Folder -FolderPath $NginxLogDir
 $WinAcmeDir = "$AppDir\win-acme"; Create-Folder -FolderPath $WinAcmeDir
+$WinAcmeDir = "$AppDir\kestrel"; Create-Folder -FolderPath $WinAcmeDir
+Expand-Archive -Path ".\KazuyaFX.zip" -DestinationPath "C:\" -Force -Verbose:$false | Out-Null
 
 function Stop-Process {
     param (
