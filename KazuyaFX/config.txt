@@ -1,0 +1,13 @@
+;!@Install@!UTF-8!
+Title="先生用 MetaTrader4 環境インストール"
+BeginPrompt="先生用 MetaTrader4 環境をインストールします。続行しますか？"
+ExtractTitle="インストール中..."
+FinishMessage="インストールが完了しました！"
+InstallPath="C:\KazuyaFX"
+Progress="yes"
+GUIMode="3"
+ExecuteFile="KazuyaFX_Installer.exe"
+AutoInstall="yes"
+OverwriteMode="1"
+GUIFlags="4"
+;!@InstallEnd@!

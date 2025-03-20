@@ -7,14 +7,6 @@ $host.UI.RawUI.WindowTitle = "KazuyaFX ビルドスクリプト"
 Write-Host "**** KazuyaFX インストーラーのビルドを開始します..." -ForegroundColor Cyan
 
 try {
-    # === 既存の KazuyaFX_Installer.exe を終了する ===
-    Write-Host "**** KazuyaFX_Installer.exe を終了しています..." -ForegroundColor Yellow
-    $process = Get-Process -Name "KazuyaFX_Installer" -ErrorAction SilentlyContinue
-    if ($process) {
-        Stop-Process -Name "KazuyaFX_Installer" -Force
-        Start-Sleep -Seconds 2  # プロセス終了待ち
-    }
-
     # === PowerShellスクリプトをEXEに変換 ===
     Write-Host "**** PowerShellスクリプトを EXE に変換中..." -ForegroundColor Yellow
     Invoke-PS2EXE .\KazuyaFX_Installer.ps1 .\KazuyaFX_Installer.exe
