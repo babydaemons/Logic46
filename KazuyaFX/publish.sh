@@ -1,6 +1,6 @@
 #!/bin/bash
 WORK="_work_KazuyaFX_InstallerBuild"
-rm -rf ${WORK} KazuyaFX/KazuyaFX.zip
+rm -rf ${WORK} KazuyaFX_Setup/KazuyaFX_Setup.zip
 mkdir ${WORK}
 
 printf "##### .NETアプリ1をビルド...\n"
@@ -11,11 +11,11 @@ printf "\n\n##### インストーラーをビルド...\n"
 (pushd KazuyaFX_Installer; powershell -File build.ps1; cp -p KazuyaFX_Installer.exe ../${WORK}; popd)
 
 printf "\n\n##### 7zでzipアーカイブ作成...\n"
-(pushd ${WORK}; find * -name \*.pdb -delete -print; 7z.exe a ../KazuyaFX/KazuyaFX.zip .; popd)
+(pushd ${WORK}; find * -name \*.pdb -delete -print; 7z.exe a ../KazuyaFX_Setup/KazuyaFX_Setup.zip .; popd)
 rm -rf ${WORK}
 
 printf "\n\n##### PuInstallerでインストーラー作成...\n"
-cd KazuyaFX
+cd KazuyaFX_Setup
 if [ ! -f venv/Scripts/activate ]
 then
     python -m venv venv
@@ -24,6 +24,6 @@ then
 else
     source venv/Scripts/activate
 fi
-pyinstaller KazuyaFX.spec
-cp -p dist/KazuyaFX.exe ..
+pyinstaller KazuyaFX_Setup.spec
+cp -p dist/KazuyaFX_Setup.exe ..
 rm -rf build dist
