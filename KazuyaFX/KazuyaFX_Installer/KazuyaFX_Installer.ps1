@@ -367,18 +367,18 @@ try {
     # === Let's Encrypt 証明書の取得 (win-acme) ===
     Create-Certificate -logFile $logFile
 
-    # === Nginx サービスとして登録 ===
-    Write-Host "#### Nginx を Windows サービスとして登録しています..." -ForegroundColor Cyan
+    # === KazuyaFX サービスとして登録 ===
+    Write-Host "#### KazuyaFX を Windows サービスとして登録しています..." -ForegroundColor Cyan
     # サービスの作成（binPath 修正）
-    $serviceName = "Nginx for KazuyaFX"
-    $exePath = "C:\KazuyaFX\Nginx\Nginx.exe"
+    $serviceName = "KazuyaFX"
+    $exePath = "C:\KazuyaFX\KazuyaFX.exe"
     if (!(Get-Service -Name $serviceName -ErrorAction SilentlyContinue)) {
         sc.exe create $serviceName binPath= "$exePath" DisplayName= "KazuyaFX Service" start= auto
         if ($LASTEXITCODE -ne 0) {
-            throw "Nginx サービスの登録に失敗しました。"
+            throw "KazuyaFX サービスの登録に失敗しました。"
         }
     }
-    Write-Host "#### Nginx サービスが正常に登録・起動されました。" -ForegroundColor Blue
+    Write-Host "#### KazuyaFX サービスが正常に登録・起動されました。" -ForegroundColor Blue
 
     Write-Host "#### セットアップが完了しました！ " -ForegroundColor Yellow
 
