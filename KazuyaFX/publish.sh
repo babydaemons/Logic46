@@ -12,11 +12,18 @@ printf "\n\n##### インストーラーをビルド...\n"
 
 printf "\n\n##### 7zでzipアーカイブ作成...\n"
 (pushd ${WORK}; find * -name \*.pdb -delete -print; 7z.exe a ../KazuyaFX/KazuyaFX.zip .; popd)
-
 rm -rf ${WORK}
 
+printf "\n\n##### PuInstallerでインストーラー作成...\n"
 cd KazuyaFX
-source venv/Scripts/activate
+if [ ! -f venv/Scripts/activate ]
+then
+    python -m venv venv
+    source venv/Scripts/activate
+    pip install PyInstaller
+else
+    source venv/Scripts/activate
+fi
 pyinstaller KazuyaFX.spec
 cp -p dist/KazuyaFX.exe ..
 rm -rf build dist
