@@ -1,13 +1,22 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Threading.Tasks;
+﻿﻿using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System.Diagnostics;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory
+});
+
+// ★ Windows サービスとして動作するように追加
+builder.Host.UseWindowsService();
+
 builder.Services.AddSingleton<PositionDao>();
+
 var app = builder.Build();
 
 ConcurrentDictionary<string, string> tickets = new();
@@ -62,7 +71,7 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
     var message = $"生徒さん[{email}], 口座番号[{position.account}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジションID[{position.position_id}]";
     Logger.Log(Color.YELLOW, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
 
-    studentBusyFlags.Remove(email!, out var flag);
+    studentBusyFlags.Remove(email!, out var _);
     return Results.Text("ok");
 });
 
@@ -105,7 +114,7 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
         Logger.Log(Color.RED, $"!!!!!!!!!! {context.Request.QueryString}");
     }
 
-    teacherBusyFlags.Remove(email!, out var flag);
+    teacherBusyFlags.Remove(email!, out var _);
     return Results.Text(lines, "text/csv; charset=utf-8");
 });
 
