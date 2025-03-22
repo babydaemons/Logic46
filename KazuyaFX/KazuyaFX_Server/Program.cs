@@ -15,8 +15,10 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 // ★ Windows サービスとして動作するように追加
 builder.Host.UseWindowsService();
 
-builder.Services.AddSingleton<PositionDao>();
+// nginx 起動用サービスを追加
+builder.Services.AddHostedService<NginxHostedService>();
 
+builder.Services.AddSingleton<PositionDao>();
 var app = builder.Build();
 
 ConcurrentDictionary<string, string> tickets = new();
