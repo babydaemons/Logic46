@@ -10,8 +10,8 @@ public class ApplicationHostedService : IHostedService
 
     public ApplicationHostedService(IConfiguration configuration)
     {
-        _appPath = configuration["Application::Path"] ?? throw new ArgumentException("Application::Path が設定されていません");
-        _appName = configuration["Application::Name"] ?? throw new ArgumentException("Application::Name が設定されていません");
+        _appPath = configuration["Application:Path"] ?? throw new ArgumentException("Application:Path が設定されていません");
+        _appName = configuration["Application:Name"] ?? throw new ArgumentException("Application:Name が設定されていません");
 
         var mode = configuration["Logger:Mode"] ?? "Console";
         Logger.SetMode(mode);

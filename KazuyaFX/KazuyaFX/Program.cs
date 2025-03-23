@@ -32,6 +32,8 @@ ConcurrentDictionary<string, string> tickets = new();
 ConcurrentDictionary<string, int> studentBusyFlags = new();
 ConcurrentDictionary<string, int> teacherBusyFlags = new();
 
+Logger.Log(Color.CYAN, "先生用 MetaTrader4 トレード受信サーバーが起動しました...");
+
 /// <summary>
 /// ヘルスチェック用のエンドポイント。
 /// サーバーの正常稼働を確認する。
