@@ -16,7 +16,7 @@ public static class Logger
     private static Stopwatch stopwatch = Stopwatch.StartNew();
     private static string Timestamp => (startAt + stopwatch.Elapsed).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
 
-    private static string _mode = "Console"; // または "File"
+    private static string _mode = "Console"; // Console / File / Both
     private static readonly string _logFilePath = Path.Combine(AppContext.BaseDirectory, "log.txt");
     private static readonly object _lock = new();
 
@@ -29,13 +29,14 @@ public static class Logger
     {
         string line = $"[{Timestamp}] {message}";
 
-        if (_mode == "Console")
+        if (_mode is "Console" or "Both")
         {
             string ESCAPE = "\x1b";
             string RESET = ESCAPE + "[0m";
             Console.WriteLine($"{ESCAPE}[{(int)color}m{line}{RESET}");
         }
-        else if (_mode == "File")
+
+        if (_mode is "File" or "Both")
         {
             lock (_lock)
             {

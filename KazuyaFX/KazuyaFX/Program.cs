@@ -12,13 +12,20 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     ContentRootPath = AppContext.BaseDirectory
 });
 
-// ★ Windows サービスとして動作するように追加
-builder.Host.UseWindowsService();
+// 設定取得
+var config = builder.Configuration;
+bool runAsService = config.GetValue<bool>("RunAsService");
 
-// nginx 起動用サービスを追加
+// RunAsService が true のときだけ Windowsサービスとして登録
+if (runAsService)
+{
+    builder.Host.UseWindowsService();
+}
+
+// nginx または指定アプリを起動する HostedService を追加
 builder.Services.AddHostedService<ApplicationHostedService>();
-
 builder.Services.AddSingleton<PositionDao>();
+
 var app = builder.Build();
 
 ConcurrentDictionary<string, string> tickets = new();
