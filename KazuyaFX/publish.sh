@@ -3,10 +3,11 @@ WORK="__WORK__"
 rm -rf ${WORK} KazuyaFX_Setup/KazuyaFX_Setup.zip
 mkdir ${WORK}
 
-printf "\n##### .NETアプリをビルド...\n"
-(pushd KazuyaFX_Server; dotnet publish KazuyaFX_Server.csproj -c Release -o ../${WORK}/server; cd ../${WORK}/server; rm -rf app; popd)
 printf "\n\n##### インストーラーをビルド...\n"
 (pushd KazuyaFX_Installer; powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1; cp -p KazuyaFX_Installer.exe ../${WORK}; popd)
+
+printf "\n##### .NETアプリをビルド...\n"
+(pushd KazuyaFX; dotnet publish KazuyaFX.csproj -c Release -o ../${WORK}; cd ../${WORK}; rm -rf app; popd)
 
 printf "\n\n##### 7zでzipアーカイブ作成...\n"
 export PATH="/c/Program Files/7-Zip:${PATH}"

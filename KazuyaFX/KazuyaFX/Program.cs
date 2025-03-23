@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Host.UseWindowsService();
 
 // nginx 起動用サービスを追加
-builder.Services.AddHostedService<NginxHostedService>();
+builder.Services.AddHostedService<ApplicationHostedService>();
 
 builder.Services.AddSingleton<PositionDao>();
 var app = builder.Build();
