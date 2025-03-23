@@ -1,18 +1,18 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 
 public class NginxHostedService : IHostedService
 {
-    private readonly ILogger<NginxHostedService> _logger;
     private readonly string _nginxPath;
     private Process? _nginxProcess;
 
-    public NginxHostedService(ILogger<NginxHostedService> logger, IConfiguration configuration)
+    public NginxHostedService(IConfiguration configuration)
     {
-        _logger = logger;
         _nginxPath = configuration["NginxPath"] ?? throw new ArgumentException("NginxPath が設定されていません");
+
+        var mode = configuration["Logger:Mode"] ?? "Console";
+        Logger.SetMode(mode);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -30,11 +30,11 @@ public class NginxHostedService : IHostedService
                 }
             };
             _nginxProcess.Start();
-            _logger.LogInformation("nginx を起動しました。");
+            Logger.Log(Color.GREEN, "nginx を起動しました。");
         }
         catch (Exception ex)
         {
-            _logger.LogError($"nginx 起動失敗: {ex.Message}");
+            Logger.Log(Color.RED, $"nginx 起動失敗: {ex.Message}");
         }
 
         return Task.CompletedTask;
@@ -48,12 +48,12 @@ public class NginxHostedService : IHostedService
             {
                 _nginxProcess.Kill(true);
                 _nginxProcess.WaitForExit();
-                _logger.LogInformation("nginx を終了しました。");
+                Logger.Log(Color.YELLOW, "nginx を終了しました。");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError($"nginx 終了失敗: {ex.Message}");
+            Logger.Log(Color.RED, $"nginx 終了失敗: {ex.Message}");
         }
 
         return Task.CompletedTask;
