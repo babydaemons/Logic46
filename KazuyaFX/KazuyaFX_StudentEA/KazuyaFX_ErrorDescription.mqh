@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                                          ErrorDescriptionMT4.mqh |
+//|                                    KazuyaFX_ErrorDescription.mqh |
 //|                          Copyright 2025, Kazuya Quartet Academy. |
 //|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+

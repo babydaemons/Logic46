@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                       TradeTransmitterServer.mq4 |
+//|                                           KazuyaFX_TeacherEA.mq4 |
 //|                          Copyright 2025, Kazuya Quartet Academy. |
 //|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property strict
 
-#include "TradeTransmitter.mqh"
+#include "../KazuyaFX_StudentEA/KazuyaFX_Common.mqh"
 
 #ifndef EMAIL
 input string  EMAIL = "babydaemons@gmail.com";                  // 生徒さんのメールアドレス

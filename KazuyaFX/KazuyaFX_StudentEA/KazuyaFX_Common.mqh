@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                             TradeTransmitter.mqh |
+//|                                              KazuyaFX_Common.mqh |
 //|                          Copyright 2025, Kazuya Quartet Academy. |
 //|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
@@ -8,11 +8,7 @@
 #property version   "1.00"
 #property strict
 
-#ifdef __MQL5__
-    #include "ErrorDescriptionMT5.mqh"
-#else
-    #include "ErrorDescriptionMT4.mqh"
-#endif 
+#include "KazuyaFX_ErrorDescription.mqh"
 
 #define HTTP_ERROR "※※※※※※※※※※※※※※※※※※※※"
 

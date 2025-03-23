@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                       TradeTransmitterClient.mq4 |
+//|                                           KazuyaFX_TestingEA.mq4 |
 //|                          Copyright 2025, Kazuya Quartet Academy. |
 //|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
@@ -24,7 +24,7 @@ string GetEmail(string path)
     return email;
 }
 
-#include "TradeTransmitter.mqh"
+#include "KazuyaFX_Common.mqh"
 
 #define MAX_POSITION 1024
 

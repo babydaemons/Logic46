@@ -12,4 +12,4 @@ const string EMAIL_EXPERT_ADVISER_PATH = __FILE__;
 #define EMAIL       GetEmail(EMAIL_EXPERT_ADVISER_PATH)
 #define ACCOUNT     GetAccount(EMAIL_EXPERT_ADVISER_PATH)
 
-#include "TradeTransmitterServer.mq4"
+#include "KazuyaFX_TeacherEA.mq4"

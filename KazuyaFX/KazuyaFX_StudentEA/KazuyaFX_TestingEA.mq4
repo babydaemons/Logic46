@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                       TradeTransmitterClient.mq4 |
+//|                                           KazuyaFX_TestingEA.mq4 |
 //|                          Copyright 2025, Kazuya Quartet Academy. |
 //|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
@@ -17,7 +17,7 @@ string GetSourcePath()
     return __FILE__;
 }
 
-#include "TradeTransmitter.mqh"
+#include "KazuyaFX_Common.mqh"
 
 // 送信元証券会社のIDです
 ulong ClientBrokerID = 0;
