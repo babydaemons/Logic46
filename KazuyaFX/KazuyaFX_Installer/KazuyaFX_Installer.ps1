@@ -1,6 +1,9 @@
 ﻿# === ログファイル設定 ===
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$logFile = "KazuyaFX_Installer-$timestamp.log"
+$logFile = "C:\Users\Administrator\Desktop\KazuyaFX_Setup-$timestamp.log"
+
+$DomainName = Read-Host -Prompt "#### ドメイン名を入力してください [例 babydaemons.jp]"
+$MailAddress = Read-Host -Prompt "#### メールアドレスを入力してください [例 babydaemons@gmail.com]"
 
 # 管理者権限で実行されているかチェック
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
@@ -46,42 +49,6 @@ public class FileDownloader
 }
 "@ -Language CSharp
 
-# INIファイル読み込み
-function Read-IniFile {
-    param (
-        [string]$iniPath
-    )
-
-    if (-Not (Test-Path $iniPath)) {
-        Write-Host "!!!! エラー: INIファイルが見つかりません: $iniPath" -ForegroundColor Red
-        # === ユーザーに終了操作を促す ===
-        Write-Host "!!!! Enterキーを押して終了してください..." -ForegroundColor Red
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        exit 1
-    }
-
-    $iniContent = Get-Content $iniPath
-    $iniData = @{}
-    $section = ""
-
-    foreach ($line in $iniContent) {
-        if ($line -match "^\s*;|^\s*$") { continue }
-        if ($line -match "^\[(.+)\]$") {
-            $section = $matches[1]
-            $iniData[$section] = @{}
-        }
-        elseif ($line -match "^(.+?)\s*=\s*(.*)$") {
-            $key = $matches[1].Trim()
-            $value = $matches[2].Trim()
-            if ($section -ne "") {
-                $iniData[$section][$key] = $value
-            }
-        }
-    }
-
-    return $iniData
-}
-
 # PowerShell で利用できる関数を定義
 function Get-File {
     param (
@@ -106,6 +73,11 @@ function Create-Folder {
         [string]$FolderPath
     )
 
+    # 既存ディレクトリがあれば削除
+    if (Test-Path $FolderPath) {
+        Remove-Item -Recurse -Force $FolderPath
+    }
+
     if (!(Test-Path $FolderPath)) {
         New-Item -ItemType Directory -Path $FolderPath -Force | Out-Null
         Write-Host "#### フォルダを作成しました: $FolderPath" -ForegroundColor Cyan
@@ -117,22 +89,18 @@ function Create-Folder {
 $logFile = Get-AvailablelogFile -baseName $logFile
 Start-Transcript -Path $logFile -Append -Force | Out-Null
 
-$Config = Read-IniFile -iniPath "C:\Users\Administrator\Desktop\KazuyaFX.ini"
-$DomainName = $Config["KazuyaFX"]["DomainName"]
-$MailAddress = $Config["KazuyaFX"]["MailAddress"]
-
 $AppDir = "C:\KazuyaFX"
 
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
 Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Yellow
+$logDir = "$AppDir\logs"; Create-Folder -FolderPath $logDir
 $ArchiveDir = "$AppDir\archive"; Create-Folder -FolderPath $ArchiveDir
 $WebRoot = "$AppDir\webroot"; Create-Folder -FolderPath $WebRoot
 $CertDir = "$AppDir\certificate"; Create-Folder -FolderPath $CertDir
 $NginxDir = "$AppDir\nginx"; Create-Folder -FolderPath $NginxDir
 $NginxLogDir = "$NginxDir\logs"; Create-Folder -FolderPath $NginxLogDir
 $WinAcmeDir = "$AppDir\win-acme"; Create-Folder -FolderPath $WinAcmeDir
-$WinAcmeDir = "$AppDir\kestrel"; Create-Folder -FolderPath $WinAcmeDir
 
 function Stop-Process {
     param (
@@ -159,6 +127,10 @@ function Stop-Process {
                 foreach ($processId in $processIds) {
                     try {
                         # taskkill.exe を使用してプロセスを強制終了
+                        if ($processId -eq 0) {
+                            continue
+                        }
+
                         $taskkillResult = & taskkill.exe /PID $processId /F 2>&1
     
                         if ($taskkillResult -match "成功") {
@@ -395,8 +367,6 @@ try {
         Stop-Transcript | Out-Null
     }
 
-    # === ユーザーに終了操作を促す ===
-    Write-Host "#### Enterキーを押して終了してください..." -ForegroundColor Red
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    exit 0
+    Write-Host "#### 完了するには[Enter]キーを押してください！ " -ForegroundColor Yellow
+    $null = Read-Host
 }

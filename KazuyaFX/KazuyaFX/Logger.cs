@@ -1,5 +1,6 @@
 ﻿﻿using System.Diagnostics;
 using System.IO;
+using Microsoft.Extensions.Configuration;
 
 public enum Color
 {
@@ -17,13 +18,25 @@ public static class Logger
     private static string Timestamp => (startAt + stopwatch.Elapsed).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
 
     private static string _mode = "Console"; // Console / File / Both
-    private static readonly string _logFilePath = Path.Combine(AppContext.BaseDirectory, "log.txt");
+    private static string? _logFilePath;
     private static readonly object _lock = new();
 
-    public static void SetMode(string mode)
+    public static void Configure(IConfiguration config)
     {
-        _mode = mode;
+        _mode = config["Logger:Mode"] ?? "Console";
+
+        if (_mode is "File" or "Both")
+        {
+            var logDir = config["Logger:Directory"] ?? Path.Combine(AppContext.BaseDirectory, "logs");
+            Directory.CreateDirectory(logDir);
+
+            var time = DateTime.Now.ToString("yyyyMMdd-HHmm");
+            var fileName = $"KazuyaFX-{time}.log";
+            _logFilePath = Path.Combine(logDir, fileName);
+        }
     }
+
+    public static void SetMode(string mode) => _mode = mode;
 
     public static void Log(Color color, string message)
     {
@@ -36,7 +49,7 @@ public static class Logger
             Console.WriteLine($"{ESCAPE}[{(int)color}m{line}{RESET}");
         }
 
-        if (_mode is "File" or "Both")
+        if ((_mode is "File" or "Both") && _logFilePath != null)
         {
             lock (_lock)
             {
