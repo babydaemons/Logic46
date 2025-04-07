@@ -2,8 +2,8 @@
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $logFile = "C:\Users\Administrator\Desktop\KazuyaFX_Setup-$timestamp.log"
 
-$DomainName = Read-Host -Prompt "#### ドメイン名を入力してください [例 babydaemons.jp]"
-$MailAddress = Read-Host -Prompt "#### メールアドレスを入力してください [例 babydaemons@gmail.com]"
+$DomainName = "qta-kazuyafx.com"
+$MailAddress = "qta.kazuyafx@gmail.com"
 
 # 管理者権限で実行されているかチェック
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
