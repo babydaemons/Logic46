@@ -367,6 +367,7 @@ try {
         Stop-Transcript | Out-Null
     }
 
-    Write-Host "#### 完了するには[Enter]キーを押してください！ " -ForegroundColor Yellow
+    Write-Host "#### インストールが完了しました。Windowsを再起動します。続行するには[Enter]キーを押してください！ " -ForegroundColor Yellow
     $null = Read-Host
+    & "shutdown.exe" "-r" "-t" "0" "-f"
 }
