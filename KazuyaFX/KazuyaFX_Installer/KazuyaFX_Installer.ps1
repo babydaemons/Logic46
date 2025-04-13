@@ -113,8 +113,8 @@ $logDir = "$AppDir\logs"; Create-Folder -FolderPath $logDir
 $ArchiveDir = "$AppDir\archive"; Create-Folder -FolderPath $ArchiveDir
 $WebRoot = "$AppDir\webroot"; Create-Folder -FolderPath $WebRoot
 $CertDir = "$AppDir\certificate"; Create-Folder -FolderPath $CertDir
-$NginxDir = "$AppDir\nginx"; Create-Folder -FolderPath $NginxDir
-$NginxLogDir = "$NginxDir\logs"; Create-Folder -FolderPath $NginxLogDir
+$NginxDir = "$AppDir\nginx"      #; Create-Folder -FolderPath $NginxDir
+#$NginxLogDir = "$NginxDir\logs" #; Create-Folder -FolderPath $NginxLogDir
 $WinAcmeDir = "$AppDir\win-acme"; Create-Folder -FolderPath $WinAcmeDir
 
 function Install-MT4 {
@@ -232,6 +232,7 @@ function Install-Nginx {
 
     if (Test-Path "$NginxDir\nginx.exe") {
         Write-Host "#### Nginx のインストールに成功しました。" -ForegroundColor Cyan
+        $NginxConfDir = "$NginxDir\conf" ; Create-Folder -FolderPath $NginxConfDir
     } else {
         throw "Nginx 実行ファイルが見つかりません。"
     }
