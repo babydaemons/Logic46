@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property strict
 
-#include "../KazuyaFX_StudentEA/KazuyaFX_Common.mqh"
+#include "Util/KazuyaFX_Common.mqh"
 
 #ifndef EMAIL
 input string  EMAIL = "babydaemons@gmail.com";                  // 生徒さんのメールアドレス
@@ -18,7 +18,7 @@ input string  EMAIL = "babydaemons@gmail.com";                  // 生徒さん�
 input int     ACCOUNT = 201942679;                              // 生徒さんの口座番号
 #endif
 
-input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp";    // トレードポジションを受信するサーバー
+input string  TRADE_TRANSMITTER_SERVER = "https://qta-kazuyafx.com";    // トレードポジションを受信するサーバー
 input int     FETCH_INTERVAL = 100;                             // オーダー取得時のインターバル
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
 input int     RETRY_INTERVAL = 100;                             // オーダー失敗時のリトライ時間インターバル

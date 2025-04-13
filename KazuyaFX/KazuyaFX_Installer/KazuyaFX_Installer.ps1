@@ -1,23 +1,43 @@
-﻿# === ログファイル設定 ===
-$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$logFile = "C:\Users\Administrator\Desktop\KazuyaFX_Setup-$timestamp.log"
+﻿Add-Type -AssemblyName System.Windows.Forms
 
-$DomainName = "qta-kazuyafx.com"
-$MailAddress = "qta.kazuyafx@gmail.com"
+# === ログファイル設定 ===
+$logFile = "$env:TEMP\KazuyaFX_Setup.log"
+$desktop = [Environment]::GetFolderPath("Desktop")
+
+try {
+    Start-Transcript -Path $logFile -Append | Out-Null
+} catch {
+    [System.Windows.Forms.MessageBox]::Show("ログ開始に失敗しました：$_", "KazuyaFX", 0, 48)
+}
+
+if (Test-Path "$NginxDir\nginx.exe") {
+    Write-Host "#### Nginx はインストールされています。" -ForegroundColor Blue
+}
 
 # 管理者権限で実行されているかチェック
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Host "管理者として再実行します…" -ForegroundColor Yellow
-
     # PowerShell を同じコンソールで管理者権限に昇格
     $command = "Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command `"& { $([System.IO.File]::ReadAllText('$($MyInvocation.MyCommand.Path)')) }`"' -Verb RunAs"
     Invoke-Expression $command
-    
     Exit
 }
 
 # 管理者権限で実行されている場合の処理
 Write-Host "管理者権限で実行中..." -ForegroundColor Green
+
+$DomainName = "qta-kazuyafx.com"
+$MailAddress = "qta.kazuyafx@gmail.com"
+
+if (Test-Path "$desktop\KazuyaFX_Setup.json") {
+    # 読み込み
+    $config = Get-Content "$desktop\KazuyaFX_Setup.json" | ConvertFrom-Json
+    $DomainName = $config.Certification.DomainName # "qta-kazuyafx.com"
+    $MailAddress = $config.Certification.MailAddress # "qta.kazuyafx@gmail.com"
+}
+
+Write-Host "#### ドメイン名:     $DomainName" -ForegroundColor Cyan
+Write-Host "#### メールアドレス: $MailAddress" -ForegroundColor Cyan
 
 # ログファイルが使用中なら、新しいファイル名を作成
 function Get-AvailablelogFile {
@@ -73,16 +93,11 @@ function Create-Folder {
         [string]$FolderPath
     )
 
-    # 既存ディレクトリがあれば削除
-    if (Test-Path $FolderPath) {
-        Remove-Item -Recurse -Force $FolderPath
-    }
-
     if (!(Test-Path $FolderPath)) {
         New-Item -ItemType Directory -Path $FolderPath -Force | Out-Null
-        Write-Host "#### フォルダを作成しました: $FolderPath" -ForegroundColor Cyan
+        # Write-Host "#### フォルダを作成しました: $FolderPath" -ForegroundColor Cyan
     } else {
-        Write-Host "#### フォルダは既に存在します: $FolderPath" -ForegroundColor Blue
+        # Write-Host "#### フォルダは既に存在します: $FolderPath" -ForegroundColor Blue
     }
 }
 
@@ -102,61 +117,91 @@ $NginxDir = "$AppDir\nginx"; Create-Folder -FolderPath $NginxDir
 $NginxLogDir = "$NginxDir\logs"; Create-Folder -FolderPath $NginxLogDir
 $WinAcmeDir = "$AppDir\win-acme"; Create-Folder -FolderPath $WinAcmeDir
 
+function Install-MT4 {
+    $fxtfExePath = "C:\Program Files (x86)\FXTF MT4\terminal.exe"
+    $fxtfInstallerUrl = "https://www.fxtrade.co.jp/system/download/fxtf4setup.exe"
+    $fxtfInstallerPath = "$env:TEMP\fxtf4setup.exe"
+
+    Write-Host "#### FXTF MT4 の存在確認..."
+    if (Test-Path $fxtfExePath) {
+        Write-Host "#### FXTF MT4 はすでにインストール済みです。" -ForegroundColor Cyan
+    } else {
+        Write-Host "#### FXTF MT4 をダウンロード中..." -ForegroundColor Cyan
+        Invoke-WebRequest -Uri $fxtfInstallerUrl -OutFile $fxtfInstallerPath
+        Write-Host "#### インストーラーを起動します..." -ForegroundColor Cyan
+        Start-Process -FilePath $fxtfInstallerPath -Wait
+        Remove-Item $fxtfInstallerPath -Force
+    }
+}
+
 function Stop-Process {
     param (
         [int]$port,
-        [string] $logFile
+        [string]$logFile
     )
 
     $maxAttempts = 5
     $attempts = 0
-    
-    while ($attempts -lt $maxAttempts) {
-        $attempts++
-        $processInfo = netstat -ano | Select-String ":$port"
-    
-        if ($processInfo) {
-            Write-Host "#### ポート $port を使用しているアプリがあります。停止を試みます... (試行 $attempts / $maxAttempts)" -ForegroundColor Cyan
-    
-            # PID を抽出（最後の列にある数値が PID）
-            $processIds = $processInfo | ForEach-Object {
-                ($_ -split '\s+')[-1]  # 最後の要素が PID
-            } | Where-Object { $_ -match '^\d+$' }  # 数値のみ取得
-            
-            if ($processIds) {
-                foreach ($processId in $processIds) {
-                    try {
-                        # taskkill.exe を使用してプロセスを強制終了
-                        if ($processId -eq 0) {
-                            continue
-                        }
 
-                        $taskkillResult = & taskkill.exe /PID $processId /F 2>&1
-    
-                        if ($taskkillResult -match "成功") {
-                            Write-Host "#### プロセス $processId を停止しました。" -ForegroundColor Blue
-                        } elseif ($taskkillResult -match "理由: これは重要なシステム プロセスです。Taskkill でこのプロセスを終了できません。") {
-                            Write-Host "**** プロセスを停止しました: $taskkillResult" -ForegroundColor Red
-                            return
-                        } else {
-                            Write-Host "!!!! プロセス $processId の停止に失敗しました: $taskkillResult" -ForegroundColor Red
-                        }
-                    } catch {
-                        Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Red
-                    }
-                }
-                return
-            } else {
-                Write-Host "!!!! 有効なプロセス ID が見つかりませんでした。" -ForegroundColor Red
-            }
-    
-            Start-Sleep -Seconds 2  # 2秒待機
-        } else {
-            Write-Host "ポート $port を使用しているアプリはありません。" -ForegroundColor Green
-            break  # ループを抜ける
+    function Write-Log {
+        param ([string]$message)
+        Write-Host $message -ForegroundColor Blue
+        if ($logFile) {
+            $message | Out-File -FilePath $logFile -Append -Encoding UTF8
         }
     }
-    
+
+    while ($attempts -lt $maxAttempts) {
+        $attempts++
+
+        $netstatOutput = netstat -ano -p tcp
+        $lines = $netstatOutput | Where-Object { $_ -match '^\s*TCP' }
+
+        # ローカルアドレス列だけを見る（第2カラム）
+        $matches = $lines | Where-Object {
+            $cols = ($_ -split '\s+') 
+            $cols.Count -ge 5 -and $cols[1] -match ":$port$"
+        }
+
+        if ($matches) {
+            Write-Log "#### ポート $port を使用しているアプリがあります。停止します... (試行 $attempts / $maxAttempts)"
+
+            $processIds = $matches | ForEach-Object {
+                ($_ -split '\s+')[-1]
+            } | Where-Object { $_ -match '^\d+$' } | Sort-Object -Unique
+
+            foreach ($pid in $processIds) {
+                if ($pid -eq 0) { continue }
+
+                try {
+                    $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+                    $procName = if ($proc) { $proc.ProcessName } else { "<不明>" }
+
+                    Write-Log "---- プロセス名: $procName (PID: $pid) を停止します"
+
+                    $result = & taskkill.exe /PID $pid /F 2>&1
+
+                    if ($result -match "成功") {
+                        Write-Log "#### プロセス $pid ($procName) を停止しました。"
+                    } elseif ($result -match "理由: これは重要なシステム プロセスです。") {
+                        Write-Log "**** システムプロセスのため停止できません: $result"
+                        return
+                    }
+
+                } catch {
+                    Write-Log "!!!! エラーが発生しました: $_"
+                }
+            }
+
+            return
+        } else {
+            Write-Log "ポート $port を使用しているアプリはありません。"
+            break
+        }
+
+        Start-Sleep -Seconds 2
+    }
+
     if ($attempts -ge $maxAttempts) {
         throw "ポート $port を使用しているアプリの停止に失敗しました。手動で確認してください。"
     }
@@ -184,7 +229,6 @@ function Install-Nginx {
     Write-Host "#### Nginx を解凍中..." -ForegroundColor Blue
     Expand-Archive -Path $zipFilePath -DestinationPath $AppDir -Force -Verbose:$false | Out-Null
     Move-Item "$AppDir\nginx-1.27.4\*" $NginxDir -Verbose:$false | Out-Null
-    Remove-Item "$AppDir\nginx-1.27.4" -Recurse -Force -Verbose:$false | Out-Null
 
     if (Test-Path "$NginxDir\nginx.exe") {
         Write-Host "#### Nginx のインストールに成功しました。" -ForegroundColor Cyan
@@ -317,10 +361,15 @@ http {
 }
     
 try {
+	# === MT4インストール ===
+	Install-MT4
+
     # === ポート80の確認 ===
+    Stop-Transcript | Out-Null
     Stop-Process -port 80 -logFile $logFile
     # === ポート443の確認 ===
     Stop-Process -port 443 -logFile $logFile
+    Start-Transcript -Path $logFile -Append -Force | Out-Null
 
     # === ファイアウォール設定 ===
     Write-Host "#### ファイアウォールの 80/443 ポートを開放しています..." -ForegroundColor Cyan
@@ -338,26 +387,10 @@ try {
 
     # === Let's Encrypt 証明書の取得 (win-acme) ===
     Create-Certificate -logFile $logFile
-
-    # === KazuyaFX サービスとして登録 ===
-    Write-Host "#### KazuyaFX を Windows サービスとして登録しています..." -ForegroundColor Cyan
-    # サービスの作成（binPath 修正）
-    $serviceName = "KazuyaFX"
-    $exePath = "C:\KazuyaFX\KazuyaFX.exe"
-    if (!(Get-Service -Name $serviceName -ErrorAction SilentlyContinue)) {
-        sc.exe create $serviceName binPath= "$exePath" DisplayName= "KazuyaFX Service" start= auto
-        if ($LASTEXITCODE -ne 0) {
-            throw "KazuyaFX サービスの登録に失敗しました。"
-        }
-    }
-    Write-Host "#### KazuyaFX サービスが正常に登録・起動されました。" -ForegroundColor Blue
-
-    Write-Host "#### セットアップが完了しました！ " -ForegroundColor Yellow
-
 } catch {
-    Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Red
-    Write-Host "!!!! 詳細なエラーログは $logFile に記録されています。" -ForegroundColor Red
-    Write-Host "!!!! Enterキーを押して終了してください..." -ForegroundColor Red
+    Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Cyan
+    Write-Host "!!!! 詳細なエラーログは $logFile に記録されています。" -ForegroundColor Cyan
+    Write-Host "!!!! Enterキーを押して終了してください..." -ForegroundColor Cyan
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit 1
 } finally {
@@ -366,8 +399,6 @@ try {
     if ($global:Transcribing) {
         Stop-Transcript | Out-Null
     }
-
-    Write-Host "#### インストールが完了しました。Windowsを再起動します。続行するには[Enter]キーを押してください！ " -ForegroundColor Yellow
-    $null = Read-Host
-    & "shutdown.exe" "-r" "-t" "0" "-f"
+    Copy-Item -Path $logFile -Destination "$desktop\KazuyaFX_Setup.log" -Force
+    [System.Windows.Forms.MessageBox]::Show("インストールが完了しました。", "KazuyaFXインストール", 0, 48)
 }
