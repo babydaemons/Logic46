@@ -59,9 +59,13 @@ function Find-TerminalFolder {
 }
 
 function Download-And-Verify-Zip {
+    param (
+        [string]$terminalFolder
+    )
     $url = "https://raw.githubusercontent.com/babydaemons/mt4config/main/qta-kazuyafx.com.api.student.zip"
-    $zipPath = "$env:TEMP\config.zip"
-    $testExtractPath = "$env:TEMP\config_test"
+
+    $zipPath = Join-Path $env:TEMP "config.zip"
+    $testExtractPath = Join-Path $env:TEMP "config_test"
     $maxRetries = 3
     $retryDelaySeconds = 1
 
@@ -69,16 +73,33 @@ function Download-And-Verify-Zip {
         try {
             Write-Host "#### ZIP をダウンロード中... (試行 $i / $maxRetries)" -ForegroundColor Cyan
 
-            # WebClient を使ってダウンロード
+            # ダウンロード実行
             $client = New-Object System.Net.WebClient
             $client.DownloadFile($url, $zipPath)
 
-            # 展開テスト（ファイル破損確認）
-            if (Test-Path $testExtractPath) { Remove-Item $testExtractPath -Recurse -Force }
+            # Null チェックとログ
+            if (-not $zipPath) {
+                throw "zipPath が null です"
+            }
+            if (-not (Test-Path $zipPath)) {
+                throw "zipPath が存在しません: $zipPath"
+            }
+
+            # 展開先フォルダが存在する場合は削除
+            if (Test-Path $testExtractPath) {
+                Remove-Item $testExtractPath -Recurse -Force
+            }
+
+            # 展開テスト
             Expand-Archive -Path $zipPath -DestinationPath $testExtractPath -Force
 
             Write-Host "#### ZIP の検証に成功しました。" -ForegroundColor Green
+
+            # 一時展開フォルダを削除
             Remove-Item $testExtractPath -Recurse -Force
+
+            Expand-Archive -Path $zipPath -DestinationPath $terminalFolder -Force
+            Write-Host "#### FXTF MT4へ先生サーバーの設定を行いました: $terminalFolder" -ForegroundColor Cyan
             return $true
         } catch {
             Write-Warning "#### ZIP のダウンロードまたは展開に失敗しました: $_"
@@ -103,17 +124,15 @@ try {
     $terminalFolder = Find-TerminalFolder -targetText "C:\Program Files (x86)\FXTF MT4"
 
     # configの上書き
-    if (-not (Download-And-Verify-Zip)) {
+    if (-not (Download-And-Verify-Zip -terminalFolder $terminalFolder)) {
         throw "config.zip の取得と検証に失敗したため、処理を中断します。"
     }
-        Write-Host "#### FXTF MT4へ先生サーバーの設定を行いました: $terminalFolder" -ForegroundColor Cyan
 
-    $EA_File = Split-Path $fullPath -Leaf $EA_Path
-    $EA_Dir = "$terminalFolder\MQL4\Experts\KazuyaFX"
-    $target_EA_Path = "$EA_Dir\$EA_File"
+    
+    $EA_Dir = Join-Path  $terminalFolder "MQL4\Experts\KazuyaFX"
     New-Item -ItemType Directory -Path $EA_Dir -Force | Out-Null
     Copy-Item -Path $EA_Path -Destination $EA_Dir -Force
-    Write-Host "#### FXTF MT4へ生徒さん用EAのインストールが完了しました: $target_EA_Path" -ForegroundColor Cyan
+    Write-Host "#### FXTF MT4へ生徒さん用EAのインストールが完了しました: $EA_Dir" -ForegroundColor Cyan
 } catch {
     Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Cyan
     Write-Host "!!!! 詳細なエラーログは $logFile に記録されています。" -ForegroundColor Cyan
