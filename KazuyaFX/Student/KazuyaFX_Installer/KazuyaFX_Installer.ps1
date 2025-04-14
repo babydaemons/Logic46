@@ -1,6 +1,5 @@
 ﻿Add-Type -AssemblyName System.Windows.Forms
 
-$ConfigUrl = "https://raw.githubusercontent.com/babydaemons/mt4config/main/qta-kazuyafx.com.api.student.zip"
 $EA_Path = $($args[0])
 
 # === ログファイル設定 ===
@@ -39,33 +38,61 @@ function Find-TerminalFolder {
         [string]$targetText
     )
 
-    $basePath = "$env:APPDATA\MetaQuotes\Terminal"
+    $basePath = "$env:APPDATA\\MetaQuotes\\Terminal"
 
-    Get-ChildItem -Path $basePath -Directory | ForEach-Object {
-        $originPath = Join-Path $_.FullName "origin.txt"
+    foreach ($dir in Get-ChildItem -Path $basePath -Directory) {
+        $originPath = Join-Path $dir.FullName "origin.txt"
         if (Test-Path $originPath) {
             $content = Get-Content $originPath -Raw
             if ($content.Trim() -eq $targetText) {
-                $terminalFolder = $_.FullName
+                $terminalFolder = $dir.FullName
                 Write-Host "#### FXTF MT4のユーザーフォルダが見つかりました: $terminalFolder" -ForegroundColor Cyan
                 return $terminalFolder
             }
         }
     }
 
-    $terminalFolder = "$basePath\F1DD1D6E7C4A311D1B1CA0D34E33291D" # 一致なしの場合
+    # 一致しなかった場合
+    $terminalFolder = "$basePath\\F1DD1D6E7C4A311D1B1CA0D34E33291D"
     Write-Host "#### FXTF MT4のユーザーフォルダが見つかりました: $terminalFolder" -ForegroundColor Cyan
     return $terminalFolder
 }
 
-function Install-Config {
-    param (
-        [string]$terminalFolder
-    )
-    $configZip = "$env:TEMP\config.zip"
-    $configFolder = "$terminalFolder\config"
-    Write-Host "Expand-Archive -Path $configZip -DestinationPath $configFolder -Force"
-    Expand-Archive -Path $configZip -DestinationPath $configFolder -Force
+function Download-And-Verify-Zip {
+    $url = "https://raw.githubusercontent.com/babydaemons/mt4config/main/qta-kazuyafx.com.api.student.zip"
+    $zipPath = "$env:TEMP\config.zip"
+    $testExtractPath = "$env:TEMP\config_test"
+    $maxRetries = 3
+    $retryDelaySeconds = 1
+
+    for ($i = 1; $i -le $maxRetries; $i++) {
+        try {
+            Write-Host "#### ZIP をダウンロード中... (試行 $i / $maxRetries)" -ForegroundColor Cyan
+
+            # WebClient を使ってダウンロード
+            $client = New-Object System.Net.WebClient
+            $client.DownloadFile($url, $zipPath)
+
+            # 展開テスト（ファイル破損確認）
+            if (Test-Path $testExtractPath) { Remove-Item $testExtractPath -Recurse -Force }
+            Expand-Archive -Path $zipPath -DestinationPath $testExtractPath -Force
+
+            Write-Host "#### ZIP の検証に成功しました。" -ForegroundColor Green
+            Remove-Item $testExtractPath -Recurse -Force
+            return $true
+        } catch {
+            Write-Warning "#### ZIP のダウンロードまたは展開に失敗しました: $_"
+            if ($i -lt $maxRetries) {
+                Write-Host "#### ${retryDelaySeconds}秒後に再試行します..." -ForegroundColor Yellow
+                Start-Sleep -Seconds $retryDelaySeconds
+            } else {
+                Write-Error "#### すべてのリトライで ZIP の検証に失敗しました。"
+                return $false
+            }
+        } finally {
+            if ($client) { $client.Dispose() }
+        }
+    }
 }
 
 try {
@@ -76,8 +103,10 @@ try {
     $terminalFolder = Find-TerminalFolder -targetText "C:\Program Files (x86)\FXTF MT4"
 
     # configの上書き
-    Install-Config -terminalFolder $terminalFolder
-    Write-Host "#### FXTF MT4へ先生サーバーの設定を行いました: $terminalFolder" -ForegroundColor Cyan
+    if (-not (Download-And-Verify-Zip)) {
+        throw "config.zip の取得と検証に失敗したため、処理を中断します。"
+    }
+        Write-Host "#### FXTF MT4へ先生サーバーの設定を行いました: $terminalFolder" -ForegroundColor Cyan
 
     $EA_File = Split-Path $fullPath -Leaf $EA_Path
     $EA_Dir = "$terminalFolder\MQL4\Experts\KazuyaFX"
