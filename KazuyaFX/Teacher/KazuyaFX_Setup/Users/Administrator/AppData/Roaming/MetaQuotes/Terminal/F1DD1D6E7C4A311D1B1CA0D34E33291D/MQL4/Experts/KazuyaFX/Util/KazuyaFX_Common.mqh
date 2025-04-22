@@ -21,7 +21,7 @@ string GetRequest(string uri, int& res, int retry_max, int retry_interval) {
     char data[];
     char result[];
     string result_headers;
-    string headers = "Authorization: Bearer 0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17";
+    string headers = "Authorization: Bearer 0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17\r\n";
     res = WebRequest("GET", uri, headers, 1000, data, result, result_headers);
     int size = ArraySize(result);
     uchar result_data[];
