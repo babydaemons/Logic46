@@ -51,43 +51,6 @@ function Get-AvailablelogFile {
     return $logFile
 }
 
-# C# の WebClient を使用してファイルをダウンロードする関数を追加
-Add-Type -TypeDefinition @"
-using System;
-using System.Net;
-using System.IO;
-
-public class FileDownloader
-{
-    public static void GetFile(string url, string outputPath)
-    {
-        using (WebClient client = new WebClient())
-        {
-            client.DownloadFile(url, outputPath);
-        }
-    }
-}
-"@ -Language CSharp
-
-# PowerShell で利用できる関数を定義
-function Get-File {
-    param (
-        [string]$Url,
-        [string]$OutputPath
-    )
-
-    try {
-        [FileDownloader]::GetFile($Url, $OutputPath)
-        if (Test-Path $OutputPath) {
-            Write-Host "#### ダウンロードが完了しました: $OutputPath" -ForegroundColor Blue
-        } else {
-            throw "ダウンロードしたファイルが見つかりません: $OutputPath"
-        }
-    } catch {
-        throw "エラーが発生しました: $_"
-    }
-}
-
 function Create-Folder {
     param (
         [string]$FolderPath
@@ -110,7 +73,6 @@ $AppDir = "C:\KazuyaFX"
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
 Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Yellow
 $logDir = "$AppDir\logs"; Create-Folder -FolderPath $logDir
-$ArchiveDir = "$AppDir\archive"; Create-Folder -FolderPath $ArchiveDir
 $WebRoot = "$AppDir\webroot"; Create-Folder -FolderPath $WebRoot
 $CertDir = "$AppDir\certificate"; Create-Folder -FolderPath $CertDir
 $NginxDir = "$AppDir\nginx"      #; Create-Folder -FolderPath $NginxDir
@@ -204,66 +166,6 @@ function Stop-Process {
 
     if ($attempts -ge $maxAttempts) {
         throw "ポート $port を使用しているアプリの停止に失敗しました。手動で確認してください。"
-    }
-}
-
-# Nginx のインストール関数
-function Install-Nginx {
-    param (
-        [string]$logFile
-    )
-    if (Test-Path "$NginxDir\nginx.exe") {
-        Write-Host "#### Nginx はインストールされています。" -ForegroundColor Blue
-    }
-
-    $nginxUrl = "https://nginx.org/download/nginx-1.27.4.zip"
-    if ($nginxUrl) {
-        Write-Host "#### 最新の Nginx バージョンURL: $nginxUrl" -ForegroundColor Blue
-    } else {
-        throw "Nginx バージョンの取得に失敗しました。"
-    }
-
-    $zipFilePath = "$ArchiveDir\nginx-1.27.4.zip"
-    Get-File -Url $nginxUrl -OutputPath $zipFilePath
-
-    Write-Host "#### Nginx を解凍中..." -ForegroundColor Blue
-    Expand-Archive -Path $zipFilePath -DestinationPath $AppDir -Force -Verbose:$false | Out-Null
-    Move-Item "$AppDir\nginx-1.27.4\*" $NginxDir -Verbose:$false | Out-Null
-
-    if (Test-Path "$NginxDir\nginx.exe") {
-        Write-Host "#### Nginx のインストールに成功しました。" -ForegroundColor Cyan
-        $NginxConfDir = "$NginxDir\conf" ; Create-Folder -FolderPath $NginxConfDir
-    } else {
-        throw "Nginx 実行ファイルが見つかりません。"
-    }
-}
-
-# win-acme のインストール関数
-function Install-WinAcme {
-    param (
-        [string]$logFile
-    )
-    if (Test-Path "$WinAcmeDir\wacs.exe") {
-        Write-Host "#### win-acme はインストールされています。" -ForegroundColor Blue
-    }
-
-    $winAcmeUrl = "https://github.com/win-acme/win-acme/releases/download/v2.2.9.1701/win-acme.v2.2.9.1701.x64.trimmed.zip"
-    if ($winAcmeUrl) {
-        Write-Host "#### 最新の win-acme バージョンURL: $winAcmeUrl" -ForegroundColor Blue
-    } else {
-        throw "win-acme バージョンの取得に失敗しました。"
-    }
-
-    $zipFilePath = "$ArchiveDir\win-acme.v2.2.9.1701.x64.trimmed.zip"
-    Get-File -Url $winAcmeUrl -OutputPath $zipFilePath
-
-    Write-Host "#### win-acme を解凍中..." -ForegroundColor Blue
-    Expand-Archive -Path $zipFilePath -DestinationPath $WinAcmeDir -Force -Verbose:$false | Out-Null
-
-    if (Test-Path "$WinAcmeDir\wacs.exe") {
-        Write-Host "#### win-acme のインストールに成功しました。" -ForegroundColor Cyan
-    } else {
-        throw "win-acme 実行ファイルが見つかりません。"
     }
 }
 
@@ -380,14 +282,9 @@ try {
     Start-Transcript -Path $logFile -Append -Force | Out-Null
     Write-Host "#### ファイアウォール設定が完了しました。" -ForegroundColor Blue
     
-    # === Nginx のインストール ===
-    Install-Nginx -logFile $logFile
-
-    # === Let's Encrypt 証明書の取得アプリ (win-acme) のインストール ===
-    Install-WinAcme -logFile $logFile
-
     # === Let's Encrypt 証明書の取得 (win-acme) ===
     Create-Certificate -logFile $logFile
+    Write-Host "#### インストールが完了しました。" -ForegroundColor Cyan
 } catch {
     Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Cyan
     Write-Host "!!!! 詳細なエラーログは $logFile に記録されています。" -ForegroundColor Cyan
