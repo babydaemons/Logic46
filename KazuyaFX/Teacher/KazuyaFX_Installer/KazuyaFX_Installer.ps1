@@ -234,7 +234,7 @@ http {
 
         # 2. HTTP ヘッダー認証
         set @valid_token 0;
-        
+
         if (@http_authorization ~* "^Bearer\s+(0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17)$") {
             set @valid_token 1;
         }
