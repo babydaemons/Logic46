@@ -20,15 +20,14 @@ bool STOPPED_BY_HTTP_ERROR = false;
 string GetRequest(string uri, int& res, int retry_max, int retry_interval) {
     char data[];
     char result[];
+
+    string headers = "Authorization: Bearer 0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17\r\n";
     string result_headers;
 
-    string header_string = "Authorization: Bearer 0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17\r\n";
-    char headers[];
-    StringToCharArray(header_string, headers);
-
     for (int attempt = 0; attempt < retry_max; ++attempt) {
-        res = WebRequest("GET", uri, headers, 5000, data, result, result_headers);
+        res = WebRequest("GET", uri, headers, 1000, data, result, result_headers);
         if (res != -1) break;
+        printf("GetLastError(): %d", GetLastError());
         Sleep(retry_interval);
     }
 
