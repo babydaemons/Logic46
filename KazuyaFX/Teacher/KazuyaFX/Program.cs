@@ -51,10 +51,12 @@ app.MapGet("/api/check", () => Results.Text("KazuyaFX_Server: OK"));
 /// </remarks>
 app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext context) =>
 {
-    var email = context.Request.Query["email"];
-    var positionId = context.Request.Query["position_id"];
+    lock (positionDao)
+    {
+        var email = context.Request.Query["email"];
+        var positionId = context.Request.Query["position_id"];
 
-    var position = new Position
+        var position = new Position
         {
             email = email!,
             account = int.TryParse(context.Request.Query["account"], out var a) ? a : 0,
@@ -65,39 +67,40 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
             position_id = positionId!
         };
 
-    if (position.entry == 1)
-    {
-        if (entryPositionIdList.ContainsKey(position.position_id))
+        if (position.entry == 1)
         {
-            // すでに同じポジションIDが存在する場合は、何もしない。
-            return Results.Text("ok");
+            if (entryPositionIdList.ContainsKey(position.position_id))
+            {
+                // すでに同じポジションIDが存在する場合は、何もしない。
+                return Results.Text("ok");
+            }
+            else
+            {
+                entryPositionIdList.TryAdd(positionId!, 1);
+            }
         }
         else
         {
-            entryPositionIdList.TryAdd(positionId!, 1);
+            if (exitPositionIdList.ContainsKey(position.position_id))
+            {
+                // すでに同じポジションIDが存在する場合は、何もしない。
+                return Results.Text("ok");
+            }
+            else
+            {
+                exitPositionIdList.TryAdd(positionId!, 1);
+            }
         }
+
+        positionDao.InsertPosition(position);
+
+        var Entry = position.entry == +1 ? "[Entry]," : "[Exit], ";
+        var Buy = position.buy == +1 ? "[Buy], " : "[Sell],";
+        var message = $"生徒さん[{email}], 口座番号[{position.account}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジションID[{position.position_id}]";
+        Logger.Log(Color.YELLOW, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
+
+        return Results.Text("ok");
     }
-    else
-    {
-        if (exitPositionIdList.ContainsKey(position.position_id))
-        {
-            // すでに同じポジションIDが存在する場合は、何もしない。
-            return Results.Text("ok");
-        }
-        else
-        {
-            exitPositionIdList.TryAdd(positionId!, 1);
-        }
-    }
-
-    positionDao.InsertPosition(position);
-
-    var Entry = position.entry == +1 ? "[Entry]," : "[Exit], ";
-    var Buy = position.buy == +1 ? "[Buy], " : "[Sell],";
-    var message = $"生徒さん[{email}], 口座番号[{position.account}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジションID[{position.position_id}]";
-    Logger.Log(Color.YELLOW, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
-
-    return Results.Text("ok");
 });
 
 /// <summary>
