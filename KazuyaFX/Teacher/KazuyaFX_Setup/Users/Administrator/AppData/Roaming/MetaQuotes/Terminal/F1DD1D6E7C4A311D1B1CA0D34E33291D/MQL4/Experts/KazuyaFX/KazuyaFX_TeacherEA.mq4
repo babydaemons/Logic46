@@ -19,12 +19,13 @@ input int     ACCOUNT = 201942679;                              // 生徒さん�
 #endif
 
 input string  TRADE_TRANSMITTER_SERVER = "https://qta-kazuyafx.com";    // トレードポジションを受信するサーバー
-input int     FETCH_INTERVAL = 100;                             // オーダー取得時のインターバル
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
-input int     RETRY_INTERVAL = 100;                             // オーダー失敗時のリトライ時間インターバル
+input int     RETRY_INTERVAL = 250;                             // オーダー失敗時のリトライ時間インターバル
 input string  SYMBOL_APPEND_SUFFIX = "";                        // ポジションコピー時にシンボル名に追加するサフィックス
 input double  LOTS_MULTIPLY = 2.0;                              // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;                                    // スリッページ(ポイント)
+
+#define FETCH_INTERVAL 100                                      // オーダー取得時のインターバル
 
 int GetPathValues(string path, string& values[])
 {
@@ -53,6 +54,9 @@ string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/api/teacher";
 string URL = ENDPOINT;
 
 bool TimerEnabled = false;
+
+string EntryProcessedPositionIdList = ",";
+string ExitProcessedPositionIdList = ",";
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -118,6 +122,20 @@ void OnTimer() {
         double lots = RoundLots(symbol, StringToDouble(RemoveQuote(field[5])) * LOTS_MULTIPLY);
         // 6列目：ポジションID(送信元証券会社名/口座番号)
         string position_id = RemoveQuote(field[6]);
+        if (entry == "1") {
+            int pos = StringFind(EntryProcessedPositionIdList, "," + position_id + ",");
+            if (pos > 0) {
+                continue;
+            }
+            EntryProcessedPositionIdList += position_id + ",";
+        }
+        else {
+            int pos = StringFind(ExitProcessedPositionIdList, "," + position_id + ",");
+            if (pos > 0) {
+                continue;
+            }
+            ExitProcessedPositionIdList += position_id + ",";
+        }
         // マジックナンバー：口座番号で代用
         int magic_number = (int)StringToInteger(accountNumber);
         if (entry == "1") {
@@ -125,16 +143,6 @@ void OnTimer() {
         }
         else {
             Exit(buy, symbol, lots, magic_number, position_id);
-        }
-        string send_response = Get(URL + "&position_id=" + position_id, res, 0, 1000);
-        if (STOPPED_BY_HTTP_ERROR || send_response == HTTP_ERROR) {
-            if (TimerEnabled) {
-                EventKillTimer();
-                TimerEnabled = false;
-                ExitEA(ENDPOINT, res);
-            }
-            ExpertRemove();
-            return;
         }
     }
 }
