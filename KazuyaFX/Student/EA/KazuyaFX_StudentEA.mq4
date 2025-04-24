@@ -27,6 +27,10 @@ string GetEmail(string path)
 #include "KazuyaFX_Common.mqh"
 
 #define MAX_POSITION 1024
+#define CHECK_INTERVAL 100
+
+string EntryProcessedPositionIdList = ",";
+string ExitProcessedPositionIdList = ",";
 
 //+------------------------------------------------------------------+
 //| ポジション全体を表す構造体です                                      |
@@ -86,6 +90,8 @@ string URL;
 
 datetime StartServerTimeEA;
 
+bool Busy = false;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -102,8 +108,8 @@ int OnInit() {
         }
     }
 
-    // 100ミリ秒の周期でポジションコピーを行います
-    if (!EventSetMillisecondTimer(100)) {
+    // CHECK_INTERVALミリ秒の周期でポジションコピーを行います
+    if (!EventSetMillisecondTimer(CHECK_INTERVAL)) {
         string error_message = "ポジションコピーのインターバルタイマーを設定できませんでした。";
         MessageBox(error_message, "エラー", MB_ICONSTOP | MB_OK);
         return INIT_FAILED;
@@ -127,7 +133,7 @@ int OnInit() {
 }
 
 //+------------------------------------------------------------------+
-//| シンボル名の変換を行います                                         |
+//| シンボル名の変換を行います                                       |
 //+------------------------------------------------------------------+
 string ConvertSymbol(string symbol_before) {
     string symbol_after = symbol_before;
@@ -147,8 +153,14 @@ void OnDeinit(const int reason) {
 //| Timer function                                                   |
 //+------------------------------------------------------------------+
 void OnTimer() {
-    // 100ミリ秒の周期でポジション全体の差分をHTTPリクエストで送信します
+    if (Busy) {
+        return;
+    }
+
+    // CHECK_INTERVALミリ秒の周期でポジション全体の差分をHTTPリクエストで送信します
+    Busy = true;
     SendPositions();
+    Busy = false;
 }
 
 //+------------------------------------------------------------------+
@@ -242,7 +254,7 @@ int ScanCurrentPositions(POSITION_LIST& Current) {
 }
 
 //+------------------------------------------------------------------+
-//| 追加されたポジション全体の状態を走査します                           |
+//| 追加されたポジション全体の状態を走査します                       |
 //+------------------------------------------------------------------+
 int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int added_count) {
     // 外側のカウンタ current のループで現在のポジション全体をスキャンします
@@ -269,7 +281,7 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
 }
 
 //+------------------------------------------------------------------+
-//| 削除されたポジション全体の状態を走査します                           |
+//| 削除されたポジション全体の状態を走査します                       |
 //+------------------------------------------------------------------+
 int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int change_count) {
     // 外側のカウンタ previous のループで前回のポジション全体をスキャンします
@@ -296,7 +308,7 @@ int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int po
 }
 
 //+------------------------------------------------------------------+
-//| 出力する差分情報構造体にポジションの要素を追記します                  |
+//| 出力する差分情報構造体にポジションの要素を追記します             |
 //+------------------------------------------------------------------+
 int AppendChangedPosition(POSITION_LIST& Current, int entry, int dst, int src) {
     Output.Change[dst] = entry;
@@ -325,12 +337,25 @@ void SendPositionRequest(int change_count) {
 }
 
 //+------------------------------------------------------------------+
-//| ポジションの差分をHTTPリクエストで送信します                         |
+//| ポジションの差分をHTTPリクエストで送信します                     |
 //+------------------------------------------------------------------+
 void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
 {
     string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, ticket);
-    
+    if (entry == 1) {
+        int pos = StringFind(EntryProcessedPositionIdList, "," + position_id + ",");
+        if (pos > 0) {
+            return;
+        }
+        EntryProcessedPositionIdList += position_id + ",";
+    }
+    else {
+        int pos = StringFind(ExitProcessedPositionIdList, "," + position_id + ",");
+        if (pos > 0) {
+            return;
+        }
+        ExitProcessedPositionIdList += position_id + ",";
+    }
     string uri = URL;
     uri += StringFormat("&entry=%d", entry);
     uri += StringFormat("&buy=%d", buy);
