@@ -28,7 +28,8 @@ builder.Services.AddSingleton<PositionDao>();
 
 var app = builder.Build();
 
-ConcurrentDictionary<string, string> tickets = new();
+ConcurrentDictionary<string, int> entryPositionIdList = new();
+ConcurrentDictionary<string, int> exitPositionIdList = new();
 ConcurrentDictionary<string, int> studentBusyFlags = new();
 ConcurrentDictionary<string, int> teacherBusyFlags = new();
 
@@ -64,17 +65,47 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
     {
         return Results.Text("ok");
     }
+    else
+    {
+        studentBusyFlags.TryAdd(email!, 1);
+    }
 
     var position = new Position
+        {
+            email = email!,
+            account = int.TryParse(context.Request.Query["account"], out var a) ? a : 0,
+            entry = int.TryParse(context.Request.Query["entry"], out var e) ? e : 0,
+            buy = int.TryParse(context.Request.Query["buy"], out var b) ? b : 0,
+            symbol = context.Request.Query["symbol"]!,
+            lots = double.TryParse(context.Request.Query["lots"], out var l) ? l : 0,
+            position_id = positionId!
+        };
+
+    if (position.entry == 1)
     {
-        email = email!,
-        account = int.TryParse(context.Request.Query["account"], out var a) ? a : 0,
-        entry = int.TryParse(context.Request.Query["entry"], out var e) ? e : 0,
-        buy = int.TryParse(context.Request.Query["buy"], out var b) ? b : 0,
-        symbol = context.Request.Query["symbol"]!,
-        lots = double.TryParse(context.Request.Query["lots"], out var l) ? l : 0,
-        position_id = positionId!
-    };
+        if (entryPositionIdList.ContainsKey(position.position_id))
+        {
+            // すでに同じポジションIDが存在する場合は、何もしない。
+            return Results.Text("ok");
+        }
+        else
+        {
+            entryPositionIdList.TryAdd(positionId!, 1);
+        }
+    }
+    else
+    {
+        if (exitPositionIdList.ContainsKey(position.position_id))
+        {
+            // すでに同じポジションIDが存在する場合は、何もしない。
+            return Results.Text("ok");
+        }
+        else
+        {
+            exitPositionIdList.TryAdd(positionId!, 1);
+        }
+    }
+
     positionDao.InsertPosition(position);
 
     var Entry = position.entry == +1 ? "[Entry]," : "[Exit], ";
@@ -100,8 +131,10 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
     {
         return Results.Text("", "text/csv; charset=utf-8");
     }
-
-    teacherBusyFlags.TryAdd(email!, 1);
+    else
+    {
+        teacherBusyFlags.TryAdd(email!, 1);
+    }
 
     string lines = string.Empty;
 
