@@ -22,6 +22,8 @@ if (runAsService)
     builder.Host.UseWindowsService();
 }
 
+// 証明書を更新する HostedService を追加
+builder.Services.AddHostedService<CertificateRenewService>();
 // nginx または指定アプリを起動する HostedService を追加
 builder.Services.AddHostedService<ApplicationHostedService>();
 builder.Services.AddSingleton<PositionDao>();

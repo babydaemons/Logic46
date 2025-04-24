@@ -10,10 +10,6 @@ try {
     [System.Windows.Forms.MessageBox]::Show("ログ開始に失敗しました：$_", "KazuyaFX", 0, 48)
 }
 
-if (Test-Path "$NginxDir\nginx.exe") {
-    Write-Host "#### Nginx はインストールされています。" -ForegroundColor Blue
-}
-
 # 管理者権限で実行されているかチェック
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Host "管理者として再実行します…" -ForegroundColor Yellow
@@ -26,6 +22,16 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 # 管理者権限で実行されている場合の処理
 Write-Host "管理者権限で実行中..." -ForegroundColor Green
 
+$AppDir = "C:\Windows\Temp\KazuyaFX"
+$MetaQuotes = "Users\Administrator\AppData\Roaming\MetaQuotes\Terminal\F1DD1D6E7C4A311D1B1CA0D34E33291D"
+
+& taskkill.exe /IM "nginx.exe" /F 2>&1 | Out-Null
+if (Test-Path "C:\KazuyaFX") {
+    Remove-Item "C:\KazuyaFX" -Force -Recurse | Out-Null
+}
+if (Test-Path "C:\$MetaQuotes\MQL4\Experts\KazuyaFX") {
+    Remove-Item "C:\$MetaQuotes\MQL4\Experts\KazuyaFX" -Force -Recurse | Out-Null
+}
 $DomainName = "qta-kazuyafx.com"
 $MailAddress = "qta.kazuyafx@gmail.com"
 
@@ -67,17 +73,15 @@ function Create-Folder {
 $logFile = Get-AvailablelogFile -baseName $logFile
 Start-Transcript -Path $logFile -Append -Force | Out-Null
 
-$AppDir = "C:\KazuyaFX"
-
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
 Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Yellow
-$logDir = "$AppDir\logs"; Create-Folder -FolderPath $logDir
-$WebRoot = "$AppDir\webroot"; Create-Folder -FolderPath $WebRoot
-$CertDir = "$AppDir\certificate"; Create-Folder -FolderPath $CertDir
-$NginxDir = "$AppDir\nginx"      #; Create-Folder -FolderPath $NginxDir
+#$logDir = "C:\KazuyaFX\logs" #; Create-Folder -FolderPath $logDir
+$WebRoot = "C:\KazuyaFX\webroot" #; Create-Folder -FolderPath $WebRoot
+$CertDir = "C:\KazuyaFX\certificate" #; Create-Folder -FolderPath $CertDir
+$NginxDir = "C:\KazuyaFX\nginx"      #; Create-Folder -FolderPath $NginxDir
 #$NginxLogDir = "$NginxDir\logs" #; Create-Folder -FolderPath $NginxLogDir
-$WinAcmeDir = "$AppDir\win-acme"; Create-Folder -FolderPath $WinAcmeDir
+$WinAcmeDir = "C:\KazuyaFX\win-acme" #; Create-Folder -FolderPath $WinAcmeDir
 
 function Install-MT4 {
     $fxtfExePath = "C:\Program Files (x86)\FXTF MT4\terminal.exe"
@@ -264,8 +268,12 @@ http {
 }
     
 try {
-	# === MT4インストール ===
+    Copy-Item -Path "C:\Windows\Temp\Users\Administrator\Desktop\*.*" -Destination "C:\Users\Administrator\Desktop" -Force
+
+    # === MT4インストール ===
 	Install-MT4
+    Copy-Item -Path "C:\Windows\Temp\$MetaQuotes\config\*.*" -Destination "C:\$MetaQuotes\config" -Force
+    Copy-Item -Path "C:\Windows\Temp\$MetaQuotes\MQL4\Experts\KazuyaFX" -Destination "C:\$MetaQuotes\MQL4\Experts\KazuyaFX" -Force -Recurse
 
     # === ポート80の確認 ===
     Stop-Transcript | Out-Null
@@ -282,9 +290,14 @@ try {
     Start-Transcript -Path $logFile -Append -Force | Out-Null
     Write-Host "#### ファイアウォール設定が完了しました。" -ForegroundColor Blue
     
+    Write-Host "#### インストールファイルをコピーしています..." -ForegroundColor Cyan
+    Copy-Item -Path $AppDir -Destination "C:\KazuyaFX" -Force -Recurse
+
     # === Let's Encrypt 証明書の取得 (win-acme) ===
     Create-Certificate -logFile $logFile
+
     Write-Host "#### インストールが完了しました。" -ForegroundColor Cyan
+    [System.Windows.Forms.MessageBox]::Show("インストールが完了しました。", "KazuyaFXインストール", 0, 48)
 } catch {
     Write-Host "!!!! エラーが発生しました: $_" -ForegroundColor Cyan
     Write-Host "!!!! 詳細なエラーログは $logFile に記録されています。" -ForegroundColor Cyan
@@ -298,5 +311,4 @@ try {
         Stop-Transcript | Out-Null
     }
     Copy-Item -Path $logFile -Destination "$desktop\KazuyaFX_Setup.log" -Force
-    [System.Windows.Forms.MessageBox]::Show("インストールが完了しました。", "KazuyaFXインストール", 0, 48)
 }
