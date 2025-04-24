@@ -29,9 +29,6 @@ string GetEmail(string path)
 #define MAX_POSITION 1024
 #define CHECK_INTERVAL 100
 
-string EntryProcessedPositionIdList = ",";
-string ExitProcessedPositionIdList = ",";
-
 //+------------------------------------------------------------------+
 //| ポジション全体を表す構造体です                                      |
 //+------------------------------------------------------------------+
@@ -342,20 +339,6 @@ void SendPositionRequest(int change_count) {
 void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
 {
     string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, ticket);
-    if (entry == 1) {
-        int pos = StringFind(EntryProcessedPositionIdList, "," + position_id + ",");
-        if (pos > 0) {
-            return;
-        }
-        EntryProcessedPositionIdList += position_id + ",";
-    }
-    else {
-        int pos = StringFind(ExitProcessedPositionIdList, "," + position_id + ",");
-        if (pos > 0) {
-            return;
-        }
-        ExitProcessedPositionIdList += position_id + ",";
-    }
     string uri = URL;
     uri += StringFormat("&entry=%d", entry);
     uri += StringFormat("&buy=%d", buy);

@@ -20,17 +20,18 @@ bool STOPPED_BY_HTTP_ERROR = false;
 string GetRequest(string uri, int& res, int retry_max, int retry_interval) {
     char data[];
     char result[];
+
+    string headers = "Authorization: Bearer 0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17\r\n";
     string result_headers;
-    string headers = "Authorization: Bearer 0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17";
-    res = WebRequest("GET", uri, headers, 1000, data, result, result_headers);
-    int size = ArraySize(result);
-    uchar result_data[];
-    ArrayResize(result_data, size);
-    for (int i = 0; i < size; ++i) {
-        result_data[i] = (uchar)result[i];
+
+    for (int attempt = 0; attempt < retry_max; ++attempt) {
+        res = WebRequest("GET", uri, headers, 1000, data, result, result_headers);
+        if (res != -1) break;
+        printf("GetLastError(): %d", GetLastError());
+        Sleep(retry_interval);
     }
-    string text = CharArrayToString(result_data);
-    return text;
+
+    return CharArrayToString(result);
 }
 
 //+------------------------------------------------------------------+
@@ -72,40 +73,6 @@ string Get(string uri, int& res, int retry_max, int retry_interval) {
             return "";
         }
     }
-    return text;
-}
-
-//+------------------------------------------------------------------+
-//| HTTP POST function                                               |
-//+------------------------------------------------------------------+
-string Post(string uri, string post_string) {
-    uchar post_uchars[];
-    StringToCharArray(post_string, post_uchars);
-    int request_size = ArraySize(post_uchars);
-
-    char data[];
-    ArrayResize(data, request_size);
-    for (int i = 0; i < request_size; ++i) {
-        data[i] = (char)post_uchars[i];
-    }
-    char result[];
-    string result_headers;
-    int res = WebRequest("POST", uri, "Content-Type: application/json\r\n", 1000, data, result, result_headers);
-    if (res != 200) {
-        MessageBox(StringFormat("下記のエラーが発生しました。EAを終了します。\nHTTPレスポンス %d\n%s", res, ErrorDescription()), "エラー", MB_ICONSTOP | MB_OK);
-        printf("下記のエラーが発生しました。EAを終了します。HTTPレスポンス:%d \"%s\"", res, ErrorDescription());
-        printf(uri);
-        printf(post_string);
-        ExpertRemove();
-    }
-
-    int response_size = ArraySize(result);
-    uchar result_data[];
-    ArrayResize(result_data, response_size);
-    for (int i = 0; i < response_size; ++i) {
-        result_data[i] = result[i];
-    }
-    string text = CharArrayToString(result_data);
     return text;
 }
 
