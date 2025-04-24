@@ -30,7 +30,6 @@ var app = builder.Build();
 
 ConcurrentDictionary<string, int> entryPositionIdList = new();
 ConcurrentDictionary<string, int> exitPositionIdList = new();
-ConcurrentDictionary<string, int> studentBusyFlags = new();
 ConcurrentDictionary<string, int> teacherBusyFlags = new();
 
 Logger.Log(Color.CYAN, "先生用 MetaTrader4 トレード受信サーバーが起動しました...");
@@ -54,21 +53,6 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
 {
     var email = context.Request.Query["email"];
     var positionId = context.Request.Query["position_id"];
-
-    if (positionDao.ExistPosition(email!, positionId!))
-    {
-        // すでに同じポジションIDが存在する場合は、何もしない。
-        return Results.Text("ok");
-    }
-
-    if (studentBusyFlags.ContainsKey(email!))
-    {
-        return Results.Text("ok");
-    }
-    else
-    {
-        studentBusyFlags.TryAdd(email!, 1);
-    }
 
     var position = new Position
         {
@@ -113,7 +97,6 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
     var message = $"生徒さん[{email}], 口座番号[{position.account}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], ポジションID[{position.position_id}]";
     Logger.Log(Color.YELLOW, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
 
-    studentBusyFlags.Remove(email!, out var _);
     return Results.Text("ok");
 });
 
