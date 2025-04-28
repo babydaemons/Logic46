@@ -17,13 +17,13 @@ public static class Logger
     private static Stopwatch stopwatch = Stopwatch.StartNew();
     private static string Timestamp => (startAt + stopwatch.Elapsed).ToString("yyyy-MM-dd HH:mm:ss.fffffff");
 
-    private static string _mode = "Console"; // Console / File / Both
+    private static string _mode = "Both"; // Console / File / Both
     private static string? _logFilePath;
     private static readonly object _lock = new();
 
     public static void Configure(IConfiguration config)
     {
-        _mode = config["Logger:Mode"] ?? "Console";
+        _mode = config["Logger:Mode"] ?? "Both";
 
         if (_mode is "File" or "Both")
         {

@@ -9,6 +9,6 @@
 #property strict
 
 const string EMAIL_EXPERT_ADVISER_PATH = __FILE__;
-#define EMAIL GetEmail(EMAIL_EXPERT_ADVISER_PATH)
+#define STUDENT_NANE GetStudentName(EMAIL_EXPERT_ADVISER_PATH)
 
-#include "KazuyaFX_StudentEA.mq4"
+#include "Common/KazuyaFX_StudentEA.mqh"

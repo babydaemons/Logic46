@@ -2,23 +2,18 @@
 
 internal class PositionDao
 {
-    private ConcurrentDictionary<string, ConcurrentQueue<Position>> _positions = new ConcurrentDictionary<string, ConcurrentQueue<Position>>();
+    private ConcurrentQueue<Position> _positions = new ();
     public PositionDao()
     {
     }
 
-    internal bool GetPosition(string email, out Position position)
+    internal bool GetPosition(out Position position)
     {
-        return _positions.GetOrAdd(email, new ConcurrentQueue<Position>()).TryDequeue(out position);
+        return _positions.TryDequeue(out position);
     }
 
     internal void InsertPosition(Position position)
     {
-        _positions.GetOrAdd(position.email, new ConcurrentQueue<Position>()).Enqueue(position);
-    }
-
-    internal bool ExistPosition(string email, string position_id)
-    {
-       return _positions.GetOrAdd(email, new ConcurrentQueue<Position>()).Any(position => position.position_id == position_id);
+        _positions.Enqueue(position);
     }
 }

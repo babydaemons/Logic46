@@ -8,20 +8,16 @@
 #property version   "1.00"
 #property strict
 
-#ifndef EMAIL
-input string  EMAIL = "babydaemons@gmail.com"; // メールアドレス
-#endif
-
 input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp"; // トレードポジションを受信するサーバー
 input string  SYMBOL_REMOVE_SUFFIX = ""; // ポジションコピー時にシンボル名から削除するサフィックス
 
-string GetEmail(string path)
+string GetStudentName(string path)
 {
     string items[];
     int n = StringSplit(path, '\\', items);
-    string email = items[n - 1];
-    StringReplace(email, ".mq4", "");
-    return email;
+    string student_name = items[n - 1];
+    StringReplace(student_name, ".mq4", "");
+    return student_name;
 }
 
 #include "KazuyaFX_Common.mqh"
@@ -96,17 +92,7 @@ bool Busy = false;
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    URL = StringFormat("%s?email=%s&account=%d", ENDPOINT, UrlEncode(EMAIL), SenderAccountNumber);
-
-    int shift_bytes = 3; // 32bitの整数値を作る: 0オリジンで0～3
-    for (int i = 0; i < StringLen(EMAIL); ++i) {
-        uchar byte = (uchar)StringGetChar(EMAIL, i);
-        ClientBrokerID ^= byte << (8 * shift_bytes);
-        --shift_bytes;
-        if (shift_bytes < 0) {
-            shift_bytes = 3;
-        }
-    }
+    URL = StringFormat("%s?name=", ENDPOINT, UrlEncode(STUDENT_NANE));
 
     // CHECK_INTERVALミリ秒の周期でポジションコピーを行います
     if (!EventSetMillisecondTimer(CHECK_INTERVAL)) {
@@ -341,7 +327,7 @@ void SendPositionRequest(int change_count) {
 //+------------------------------------------------------------------+
 void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
 {
-    string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, ticket);
+    string position_id = StringFormat("%d", ticket);
     if (entry == 1) {
         int pos = StringFind(EntryProcessedPositionIdList, "," + position_id + ",");
         if (pos > 0) {
@@ -361,7 +347,7 @@ void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
     uri += StringFormat("&buy=%d", buy);
     uri += StringFormat("&symbol=%s", symbol);
     uri += StringFormat("&lots=%.2f", lots);
-    uri += StringFormat("&position_id=%s", position_id);
+    uri += StringFormat("&ticket=%d", ticket);
 
     int res = 0;
     string response = Get(uri, res, 4, 1000);
