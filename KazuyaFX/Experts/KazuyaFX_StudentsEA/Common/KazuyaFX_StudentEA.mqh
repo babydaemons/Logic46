@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property strict
 
-input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp"; // トレードポジションを受信するサーバー
+input string  TRADE_TRANSMITTER_SERVER = "https://qta-kazuyafx.com"; // トレードポジションを受信するサーバー
 input string  SYMBOL_REMOVE_SUFFIX = ""; // ポジションコピー時にシンボル名から削除するサフィックス
 
 string GetName(string path)
