@@ -271,6 +271,9 @@ http {
 }
     
 try {
+    Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\KazuyaFX" -Destination "C:\" -Recurse -Force
+    Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\User\Administrator" -Destination "C:\User" -Recurse -Force
+
     # === MT4インストール ===
 	Install-MT4
 
@@ -290,8 +293,6 @@ try {
     Write-Host "#### ファイアウォール設定が完了しました。" -ForegroundColor Blue
     
     Write-Host "#### インストールファイルをコピーしています..." -ForegroundColor Cyan
-
-    Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\*.*" -Destination "C:\" -Recurse -Force
 
     # === Let's Encrypt 証明書の取得 (win-acme) ===
     Create-Certificate -logFile $logFile
