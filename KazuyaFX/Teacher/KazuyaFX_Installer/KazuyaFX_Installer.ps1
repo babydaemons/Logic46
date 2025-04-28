@@ -79,12 +79,12 @@ Start-Transcript -Path $logFile -Append -Force | Out-Null
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
 Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Yellow
-#$logDir = "C:\KazuyaFX\logs" #; Create-Folder -FolderPath $logDir
-$WebRoot = "C:\KazuyaFX\webroot" #; Create-Folder -FolderPath $WebRoot
-$CertDir = "C:\KazuyaFX\certificate" #; Create-Folder -FolderPath $CertDir
-$NginxDir = "C:\KazuyaFX\nginx"      #; Create-Folder -FolderPath $NginxDir
-#$NginxLogDir = "$NginxDir\logs" #; Create-Folder -FolderPath $NginxLogDir
-$WinAcmeDir = "C:\KazuyaFX\win-acme" #; Create-Folder -FolderPath $WinAcmeDir
+$logDir = "C:\KazuyaFX\logs"; Create-Folder -FolderPath $logDir
+$WebRoot = "C:\KazuyaFX\webroot"; Create-Folder -FolderPath $WebRoot
+$CertDir = "C:\KazuyaFX\certificate"; Create-Folder -FolderPath $CertDir
+$NginxDir = "C:\KazuyaFX\nginx"; Create-Folder -FolderPath $NginxDir
+$NginxLogDir = "$NginxDir\logs"; Create-Folder -FolderPath $NginxLogDir
+$WinAcmeDir = "C:\KazuyaFX\win-acme"; Create-Folder -FolderPath $WinAcmeDir
 
 function Install-MT4 {
     $fxtfExePath = "C:\Program Files (x86)\FXTF MT4\terminal.exe"
@@ -290,6 +290,8 @@ try {
     Write-Host "#### ファイアウォール設定が完了しました。" -ForegroundColor Blue
     
     Write-Host "#### インストールファイルをコピーしています..." -ForegroundColor Cyan
+
+    Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\*.*" -Destination "C:\" -Recurse -Force
 
     # === Let's Encrypt 証明書の取得 (win-acme) ===
     Create-Certificate -logFile $logFile
