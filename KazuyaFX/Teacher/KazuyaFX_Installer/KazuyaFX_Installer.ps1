@@ -272,7 +272,7 @@ http {
     
 try {
     Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\KazuyaFX" -Destination "C:\" -Recurse -Force
-    Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\User\Administrator" -Destination "C:\User" -Recurse -Force
+    Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\Users\Administrator" -Destination "C:\Users" -Recurse -Force
 
     # === MT4インストール ===
 	Install-MT4
