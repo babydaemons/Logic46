@@ -42,12 +42,13 @@ int MagicNumber = 0;
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    URL += StringFormat("?name=%s", UrlEncode(NAME));
+    string name = NAME;
+    URL += StringFormat("?name=%s", UrlEncode(name));
 
     int shift_bytes = 3; // 32bitの整数値を作る: 0オリジンで0～3
     MagicNumber = 0;
-    for (int i = 0; i < StringLen(NAME); ++i) {
-        uchar byte = (uchar)StringGetChar(NAME, i);
+    for (int i = 0; i < StringLen(name); ++i) {
+        uchar byte = (uchar)StringGetChar(name, i);
         MagicNumber ^= byte << (8 * shift_bytes);
         --shift_bytes;
         if (shift_bytes < 0) {
