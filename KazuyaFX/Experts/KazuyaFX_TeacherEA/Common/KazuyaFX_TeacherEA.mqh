@@ -8,46 +8,24 @@
 #property version   "1.00"
 #property strict
 
-#include "Util/KazuyaFX_Common.mqh"
+#include "KazuyaFX_Common.mqh"
 
-#ifndef EMAIL
-input string  EMAIL = "babydaemons@gmail.com";                  // 生徒さんのメールアドレス
-#endif
-
-#ifndef ACCOUNT
-input int     ACCOUNT = 201942679;                              // 生徒さんの口座番号
-#endif
 
 input string  TRADE_TRANSMITTER_SERVER = "https://qta-kazuyafx.com";    // トレードポジションを受信するサーバー
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
 input int     RETRY_INTERVAL = 250;                             // オーダー失敗時のリトライ時間インターバル
 input string  SYMBOL_APPEND_SUFFIX = "";                        // ポジションコピー時にシンボル名に追加するサフィックス
-input double  LOTS_MULTIPLY = 2.0;                              // ポジションコピー時のロット数の係数
 input int     SLIPPAGE = 30;                                    // スリッページ(ポイント)
 
 #define FETCH_INTERVAL 100                                      // オーダー取得時のインターバル
 
-int GetPathValues(string path, string& values[])
+string GetName(string path)
 {
     string items[];
     int n = StringSplit(path, '\\', items);
-    string filename = items[n - 1];
-    StringReplace(filename, ".mq4", "");
-    return StringSplit(filename, '+', values);
-}
-
-string GetEmail(string path)
-{
-    string values[];
-    GetPathValues(path, values);
-    return values[0];
-}
-
-int GetAccount(string path)
-{
-    string values[];
-    GetPathValues(path, values);
-    return (int)StringToInteger(values[1]);
+    string name = items[n - 1];
+    StringReplace(name, ".mq4", "");
+    return name;
 }
 
 string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/api/teacher";
@@ -58,11 +36,26 @@ bool TimerEnabled = false;
 string EntryProcessedPositionIdList = ",";
 string ExitProcessedPositionIdList = ",";
 
+int MagicNumber = 0;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    URL += StringFormat("?email=%s", UrlEncode(EMAIL));
+    URL += StringFormat("?name=%s", UrlEncode(NAME));
+
+    int shift_bytes = 3; // 32bitの整数値を作る: 0オリジンで0～3
+    MagicNumber = 0;
+    for (int i = 0; i < StringLen(NAME); ++i) {
+        uchar byte = (uchar)StringGetChar(NAME, i);
+        MagicNumber ^= byte << (8 * shift_bytes);
+        --shift_bytes;
+        if (shift_bytes < 0) {
+            shift_bytes = 3;
+        }
+    }
+    MagicNumber &= 0x7FFFFFFF;
+
     EventSetMillisecondTimer(FETCH_INTERVAL);
     TimerEnabled = true;
     return INIT_SUCCEEDED;
@@ -108,20 +101,19 @@ void OnTimer() {
         string field[];
         StringSplit(lines[i], ',', field);
         // タブ区切りファイルの仕様
-        // 0列目：メールアドレス
-        string email = RemoveQuote(field[0]);
-        // 1列目：口座番号
-        string accountNumber = RemoveQuote(field[1]);
-        // 2列目："1:Entry": ポジション追加 ／ "0:Exit": ポジション削除
-        string entry = RemoveQuote(field[2]);
-        // 3列目："1:Buy": 買い建て ／ "0:Sell": 売り建て
-        string buy = RemoveQuote(field[3]);
-        // 4列目：シンボル名
-        string symbol = RemoveQuote(field[4]) + SYMBOL_APPEND_SUFFIX;
-        // 5列目：ポジションサイズ
-        double lots = RoundLots(symbol, StringToDouble(RemoveQuote(field[5])) * LOTS_MULTIPLY);
-        // 6列目：ポジションID(送信元証券会社名/口座番号)
-        string position_id = RemoveQuote(field[6]);
+        // 0列目：生徒さんの名前
+        string name = RemoveQuote(field[0]);
+        // 1列目："1:Entry": ポジション追加 ／ "0:Exit": ポジション削除
+        string entry = RemoveQuote(field[1]);
+        // 2列目："1:Buy": 買い建て ／ "0:Sell": 売り建て
+        string buy = RemoveQuote(field[2]);
+        // 3列目：シンボル名
+        string symbol = RemoveQuote(field[3]) + SYMBOL_APPEND_SUFFIX;
+        // 4列目：ポジションサイズ
+        double lots = RoundLots(symbol, StringToDouble(RemoveQuote(field[4])) * LOTS_MULTIPLY);
+        // 5列目：ポジションID(生徒さんの名前-チケット番号)
+        string position_id = StringFormat("%s-%s", NAME, RemoveQuote(field[5]));
+        int ticket = (int)StringToInteger(RemoveQuote(field[5]));
         if (entry == "1") {
             int pos = StringFind(EntryProcessedPositionIdList, "," + position_id + ",");
             if (pos > 0) {
@@ -136,13 +128,11 @@ void OnTimer() {
             }
             ExitProcessedPositionIdList += position_id + ",";
         }
-        // マジックナンバー：口座番号で代用
-        int magic_number = (int)StringToInteger(accountNumber);
         if (entry == "1") {
-            Entry(buy, symbol, lots, magic_number, position_id);
+            Entry(buy, symbol, lots, MagicNumber, position_id);
         }
         else {
-            Exit(buy, symbol, lots, magic_number, position_id);
+            Exit(buy, symbol, lots, MagicNumber, position_id);
         }
     }
 }

@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                       TradeTransmitterServer.mq4 |
+//|                                       TradeTransmitterClient.mq4 |
 //|                          Copyright 2025, Kazuya Quartet Academy. |
 //|                                       https://www.fx-kazuya.com/ |
 //+------------------------------------------------------------------+
@@ -8,8 +8,7 @@
 #property version   "1.00"
 #property strict
 
-const string EMAIL_EXPERT_ADVISER_PATH = __FILE__;
-#define EMAIL       GetEmail(EMAIL_EXPERT_ADVISER_PATH)
-#define ACCOUNT     GetAccount(EMAIL_EXPERT_ADVISER_PATH)
+const string NAME_EXPERT_ADVISER_PATH = __FILE__;
+#define NAME GetName(NAME_EXPERT_ADVISER_PATH)
 
-#include "KazuyaFX_TeacherEA.mq4"
+#include "Common/KazuyaFX_StudentEA.mqh"

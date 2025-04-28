@@ -22,15 +22,18 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 # 管理者権限で実行されている場合の処理
 Write-Host "管理者権限で実行中..." -ForegroundColor Green
 
-$AppDir = "C:\Windows\Temp\KazuyaFX"
+$AppDir = "C:\KazuyaFX"
 $MetaQuotes = "Users\Administrator\AppData\Roaming\MetaQuotes\Terminal\F1DD1D6E7C4A311D1B1CA0D34E33291D"
 
 & taskkill.exe /IM "nginx.exe" /F 2>&1 | Out-Null
 if (Test-Path "C:\KazuyaFX") {
     Remove-Item "C:\KazuyaFX" -Force -Recurse | Out-Null
 }
-if (Test-Path "C:\$MetaQuotes\MQL4\Experts\KazuyaFX") {
-    Remove-Item "C:\$MetaQuotes\MQL4\Experts\KazuyaFX" -Force -Recurse | Out-Null
+if (Test-Path "C:\$MetaQuotes\MQL4\Experts\KazuyaFX_StudentsEA") {
+    Remove-Item "C:\$MetaQuotes\MQL4\Experts\KazuyaFX_StudentsEA" -Force -Recurse | Out-Null
+}
+if (Test-Path "C:\$MetaQuotes\MQL4\Experts\KazuyaFX_TeacherEA") {
+    Remove-Item "C:\$MetaQuotes\MQL4\Experts\KazuyaFX_TeacherEA" -Force -Recurse | Out-Null
 }
 $DomainName = "qta-kazuyafx.com"
 $MailAddress = "qta.kazuyafx@gmail.com"
@@ -268,12 +271,8 @@ http {
 }
     
 try {
-    Copy-Item -Path "C:\Windows\Temp\Users\Administrator\Desktop\*.*" -Destination "C:\Users\Administrator\Desktop" -Force
-
     # === MT4インストール ===
 	Install-MT4
-    Copy-Item -Path "C:\Windows\Temp\$MetaQuotes\config\*.*" -Destination "C:\$MetaQuotes\config" -Force
-    Copy-Item -Path "C:\Windows\Temp\$MetaQuotes\MQL4\Experts\KazuyaFX" -Destination "C:\$MetaQuotes\MQL4\Experts\KazuyaFX" -Force -Recurse
 
     # === ポート80の確認 ===
     Stop-Transcript | Out-Null
@@ -291,7 +290,6 @@ try {
     Write-Host "#### ファイアウォール設定が完了しました。" -ForegroundColor Blue
     
     Write-Host "#### インストールファイルをコピーしています..." -ForegroundColor Cyan
-    Copy-Item -Path $AppDir -Destination "C:\KazuyaFX" -Force -Recurse
 
     # === Let's Encrypt 証明書の取得 (win-acme) ===
     Create-Certificate -logFile $logFile
