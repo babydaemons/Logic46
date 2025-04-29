@@ -26,6 +26,7 @@ $AppDir = "C:\KazuyaFX"
 $MetaQuotes = "Users\Administrator\AppData\Roaming\MetaQuotes\Terminal\F1DD1D6E7C4A311D1B1CA0D34E33291D"
 
 & taskkill.exe /IM "nginx.exe" /F 2>&1 | Out-Null
+& taskkill.exe /IM "KazuyaFX.exe" /F 2>&1 | Out-Null
 if (Test-Path "C:\KazuyaFX") {
     Remove-Item "C:\KazuyaFX" -Force -Recurse | Out-Null
 }

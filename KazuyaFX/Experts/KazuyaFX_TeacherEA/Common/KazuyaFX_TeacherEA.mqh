@@ -40,6 +40,7 @@ int MagicNumber = 0;
 
 int file = INVALID_HANDLE;
 string filename = "";
+string title = "発注日時,決済日時,通貨ペア,取引数量,損益\n";
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -61,7 +62,6 @@ int OnInit() {
     MagicNumber &= 0x7FFFFFFF;
 
     filename = name + ".csv";
-    string title = "発注日時,決済日時,通貨ペア,取引数量,損益\n";
     bool result = AppendLog(title);
     if (!result) {
         return INIT_FAILED;
@@ -300,9 +300,10 @@ bool AppendLog(string message) {
     if (handle == INVALID_HANDLE) {
         // 初回作成（追記ではなく新規書き込み）
         handle = FileOpen(filename, FILE_WRITE | FILE_TXT | FILE_ANSI);
-        FileWriteString(handle, message);
-        FileClose(handle);
-        return true;
+    }
+
+    if (FileSize(handle) == 0 && message != title) {
+        FileWriteString(handle, title);
     }
 
     if (handle != INVALID_HANDLE) {
