@@ -38,6 +38,8 @@ string ExitProcessedPositionIdList = ",";
 
 int MagicNumber = 0;
 
+int file = INVALID_HANDLE;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -56,6 +58,20 @@ int OnInit() {
         }
     }
     MagicNumber &= 0x7FFFFFFF;
+
+    string file_name = name + ".csv";
+    file = FileOpen(file_name, FILE_TXT | FILE_ANSI | FILE_REWRITE | FILE_SHARE_WRITE, ',');
+    if (file == INVALID_HANDLE) {
+        MessageBox(file_name + "が開けませんでした。", "エラー");
+        return INIT_FAILED;
+    }
+    else {
+        if (FileSize(file) == 0) {
+            string title = "発注日時,決済日時,通貨ペア,取引数量,損益\n";
+            FileWriteString(file, title);
+            FileFlush(file);
+        }
+    }
 
     EventSetMillisecondTimer(FETCH_INTERVAL);
     TimerEnabled = true;
@@ -237,9 +253,7 @@ void Exit(string buy, string symbol, double lots, int magic_number, string posit
             } else {
                 price = SymbolInfoDouble(symbol, SYMBOL_BID);
             }
-            bool result = (order_type == OP_BUY || order_type == OP_SELL) ?
-                            OrderClose(ticket, ordered_lots, price, SLIPPAGE, arrow) :
-                            OrderDelete(ticket, arrow);
+            bool result = Settlement(order_type, ticket, ordered_lots, price, arrow);
             if (!result) {
                 int error = GetLastError();
                 if (error <= 1) {
@@ -256,5 +270,34 @@ void Exit(string buy, string symbol, double lots, int magic_number, string posit
 
         Alert(error_message);
         return;
+    }
+}
+
+//+------------------------------------------------------------------+
+//| ポジションを決済し、ログファイルに出力します                     |
+//+------------------------------------------------------------------+
+bool Settlement(int order_type, int ticket, double ordered_lots, double price, color arrow)
+{
+    if (order_type == OP_BUY || order_type == OP_SELL) {
+        bool result = OrderClose(ticket, ordered_lots, price, SLIPPAGE, arrow);
+        if (!result) {
+            return result;
+        }
+        // "発注日時,決済日時,通貨ペア,取引数量,損益\n";
+        string line = "";
+        MqlDateTime dt = {};
+        TimeToStruct(OrderOpenTime(), dt);
+        line += StringFormat("%04d/%02d/%02d %02d:%02d:%02d,",dt.year, dt.mon, dt.day, dt.hour, dt.min, dt.sec);
+        TimeToStruct(OrderCloseTime(), dt);
+        line += StringFormat("%04d/%02d/%02d %02d:%02d:%02d,",dt.year, dt.mon, dt.day, dt.hour, dt.min, dt.sec);
+        line += StringFormat("%s,", OrderSymbol());
+        line += StringFormat("%.2f,", OrderLots());
+        line += StringFormat("%.0f\n",OrderProfit() + OrderSwap());
+        FileWriteString(file, line);
+        FileFlush(file);
+        return result;
+    }
+    else {
+        return OrderDelete(ticket, arrow);
     }
 }
