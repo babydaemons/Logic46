@@ -40,19 +40,20 @@ int MagicNumber = 0;
 
 int file = INVALID_HANDLE;
 string filename = "";
-string title = "発注日時,決済日時,通貨ペア,取引数量,損益\n";
+string title = "発注日時,決済日時,通貨ペア,取引数量,損益,生徒さん取引番号,先生取引番号\n";
+string Name = "";
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    string name = NAME;
-    URL += StringFormat("?name=%s", UrlEncode(name));
+    Name = NAME;
+    URL += StringFormat("?name=%s", UrlEncode(Name));
 
     int shift_bytes = 3; // 32bitの整数値を作る: 0オリジンで0～3
     MagicNumber = 0;
-    for (int i = 0; i < StringLen(name); ++i) {
-        uchar byte = (uchar)StringGetChar(name, i);
+    for (int i = 0; i < StringLen(Name); ++i) {
+        uchar byte = (uchar)StringGetChar(Name, i);
         MagicNumber ^= byte << (8 * shift_bytes);
         --shift_bytes;
         if (shift_bytes < 0) {
@@ -61,7 +62,7 @@ int OnInit() {
     }
     MagicNumber &= 0x7FFFFFFF;
 
-    filename = name + ".csv";
+    filename = Name + ".csv";
     bool result = AppendLog(title);
     if (!result) {
         return INIT_FAILED;
@@ -277,7 +278,7 @@ bool Settlement(int order_type, int ticket, double ordered_lots, double price, c
         if (!result) {
             return result;
         }
-        // "発注日時,決済日時,通貨ペア,取引数量,損益\n";
+        // "発注日時,決済日時,通貨ペア,取引数量,損益,生徒さん取引番号,先生取引番号\n"
         if (!OrderSelect(ticket, SELECT_BY_TICKET, MODE_HISTORY)) {
             printf(ErrorDescription());
             return false;
@@ -290,7 +291,10 @@ bool Settlement(int order_type, int ticket, double ordered_lots, double price, c
         line += StringFormat("%04d/%02d/%02d %02d:%02d:%02d,",dt.year, dt.mon, dt.day, dt.hour, dt.min, dt.sec);
         line += StringFormat("%s,", OrderSymbol());
         line += StringFormat("%.2f,", OrderLots());
-        line += StringFormat("%.0f\n",OrderProfit() + OrderSwap());
+        line += StringFormat("%.0f,", OrderProfit() + OrderSwap());
+        string student_ticket = OrderComment();
+        StringReplace(student_ticket, Name + "-", "");
+        line += StringFormat("%s,d\n,", ticket);
         AppendLog(line);
         return result;
     }
