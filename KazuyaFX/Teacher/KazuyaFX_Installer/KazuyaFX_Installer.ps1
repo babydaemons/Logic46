@@ -271,6 +271,7 @@ http {
 }
     
 try {
+    Remove-Item "C:\KazuyaFX" -Force -Recurse | Out-Null
     Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\KazuyaFX" -Destination "C:\" -Recurse -Force
     Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\Users\Administrator" -Destination "C:\Users" -Recurse -Force
 
