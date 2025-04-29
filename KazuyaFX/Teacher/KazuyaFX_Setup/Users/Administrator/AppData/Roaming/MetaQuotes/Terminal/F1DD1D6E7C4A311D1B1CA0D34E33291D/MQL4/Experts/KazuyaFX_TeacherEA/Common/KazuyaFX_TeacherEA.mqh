@@ -294,7 +294,8 @@ bool Settlement(int order_type, int ticket, double ordered_lots, double price, c
         line += StringFormat("%.0f,", OrderProfit() + OrderSwap());
         string student_ticket = OrderComment();
         StringReplace(student_ticket, Name + "-", "");
-        line += StringFormat("%s,d\n,", ticket);
+        line += StringFormat("%s,", student_ticket);
+        line += StringFormat("%d\n,", ticket);
         AppendLog(line);
         return result;
     }
