@@ -295,7 +295,7 @@ bool Settlement(int order_type, int ticket, double ordered_lots, double price, c
         string student_ticket = OrderComment();
         StringReplace(student_ticket, Name + "-", "");
         line += StringFormat("%s,", student_ticket);
-        line += StringFormat("%d\n,", ticket);
+        line += StringFormat("%d\n", ticket);
         AppendLog(line);
         return result;
     }
@@ -305,15 +305,17 @@ bool Settlement(int order_type, int ticket, double ordered_lots, double price, c
 }
 
 bool AppendLog(string message) {
+    bool created = false;
     int handle = FileOpen(filename, FILE_READ | FILE_WRITE | FILE_TXT | FILE_ANSI);
     if (handle == INVALID_HANDLE) {
         // 初回作成（追記ではなく新規書き込み）
         handle = FileOpen(filename, FILE_WRITE | FILE_TXT | FILE_ANSI);
+        created = true;
     }
 
     if (handle != INVALID_HANDLE) {
         FileSeek(handle, 0, SEEK_END);
-        if (FileTell(handle) == 0 && message == title) {
+        if (created) {
             FileWriteString(handle, title);
         }
         else {
