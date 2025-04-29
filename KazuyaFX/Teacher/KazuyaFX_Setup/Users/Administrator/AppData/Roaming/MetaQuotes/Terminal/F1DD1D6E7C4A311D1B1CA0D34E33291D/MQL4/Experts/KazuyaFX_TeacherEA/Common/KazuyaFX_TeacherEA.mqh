@@ -306,13 +306,14 @@ bool AppendLog(string message) {
         handle = FileOpen(filename, FILE_WRITE | FILE_TXT | FILE_ANSI);
     }
 
-    if (FileSize(handle) == 0 && message != title) {
-        FileWriteString(handle, title);
-    }
-
     if (handle != INVALID_HANDLE) {
         FileSeek(handle, 0, SEEK_END);
-        FileWriteString(handle, message);
+        if (FileTell(handle) == 0 && message == title) {
+            FileWriteString(handle, title);
+        }
+        else {
+            FileWriteString(handle, message);
+        }
         FileClose(handle);
         return true;
     } else {
