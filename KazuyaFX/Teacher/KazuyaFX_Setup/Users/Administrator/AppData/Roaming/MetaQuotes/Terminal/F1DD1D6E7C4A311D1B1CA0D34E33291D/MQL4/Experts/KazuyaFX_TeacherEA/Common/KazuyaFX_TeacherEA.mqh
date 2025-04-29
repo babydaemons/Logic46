@@ -278,6 +278,10 @@ bool Settlement(int order_type, int ticket, double ordered_lots, double price, c
             return result;
         }
         // "発注日時,決済日時,通貨ペア,取引数量,損益\n";
+        if (!OrderSelect(ticket, SELECT_BY_TICKET, MODE_HISTORY)) {
+            printf(ErrorDescription());
+            return false;
+        }
         string line = "";
         MqlDateTime dt = {};
         TimeToStruct(OrderOpenTime(), dt);
