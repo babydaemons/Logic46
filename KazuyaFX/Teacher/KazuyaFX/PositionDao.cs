@@ -7,18 +7,18 @@ internal class PositionDao
     {
     }
 
-    internal bool GetPosition(string email, out Position position)
+    internal bool GetPosition(string name, out Position position)
     {
-        return _positions.GetOrAdd(email, new ConcurrentQueue<Position>()).TryDequeue(out position);
+        return _positions.GetOrAdd(name, new ConcurrentQueue<Position>()).TryDequeue(out position);
     }
 
     internal void InsertPosition(Position position)
     {
-        _positions.GetOrAdd(position.email, new ConcurrentQueue<Position>()).Enqueue(position);
+        _positions.GetOrAdd(position.name, new ConcurrentQueue<Position>()).Enqueue(position);
     }
 
-    internal bool ExistPosition(string email, string position_id)
+    internal bool ExistPosition(string name, int ticket)
     {
-       return _positions.GetOrAdd(email, new ConcurrentQueue<Position>()).Any(position => position.position_id == position_id);
+       return _positions.GetOrAdd(name, new ConcurrentQueue<Position>()).Any(position => position.ticket == ticket);
     }
 }

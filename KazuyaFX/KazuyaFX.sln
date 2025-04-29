@@ -1,0 +1,55 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Teacher", "Teacher", "{C589DD9F-7C2F-428E-FEAD-17962DCB194C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_BK", "_BK", "{52656C2B-2FE0-5153-B6D1-5AC2AA0BEE75}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KazuyaFX", "Teacher\KazuyaFX\KazuyaFX.csproj", "{8B545150-CB84-2884-7CD5-BA435A403E89}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "app", "_BK\app\app.csproj", "{3940BB13-9C71-A82E-3B7C-A75FB0CE5DB0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KazuyaFX_Service", "_BK\KazuyaFX_Service\KazuyaFX_Service.csproj", "{1800F1DA-A571-6E37-B374-005B46328A8A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TradeTransmitterServer", "TradeTransmitterServer", "{7F5CFD82-DC5E-B77E-3E8E-C18FBA717D88}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeTransmitterServer", "_BK\TradeTransmitterServer\TradeTransmitterServer\TradeTransmitterServer.csproj", "{2B9C15BF-89C9-CF98-CC1B-25E92DD7E2E3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8B545150-CB84-2884-7CD5-BA435A403E89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B545150-CB84-2884-7CD5-BA435A403E89}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B545150-CB84-2884-7CD5-BA435A403E89}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B545150-CB84-2884-7CD5-BA435A403E89}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3940BB13-9C71-A82E-3B7C-A75FB0CE5DB0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3940BB13-9C71-A82E-3B7C-A75FB0CE5DB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3940BB13-9C71-A82E-3B7C-A75FB0CE5DB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3940BB13-9C71-A82E-3B7C-A75FB0CE5DB0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1800F1DA-A571-6E37-B374-005B46328A8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1800F1DA-A571-6E37-B374-005B46328A8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1800F1DA-A571-6E37-B374-005B46328A8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1800F1DA-A571-6E37-B374-005B46328A8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B9C15BF-89C9-CF98-CC1B-25E92DD7E2E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B9C15BF-89C9-CF98-CC1B-25E92DD7E2E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B9C15BF-89C9-CF98-CC1B-25E92DD7E2E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B9C15BF-89C9-CF98-CC1B-25E92DD7E2E3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8B545150-CB84-2884-7CD5-BA435A403E89} = {C589DD9F-7C2F-428E-FEAD-17962DCB194C}
+		{3940BB13-9C71-A82E-3B7C-A75FB0CE5DB0} = {52656C2B-2FE0-5153-B6D1-5AC2AA0BEE75}
+		{1800F1DA-A571-6E37-B374-005B46328A8A} = {52656C2B-2FE0-5153-B6D1-5AC2AA0BEE75}
+		{7F5CFD82-DC5E-B77E-3E8E-C18FBA717D88} = {52656C2B-2FE0-5153-B6D1-5AC2AA0BEE75}
+		{2B9C15BF-89C9-CF98-CC1B-25E92DD7E2E3} = {7F5CFD82-DC5E-B77E-3E8E-C18FBA717D88}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {72C4C303-7057-4FE3-978E-0E30F42FFD65}
+	EndGlobalSection
+EndGlobal
