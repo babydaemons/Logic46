@@ -32,7 +32,7 @@ var app = builder.Build();
 
 ConcurrentDictionary<string, int> entryPositionIdList = new();
 ConcurrentDictionary<string, int> exitPositionIdList = new();
-ConcurrentDictionary<string, int> teacherBusyFlags = new();
+bool teacherBusyFlag = false;
 
 Logger.Log(Color.CYAN, "先生用 MetaTrader4 トレード受信サーバーが起動しました...");
 
@@ -112,23 +112,22 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
 /// </remarks>
 app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
 {
-    var name = context.Request.Query["name"];
-
-    if (teacherBusyFlags.ContainsKey(name!))
+    if (teacherBusyFlag)
     {
         return Results.Text("", "text/csv; charset=utf-8");
     }
     else
     {
-        teacherBusyFlags.TryAdd(name!, 1);
+        teacherBusyFlag = true;
     }
 
     string lines = string.Empty;
 
     try
     {
-        while (positionDao.GetPosition(name!, out var position))
+        while (positionDao.GetPosition(out var position))
         {
+            var name = position.name;
             var entry = position.entry == +1 ? "Entry" : "Exit";
             var buy = position.buy == +1 ? "Buy" : "Sell";
             var line = $"\"{name}\",\"{position.entry}\",\"{position.buy}\",\"{position.symbol}\",\"{position.lots}\",\"{position.ticket}\"\n";
@@ -145,7 +144,7 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
         Logger.Log(Color.RED, $"!!!!!!!!!! {context.Request.QueryString}");
     }
 
-    teacherBusyFlags.Remove(name!, out var _);
+    teacherBusyFlag = false;
     return Results.Text(lines, "text/csv; charset=utf-8");
 });
 
