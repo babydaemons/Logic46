@@ -17,6 +17,11 @@ $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
 Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Yellow
 
 function Install-MT4 {
+    $response = (Read-Host "#### FXTF MT4 をインストールしますか (Y/N)?").ToLower()
+    if ($response -ne "y") {
+        return
+    }
+
     $fxtfExePath = "C:\Program Files (x86)\FXTF MT4\terminal.exe"
     $fxtfInstallerUrl = "https://www.fxtrade.co.jp/system/download/fxtf4setup.exe"
     $fxtfInstallerPath = "$env:TEMP\fxtf4setup.exe"
@@ -34,28 +39,43 @@ function Install-MT4 {
 }
 
 function Find-TerminalFolder {
-    param (
-        [string]$targetText
-    )
+    Write-Host "#### 生徒さん用のEAをインストールするMT4を選択してください" -ForegroundColor Cyan
 
     $basePath = "$env:APPDATA\\MetaQuotes\\Terminal"
 
+    $targetDirs = New-Object System.Collections.ArrayList
+
+    $index = 1
     foreach ($dir in Get-ChildItem -Path $basePath -Directory) {
         $originPath = Join-Path $dir.FullName "origin.txt"
         if (Test-Path $originPath) {
-            $content = Get-Content $originPath -Raw
-            if ($content.Trim() -eq $targetText) {
-                $terminalFolder = $dir.FullName
-                Write-Host "#### FXTF MT4のユーザーフォルダが見つかりました: $terminalFolder" -ForegroundColor Cyan
-                return $terminalFolder
+            $content = (Get-Content $originPath -Raw).Trim()
+            if ($content.StartsWith("C:\Program Files (x86)\")) {
+                $targetDir = $dir.FullName
+                $targetDirs.Add($targetDir) | Out-Null
+                $brokerName = ($content.Split("\"))[2]
+                Write-Host "($index) $brokerName" -ForegroundColor Green
+                $index += 1
             }
         }
     }
 
-    # 一致しなかった場合
-    $terminalFolder = "$basePath\\F1DD1D6E7C4A311D1B1CA0D34E33291D"
-    Write-Host "#### FXTF MT4のユーザーフォルダが見つかりました: $terminalFolder" -ForegroundColor Cyan
-    return $terminalFolder
+    $max = $index - 1
+    $resultDir = "$basePath\F1DD1D6E7C4A311D1B1CA0D34E33291D"
+    while ($true) {
+        $response = Read-Host "#### どの MT4 へインストールしますか (1～$max)?"
+        if ([int]::TryParse($response, [ref]$number)) {
+            if (1 -ge $number -and $number -gt $max) {
+                $resultDir = $targetDirs[$number - 1]
+                break
+            } else {
+                Write-Host "#### 入力エラー: 1～$max の範囲で入力してください: $response" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "#### 入力エラー: 整数で入力してください: $response" -ForegroundColor Red
+        }
+    }
+    return $resultDir
 }
 
 function Download-And-Verify-Zip {
@@ -121,13 +141,12 @@ try {
 	Install-MT4
 
     # Terminalフォルダの検索
-    $terminalFolder = Find-TerminalFolder -targetText "C:\Program Files (x86)\FXTF MT4"
+    $terminalFolder = Find-TerminalFolder
 
     # configの上書き
     if (-not (Download-And-Verify-Zip -terminalFolder $terminalFolder)) {
         throw "config.zip の取得と検証に失敗したため、処理を中断します。"
     }
-
     
     $EA_Dir = Join-Path  $terminalFolder "MQL4\Experts\KazuyaFX"
     New-Item -ItemType Directory -Path $EA_Dir -Force | Out-Null
