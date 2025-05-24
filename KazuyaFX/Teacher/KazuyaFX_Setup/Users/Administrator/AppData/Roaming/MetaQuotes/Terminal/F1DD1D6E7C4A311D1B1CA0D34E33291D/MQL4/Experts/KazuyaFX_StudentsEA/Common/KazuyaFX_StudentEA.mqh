@@ -8,17 +8,7 @@
 #property version   "1.00"
 #property strict
 
-input string  TRADE_TRANSMITTER_SERVER = "https://qta-kazuyafx.com"; // トレードポジションを受信するサーバー
 input string  SYMBOL_REMOVE_SUFFIX = ""; // ポジションコピー時にシンボル名から削除するサフィックス
-
-string GetName(string path)
-{
-    string items[];
-    int n = StringSplit(path, '\\', items);
-    string name = items[n - 1];
-    StringReplace(name, ".mq4", "");
-    return name;
-}
 
 #include "KazuyaFX_Common.mqh"
 
@@ -80,8 +70,9 @@ int MagicNumber = 0;
 // 口座番号です
 ulong SenderAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
 
-string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/api/student";
+string ENDPOINT;
 string URL;
+string Name = "";
 
 datetime StartServerTimeEA;
 
@@ -91,7 +82,9 @@ bool Busy = false;
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    URL = StringFormat("%s?name=%s", ENDPOINT, UrlEncode(NAME));
+    Name = NAME;
+    ENDPOINT = GetWebApiUri("/api/student");
+    URL = ENDPOINT + StringFormat("?name=%s", UrlEncode(Name));
 
     MagicNumber &= 0x7FFFFFFF;
 

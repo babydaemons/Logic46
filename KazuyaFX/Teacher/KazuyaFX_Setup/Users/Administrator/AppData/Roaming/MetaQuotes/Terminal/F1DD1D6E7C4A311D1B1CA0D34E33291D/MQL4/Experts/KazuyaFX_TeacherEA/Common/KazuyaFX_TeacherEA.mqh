@@ -10,8 +10,6 @@
 
 #include "KazuyaFX_Common.mqh"
 
-
-input string  TRADE_TRANSMITTER_SERVER = "https://qta-kazuyafx.com";    // トレードポジションを受信するサーバー
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
 input int     RETRY_INTERVAL = 250;                             // オーダー失敗時のリトライ時間インターバル
 input string  SYMBOL_APPEND_SUFFIX = "";                        // ポジションコピー時にシンボル名に追加するサフィックス
@@ -19,17 +17,8 @@ input int     SLIPPAGE = 30;                                    // スリッペ�
 
 #define FETCH_INTERVAL 100                                      // オーダー取得時のインターバル
 
-string GetName(string path)
-{
-    string items[];
-    int n = StringSplit(path, '\\', items);
-    string name = items[n - 1];
-    StringReplace(name, ".mq4", "");
-    return name;
-}
-
-string ENDPOINT = TRADE_TRANSMITTER_SERVER + "/api/teacher";
-string URL = ENDPOINT;
+string ENDPOINT;
+string URL;
 
 bool TimerEnabled = false;
 
@@ -48,7 +37,8 @@ string Name = "";
 //+------------------------------------------------------------------+
 int OnInit() {
     Name = NAME;
-    URL += StringFormat("?name=%s", UrlEncode(Name));
+    ENDPOINT = GetWebApiUri("/api/teacher");
+    URL = ENDPOINT + StringFormat("?name=%s", UrlEncode(Name));
 
     int shift_bytes = 3; // 32bitの整数値を作る: 0オリジンで0～3
     MagicNumber = 0;

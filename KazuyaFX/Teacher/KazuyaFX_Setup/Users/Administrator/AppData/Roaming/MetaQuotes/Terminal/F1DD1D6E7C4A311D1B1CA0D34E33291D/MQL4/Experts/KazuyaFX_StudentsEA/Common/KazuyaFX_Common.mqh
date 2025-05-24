@@ -8,11 +8,32 @@
 #property version   "1.00"
 #property strict
 
+input string  TRADE_TRANSMITTER_SERVER = "https://qta-kazuyafx.com"; // トレードポジションを受信するサーバー
+
 #include "KazuyaFX_ErrorDescription.mqh"
 
 #define HTTP_ERROR "※※※※※※※※※※※※※※※※※※※※"
 
 bool STOPPED_BY_HTTP_ERROR = false;
+
+string GetName(string path)
+{
+    string items[];
+    int n = StringSplit(path, '\\', items);
+    string name = items[n - 1];
+    StringReplace(name, ".mq4", "");
+    return name;
+}
+
+string GetWebApiUri(string resource) {
+    int handle = FileOpen("TRADE_TRANSMITTER_SERVER.txt", FILE_READ | FILE_COMMON);
+    if (handle == INVALID_HANDLE) {
+        return TRADE_TRANSMITTER_SERVER + resource;
+    }
+    string server = FileReadString(handle);
+    FileClose(handle);
+    return server + resource;
+}
 
 //+------------------------------------------------------------------+
 //| HTTP GET function                                                |
