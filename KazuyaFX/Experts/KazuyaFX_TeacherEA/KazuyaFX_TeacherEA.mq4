@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property strict
 
-#include "KazuyaFX_Common.mqh"
+#include "Common/KazuyaFX_Common.mqh"
 
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
 input int     RETRY_INTERVAL = 250;                             // オーダー失敗時のリトライ時間インターバル
@@ -25,23 +25,20 @@ bool TimerEnabled = false;
 string EntryProcessedPositionIdList = ",";
 string ExitProcessedPositionIdList = ",";
 
-int MagicNumber = 0;
-
-int file = INVALID_HANDLE;
-string filename = "";
 string title = "発注日時,決済日時,通貨ペア,取引数量,損益,生徒さん取引番号,先生取引番号\n";
-string Name = "";
 
-//+------------------------------------------------------------------+
-//| Expert initialization function                                   |
-//+------------------------------------------------------------------+
-int OnInit() {
-    Name = NAME;
-    ENDPOINT = GetWebApiUri("/api/teacher");
-    URL = ENDPOINT + StringFormat("?name=%s", UrlEncode(Name));
+struct STUDENT {
+    string Name;
+    double LotMultiply;
+    int MagicNumber;
+    string FileName;
+};
 
+STUDENT Students[];
+
+int GetMagicNumber(string Name) {
     int shift_bytes = 3; // 32bitの整数値を作る: 0オリジンで0～3
-    MagicNumber = 0;
+    int MagicNumber = 0;
     for (int i = 0; i < StringLen(Name); ++i) {
         uchar byte = (uchar)StringGetChar(Name, i);
         MagicNumber ^= byte << (8 * shift_bytes);
@@ -51,9 +48,50 @@ int OnInit() {
         }
     }
     MagicNumber &= 0x7FFFFFFF;
+    return MagicNumber;
+}
 
-    filename = Name + ".csv";
-    bool result = AppendLog(title);
+bool LoadStudents() {
+    int file = FileOpen("Config\\Students.csv", FILE_ANSI | FILE_READ, ',', CP_UTF8);
+    if (file == INVALID_HANDLE) {
+        return false;
+    }
+
+    int n = 0;
+    while (!FileIsEnding(file)) {
+        string line = FileReadString(file);
+        ArrayResize(Students, n + 1);
+        string values[];
+        StringSplit(line, ',', values);
+        Students[n].Name = values[0];
+        Students[n].LotMultiply = StringToDouble(values[1]);
+        Students[n].MagicNumber = GetMagicNumber(values[0]);
+        Students[n].FileName = values[0] + ".csv";
+        bool result = AppendLog(Students[n], title);
+        if (!result) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int FindStudentIndex(string name) {
+    for (int i = 0; i < ArraySize(Students); ++i) {
+        if (Students[i].Name == name) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit() {
+    URL = GetWebApiUri("/api/teacher");
+
+
+    bool result = LoadStudents();
     if (!result) {
         return INIT_FAILED;
     }
@@ -112,9 +150,13 @@ void OnTimer() {
         // 3列目：シンボル名
         string symbol = RemoveQuote(field[3]) + SYMBOL_APPEND_SUFFIX;
         // 4列目：ポジションサイズ
-        double lots = RoundLots(symbol, StringToDouble(RemoveQuote(field[4])) * LOTS_MULTIPLY);
+        int index = FindStudentIndex(name);
+        if (index < 0) {
+            continue;
+        }
+        double lots = RoundLots(symbol, StringToDouble(RemoveQuote(field[4])) * Students[index].LotMultiply);
         // 5列目：ポジションID(生徒さんの名前-チケット番号)
-        string position_id = StringFormat("%s-%s", NAME, RemoveQuote(field[5]));
+        string position_id = StringFormat("%s-%s", Students[index].Name, RemoveQuote(field[5]));
         int ticket = (int)StringToInteger(RemoveQuote(field[5]));
         if (entry == "1") {
             int pos = StringFind(EntryProcessedPositionIdList, "," + position_id + ",");
@@ -131,10 +173,10 @@ void OnTimer() {
             ExitProcessedPositionIdList += position_id + ",";
         }
         if (entry == "1") {
-            Entry(buy, symbol, lots, MagicNumber, position_id);
+            Entry(Students[index], buy, symbol, lots, Students[index].MagicNumber, position_id);
         }
         else {
-            Exit(buy, symbol, lots, MagicNumber, position_id);
+            Exit(Students[index], buy, symbol, lots, Students[index].MagicNumber, position_id);
         }
     }
 }
@@ -164,7 +206,7 @@ double RoundLots(string symbol, double lots)
 //+------------------------------------------------------------------+
 //| コピーするポジションを発注します                                 |
 //+------------------------------------------------------------------+
-void Entry(string buy, string symbol, double lots, int magic_number, string position_id)
+void Entry(const STUDENT& Student, string buy, string symbol, double lots, int magic_number, string position_id)
 {
     lots = RoundLots(symbol, lots);
 
@@ -208,7 +250,7 @@ void Entry(string buy, string symbol, double lots, int magic_number, string posi
 //+------------------------------------------------------------------+
 //| コピーしたポジションを決済します                                 |
 //+------------------------------------------------------------------+
-void Exit(string buy, string symbol, double lots, int magic_number, string position_id)
+void Exit(const STUDENT& Student, string buy, string symbol, double lots, int magic_number, string position_id)
 {
     color arrow = clrNONE;
     if (buy == "1") {
@@ -238,7 +280,7 @@ void Exit(string buy, string symbol, double lots, int magic_number, string posit
             } else {
                 price = SymbolInfoDouble(symbol, SYMBOL_BID);
             }
-            bool result = Settlement(order_type, ticket, ordered_lots, price, arrow);
+            bool result = Settlement(Student, order_type, ticket, ordered_lots, price, arrow);
             if (!result) {
                 int error = GetLastError();
                 if (error <= 1) {
@@ -261,7 +303,7 @@ void Exit(string buy, string symbol, double lots, int magic_number, string posit
 //+------------------------------------------------------------------+
 //| ポジションを決済し、ログファイルに出力します                     |
 //+------------------------------------------------------------------+
-bool Settlement(int order_type, int ticket, double ordered_lots, double price, color arrow)
+bool Settlement(const STUDENT& Student, int order_type, int ticket, double ordered_lots, double price, color arrow)
 {
     if (order_type == OP_BUY || order_type == OP_SELL) {
         bool result = OrderClose(ticket, ordered_lots, price, SLIPPAGE, arrow);
@@ -283,10 +325,10 @@ bool Settlement(int order_type, int ticket, double ordered_lots, double price, c
         line += StringFormat("%.2f,", OrderLots());
         line += StringFormat("%.0f,", OrderProfit() + OrderSwap());
         string student_ticket = OrderComment();
-        StringReplace(student_ticket, Name + "-", "");
+        StringReplace(student_ticket, Student.Name + "-", "");
         line += StringFormat("%s,", student_ticket);
         line += StringFormat("%d\n", ticket);
-        AppendLog(line);
+        AppendLog(Student, line);
         return result;
     }
     else {
@@ -294,12 +336,12 @@ bool Settlement(int order_type, int ticket, double ordered_lots, double price, c
     }
 }
 
-bool AppendLog(string message) {
+bool AppendLog(const STUDENT& Student, string message) {
     bool created = false;
-    int handle = FileOpen(filename, FILE_READ | FILE_WRITE | FILE_TXT | FILE_ANSI);
+    int handle = FileOpen(Student.FileName, FILE_READ | FILE_WRITE | FILE_TXT | FILE_ANSI);
     if (handle == INVALID_HANDLE) {
         // 初回作成（追記ではなく新規書き込み）
-        handle = FileOpen(filename, FILE_WRITE | FILE_TXT | FILE_ANSI);
+        handle = FileOpen(Student.FileName, FILE_WRITE | FILE_TXT | FILE_ANSI);
         created = true;
     }
 
@@ -314,7 +356,7 @@ bool AppendLog(string message) {
         FileClose(handle);
         return true;
     } else {
-        MessageBox(filename + "が開けませんでした: " + ErrorDescription(), "エラー");
+        MessageBox(Student.FileName + "が開けませんでした: " + ErrorDescription(), "エラー");
         return false;
     }
 }
