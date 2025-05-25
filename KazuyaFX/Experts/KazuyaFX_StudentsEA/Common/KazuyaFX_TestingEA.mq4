@@ -7,6 +7,8 @@
 #property link      "https://www.fx-kazuya.com/"
 #property version   "1.00"
 #property strict
+
+input string  NAME = "Shingo"; // 生徒さんの名前
 input string  SYMBOL_REMOVE_SUFFIX = ""; // ポジションコピー時にシンボル名から削除するサフィックス
 
 #include "KazuyaFX_Common.mqh"
