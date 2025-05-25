@@ -25,7 +25,7 @@ int Counter = 0;
 int Ticket = 0;
 int Position = +1;
 
-string Name = "Shingo";
+string Name = NAME;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
