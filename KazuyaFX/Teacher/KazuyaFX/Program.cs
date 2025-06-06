@@ -118,7 +118,7 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
 
     foreach (var name in name_list)
     {
-        Logger.Log(Color.RED, name);
+        //Logger.Log(Color.RED, name);
         if (string.IsNullOrWhiteSpace(name))
         {
             continue; // 空の名前はスキップ
