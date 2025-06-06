@@ -52,7 +52,7 @@ int GetMagicNumber(string Name) {
 }
 
 bool LoadStudents() {
-    int file = FileOpen("Config\\Students.csv", FILE_ANSI | FILE_READ, ',', CP_UTF8);
+    int file = FileOpen("Config\\Students.csv", FILE_ANSI | FILE_READ | FILE_SHARE_READ);
     if (file == INVALID_HANDLE) {
         return false;
     }
@@ -71,6 +71,7 @@ bool LoadStudents() {
         if (!result) {
             return false;
         }
+        ++n;
     }
     return true;
 }
@@ -127,7 +128,7 @@ void OnTimer() {
         if (TimerEnabled) {
             EventKillTimer();
             TimerEnabled = false;
-            ExitEA(ENDPOINT, res);
+            ExitEA(URL, res);
         }
         ExpertRemove();
         return;
