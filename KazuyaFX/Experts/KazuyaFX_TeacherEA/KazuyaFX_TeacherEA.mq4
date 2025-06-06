@@ -51,8 +51,8 @@ int GetMagicNumber(string Name) {
     return MagicNumber;
 }
 
-bool LoadStudents() {
-    int file = FileOpen("Config\\Students.csv", FILE_ANSI | FILE_READ | FILE_SHARE_READ);
+bool LoadStudents(string& names) {
+    int file = FileOpen("Config\\Students.csv", FILE_ANSI | FILE_READ, '\xFF', CP_UTF8);
     if (file == INVALID_HANDLE) {
         return false;
     }
@@ -69,10 +69,18 @@ bool LoadStudents() {
         Students[n].FileName = values[0] + ".csv";
         bool result = AppendLog(Students[n], title);
         if (!result) {
+            FileClose(file);
             return false;
+        }
+        if (names == "") {
+            names = values[0];
+        }
+        else {
+            names += "," + values[0];
         }
         ++n;
     }
+    FileClose(file);
     return true;
 }
 
@@ -89,13 +97,14 @@ int FindStudentIndex(string name) {
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    URL = GetWebApiUri("/api/teacher");
+    ENDPOINT = GetWebApiUri("/api/teacher");
 
-
-    bool result = LoadStudents();
+    string names = "";
+    bool result = LoadStudents(names);
     if (!result) {
         return INIT_FAILED;
     }
+    URL = ENDPOINT + "?names=" + names;
 
     EventSetMillisecondTimer(FETCH_INTERVAL);
     TimerEnabled = true;
@@ -128,7 +137,7 @@ void OnTimer() {
         if (TimerEnabled) {
             EventKillTimer();
             TimerEnabled = false;
-            ExitEA(URL, res);
+            ExitEA(ENDPOINT, res);
         }
         ExpertRemove();
         return;
