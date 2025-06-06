@@ -8,19 +8,10 @@
 #property version   "1.00"
 #property strict
 
-input string  EMAIL = "babydaemons@gmail.com"; // メールアドレス
-input string  TRADE_TRANSMITTER_SERVER = "https://babydaemons.jp"; // トレードポジションを受信するサーバー
+input string  NAME = "Shingo"; // 生徒さんの名前
 input string  SYMBOL_REMOVE_SUFFIX = ""; // ポジションコピー時にシンボル名から削除するサフィックス
 
-string GetSourcePath()
-{
-    return __FILE__;
-}
-
 #include "KazuyaFX_Common.mqh"
-
-// 送信元証券会社のIDです
-ulong ClientBrokerID = 0;
 
 // 口座番号です
 ulong SenderAccountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
@@ -34,21 +25,14 @@ int Counter = 0;
 int Ticket = 0;
 int Position = +1;
 
+string Name = NAME;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit() {
-    URL = StringFormat("%s?email=%s&account=%d", ENDPOINT, UrlEncode(EMAIL), SenderAccountNumber);
-
-    int shift_bytes = 3; // 32bitの整数値を作る: 0オリジンで0～3
-    for (int i = 0; i < StringLen(EMAIL); ++i) {
-        uchar byte = (uchar)StringGetChar(EMAIL, i);
-        ClientBrokerID ^= byte << (8 * shift_bytes);
-        --shift_bytes;
-        if (shift_bytes < 0) {
-            shift_bytes = 3;
-        }
-    }
+    ENDPOINT = GetWebApiUri("/api/student");
+    URL = ENDPOINT + StringFormat("?name=%s", UrlEncode(Name));
 
     // 15000ミリ秒の周期でポジションコピーを行います
     if (!EventSetMillisecondTimer(15000)) {
@@ -96,14 +80,12 @@ void OnTimer() {
 //+------------------------------------------------------------------+
 void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
 {
-    string position_id = StringFormat("%08x%08x%08x", ClientBrokerID, SenderAccountNumber, ticket);
-    
     string uri = URL;
     uri += StringFormat("&entry=%d", entry);
     uri += StringFormat("&buy=%d", buy);
     uri += StringFormat("&symbol=%s", symbol);
     uri += StringFormat("&lots=%.2f", lots);
-    uri += StringFormat("&position_id=%s", position_id);
+    uri += StringFormat("&ticket=%d", ticket);
 
     int res = 0;
     string response = Get(uri, res, 4, 1000);
