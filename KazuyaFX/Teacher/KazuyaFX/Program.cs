@@ -32,7 +32,7 @@ var app = builder.Build();
 
 ConcurrentDictionary<string, int> entryPositionIdList = new();
 ConcurrentDictionary<string, int> exitPositionIdList = new();
-bool teacherBusyFlag = false;
+ConcurrentDictionary<string, int> teacherBusyFlags = new();
 
 Logger.Log(Color.CYAN, "先生用 MetaTrader4 トレード受信サーバーが起動しました...");
 
@@ -112,39 +112,47 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
 /// </remarks>
 app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
 {
-    if (teacherBusyFlag)
-    {
-        return Results.Text("", "text/csv; charset=utf-8");
-    }
-    else
-    {
-        teacherBusyFlag = true;
-    }
-
+    var names = context.Request.Query["names"];
+    var name_list = names.ToString().Split(',');
     string lines = string.Empty;
 
-    try
+    foreach (var name in name_list)
     {
-        while (positionDao.GetPosition(out var position))
+        Logger.Log(Color.RED, name);
+        if (string.IsNullOrWhiteSpace(name))
         {
-            var name = position.name;
-            var entry = position.entry == +1 ? "Entry" : "Exit";
-            var buy = position.buy == +1 ? "Buy" : "Sell";
-            var line = $"\"{name}\",\"{position.entry}\",\"{position.buy}\",\"{position.symbol}\",\"{position.lots}\",\"{position.ticket}\"\n";
-            lines += line;
-            var Entry = position.entry == +1 ? "[Entry]," : "[Exit], ";
-            var Buy = position.buy == +1 ? "[Buy], " : "[Sell],";
-            string message = $"生徒さん[{name}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], 売買番号[{position.ticket}]";
-            Logger.Log(Color.GREEN, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
+            continue; // 空の名前はスキップ
         }
-    }
-    catch (Exception ex)
-    {
-        Logger.Log(Color.RED, $"!!!!!!!!!! {ex}");
-        Logger.Log(Color.RED, $"!!!!!!!!!! {context.Request.QueryString}");
+        if (teacherBusyFlags.ContainsKey(name!))
+        {
+            continue;
+        }
+        else
+        {
+            teacherBusyFlags.TryAdd(name!, 1);
+        }
+        try
+        {
+            while (positionDao.GetPosition(name!, out var position))
+            {
+                var entry = position.entry == +1 ? "Entry" : "Exit";
+                var buy = position.buy == +1 ? "Buy" : "Sell";
+                var line = $"\"{name}\",\"{position.entry}\",\"{position.buy}\",\"{position.symbol}\",\"{position.lots}\",\"{position.ticket}\"\n";
+                lines += line;
+                var Entry = position.entry == +1 ? "[Entry]," : "[Exit], ";
+                var Buy = position.buy == +1 ? "[Buy], " : "[Sell],";
+                string message = $"生徒さん[{name}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], 売買番号[{position.ticket}]";
+                Logger.Log(Color.GREEN, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(Color.RED, $"!!!!!!!!!! {ex}");
+            Logger.Log(Color.RED, $"!!!!!!!!!! {context.Request.QueryString}");
+        }
+        teacherBusyFlags.Remove(name!, out var _);
     }
 
-    teacherBusyFlag = false;
     return Results.Text(lines, "text/csv; charset=utf-8");
 });
 
