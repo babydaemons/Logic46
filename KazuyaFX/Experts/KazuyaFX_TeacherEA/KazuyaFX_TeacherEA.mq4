@@ -111,6 +111,7 @@ int OnInit() {
     if (status != "ready") {
         ExitEA(ENDPOINT, ERROR_SERVER_NOT_READY, res);
     }
+
     EventSetMillisecondTimer(FETCH_INTERVAL);
     TimerEnabled = true;
     return INIT_SUCCEEDED;
