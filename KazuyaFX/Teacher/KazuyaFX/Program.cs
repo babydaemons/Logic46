@@ -53,6 +53,11 @@ app.MapGet("/api/check", () => Results.Text("KazuyaFX_Server: OK"));
 /// </remarks>
 app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext context) =>
 {
+    if (context.Request.Query.ContainsKey("check"))
+    {
+        return Results.Text("ready");
+    }
+
     lock (positionDao)
     {
         var name = context.Request.Query["name"];
@@ -112,6 +117,11 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
 /// </remarks>
 app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
 {
+    if (context.Request.Query.ContainsKey("check"))
+    {
+        return Results.Text("ready");
+    }
+
     var names = context.Request.Query["names"];
     var name_list = names.ToString().Split(',');
     string lines = string.Empty;
