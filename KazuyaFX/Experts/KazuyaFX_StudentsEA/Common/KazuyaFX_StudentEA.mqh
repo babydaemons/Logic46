@@ -84,6 +84,13 @@ bool Busy = false;
 int OnInit() {
     Name = NAME;
     ENDPOINT = GetWebApiUri("/api/student");
+
+    int res = 0;
+    string status = Get(ENDPOINT + "?check=1", res, 2, 50);
+    if (status != "ready") {
+        ExitEA(ENDPOINT, ERROR_SERVER_NOT_READY, res);
+    }
+
     URL = ENDPOINT + StringFormat("?name=%s", UrlEncode(Name));
 
     MagicNumber &= 0x7FFFFFFF;
@@ -139,14 +146,22 @@ void OnTimer() {
 
     // CHECK_INTERVALミリ秒の周期でポジション全体の差分をHTTPリクエストで送信します
     Busy = true;
-    SendPositions();
+    static int last_status_checked_minute = -1;
+    int minute = TimeMinute(TimeCurrent());
+    if (!SendPositions() && last_status_checked_minute != minute) {
+        int res = 0;
+        string status = Get(ENDPOINT + "?check=1", res, 2, 50);
+        if (status != "ready") {
+            ExitEA(ENDPOINT, ERROR_SERVER_CONNECTION_LOST, res);
+        }
+    }
     Busy = false;
 }
 
 //+------------------------------------------------------------------+
 //| ポジション全体の差分をHTTPリクエストで送信します                     |
 //+------------------------------------------------------------------+
-void SendPositions() {
+bool SendPositions() {
     // 出力するポジション全体の差分を表す構造体をクリアします
     Output.Clear();
 
@@ -171,11 +186,11 @@ void SendPositions() {
 
     // ポジションの差分が0件ならばファイル出力しません
     if (change_count == 0) {
-        return;
+        return false;
     }
 
     // コピーポジション連携用HTTPリクエストで送信します
-    SendPositionRequest(change_count);
+    return SendPositionRequest(change_count);
 }
 
 
@@ -307,32 +322,32 @@ int AppendChangedPosition(POSITION_LIST& Current, int entry, int dst, int src) {
 //+------------------------------------------------------------------+
 //| コピーポジション連携用HTTPリクエストで送信します                 |
 //+------------------------------------------------------------------+
-void SendPositionRequest(int change_count) {
+bool SendPositionRequest(int change_count) {
     for (int i = 0; i < change_count; ++i) {
         string symbol = Output.SymbolValue[i];
         StringReplace(symbol, SYMBOL_REMOVE_SUFFIX, "");
-        ExecuteRequest(Output.Change[i], Output.Command[i], symbol, Output.Lots[i], Output.Tickets[i]);
-        break;
+        return ExecuteRequest(Output.Change[i], Output.Command[i], symbol, Output.Lots[i], Output.Tickets[i]);
     }
+    return false;
 }
 
 //+------------------------------------------------------------------+
 //| ポジションの差分をHTTPリクエストで送信します                     |
 //+------------------------------------------------------------------+
-void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
+bool ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
 {
     string position_id = IntegerToString(ticket);
     if (entry == 1) {
         int pos = StringFind(EntryProcessedPositionIdList, "," + position_id + ",");
         if (pos > 0) {
-            return;
+            return false;
         }
         EntryProcessedPositionIdList += position_id + ",";
     }
     else {
         int pos = StringFind(ExitProcessedPositionIdList, "," + position_id + ",");
         if (pos > 0) {
-            return;
+            return false;
         }
         ExitProcessedPositionIdList += position_id + ",";
     }
@@ -347,9 +362,10 @@ void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
     string response = Get(uri, res, 4, 1000);
 
     if (STOPPED_BY_HTTP_ERROR || response == HTTP_ERROR) {
-        ExitEA(ENDPOINT, res);
-        return;
+        ExitEA(ENDPOINT, ERROR_SERVER_CONNECTION_LOST, res);
+        return false;
     }
 
     printf("Order Request Sended: %s", uri);
+    return true;
 }
