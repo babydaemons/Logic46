@@ -14,6 +14,29 @@ input string  TRADE_TRANSMITTER_SERVER = "https://qta-kazuyafx.com"; // トレ�
 
 #define HTTP_ERROR "※※※※※※※※※※※※※※※※※※※※"
 
+const string ERROR_SERVER_NOT_READY =
+        "初期化エラー[%d]: 下記のいずれかの問題が発生しました。EAを終了します。\n" +
+        " (1) 「生徒さん→先生」連携サーバーが起動していません。先生に確認してください。\n" +
+        " (2) 「生徒さん→先生」連携サーバーURLが未設定または誤っていますです。\n" + 
+        "      下記の通り設定してください。\n"
+        "     ⇒ [ツール(T)] メニュー\n" +
+        "        ⇒ [オプション(O)] メニュー\n" +
+        "           ⇒ [エキスパートアドバイザー] タブ\n" +
+        "              ⇒ WebRequestを許可するURLリスト\n" +
+        "                 ⇒ 〈%s〉";
+
+const string ERROR_SERVER_CONNECTION_LOST =
+        "通信エラー[%d]: 「生徒さん→先生」連携サーバーが停止しました。EAを終了します。\n" +
+        " (1) 「生徒さん→先生」連携サーバーが停止していないか、先生に確認してください。\n" +
+        " (2) 「生徒さん→先生」連携サーバーURLが未設定または誤っていますです。\n" + 
+        "      下記の通り設定してください。\n"
+        "     ⇒ [ツール(T)] メニュー\n" +
+        "        ⇒ [オプション(O)] メニュー\n" +
+        "           ⇒ [エキスパートアドバイザー] タブ\n" +
+        "              ⇒ WebRequestを許可するURLリスト\n" +
+        "                 ⇒ 〈%s〉";
+
+
 bool STOPPED_BY_HTTP_ERROR = false;
 
 string GetName(string path)
@@ -74,27 +97,25 @@ string Get(string uri, int& res, int retry_max, int retry_interval) {
         }
         else if (res >= 400) {
             string error_message = StringFormat("HTTP ERROR! [%d] \"%s\" %s", res, Replace(uri, "%40", "@"), ErrorDescription());
-            // Alert(error_message);
             printf(error_message);
             if (retry_count < retry_max - 1) {
                 Sleep(retry_interval << retry_count);
                 ++retry_count;
                 continue;
             }
-            //string expert_name = GetSourcePath();
-            //if (StringFind(expert_name, "Server") != -1) {
-            //    MessageBox("エラー: TradeTransmitterClientを終了します", "エラー", MB_OK);
-            //    ExpertRemove();
-            //}
-            //else {
-                return "";
-            //}
+            return "";
         }
         else if (res > 200) {
             return "";
         }
     }
     return text;
+}
+
+bool IsServerReady(string endpoint, int& res) {
+    string uri = endpoint + "?check=1";
+    string status = Get(uri, res, 1, 1000);
+    return status == "ready";
 }
 
 //+------------------------------------------------------------------+
@@ -166,17 +187,9 @@ string Base64Encode(const string data) {
 //+------------------------------------------------------------------+
 //| EA終了関数                                                      |
 //+------------------------------------------------------------------+
-void ExitEA(string url, int res)
+void ExitEA(string url, string message_format, int res)
 {
-    string message = StringFormat(
-        "エラー[%d]: 下記のいずれかの問題が発生しました。EAを終了します。\n" +
-        " (1) 「生徒さん→先生」連携サーバーが起動していません。\n" +
-        " (2) 「生徒さん→先生」連携サーバーURLが未設定です。下記の通り設定してください。\n"
-        "     ⇒ [ツール(T)] メニュー\n" +
-        "        ⇒ [オプション(O)] メニュー\n" +
-        "           ⇒ [エキスパートアドバイザー] タブ\n" +
-        "              ⇒ WebRequestを許可するURLリスト\n" +
-        "                 ⇒ 〈%s〉", res, url);
+    string message = StringFormat(message_format, res, url);
     MessageBox(message, "エラー", MB_OK);
     ExpertRemove();
 }
