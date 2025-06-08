@@ -137,6 +137,29 @@ void OnTick() {
 //| Timer function                                                   |
 //+------------------------------------------------------------------+
 void OnTimer() {
+    static bool Busy = false;
+    if (Busy) {
+        return;
+    }
+
+    Busy = true;
+    ExecuteTimer();
+    static int last_status_checked_minute = -1;
+    int minute = TimeMinute(TimeCurrent());
+    if (last_status_checked_minute != minute) {
+        int res = 0;
+        string status = Get(ENDPOINT + "?check=1", res, 2, 50);
+        if (status != "ready") {
+            ExitEA(ENDPOINT, ERROR_SERVER_CONNECTION_LOST, res);
+        }
+    }
+    Busy = false;
+}
+
+//+------------------------------------------------------------------+
+//| Timer function                                                   |
+//+------------------------------------------------------------------+
+void ExecuteTimer() {
     int res = 0;
     string csv_text = Get(URL, res, 1, 1000);
     if (STOPPED_BY_HTTP_ERROR || csv_text == HTTP_ERROR) {
