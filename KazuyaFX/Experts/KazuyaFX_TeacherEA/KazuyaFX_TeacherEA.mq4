@@ -106,6 +106,11 @@ int OnInit() {
     }
     URL = ENDPOINT + "?names=" + names;
 
+    int res = 0;
+    string status = Get(ENDPOINT + "?check=1", res, 2, 50);
+    if (status != "ready") {
+        ExitEA(ENDPOINT, ERROR_SERVER_NOT_READY, res);
+    }
     EventSetMillisecondTimer(FETCH_INTERVAL);
     TimerEnabled = true;
     return INIT_SUCCEEDED;
@@ -137,7 +142,7 @@ void OnTimer() {
         if (TimerEnabled) {
             EventKillTimer();
             TimerEnabled = false;
-            ExitEA(ENDPOINT, res);
+            ExitEA(ENDPOINT, ERROR_SERVER_CONNECTION_LOST, res);
         }
         ExpertRemove();
         return;
