@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>KazuyaFX_StudentSetup</RootNamespace>
+    <AssemblyName>KazuyaFX_StudentSetup</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WindowsShortcutFactory" Version="1.2.0" />
+  </ItemGroup>
+
+</Project>
+
