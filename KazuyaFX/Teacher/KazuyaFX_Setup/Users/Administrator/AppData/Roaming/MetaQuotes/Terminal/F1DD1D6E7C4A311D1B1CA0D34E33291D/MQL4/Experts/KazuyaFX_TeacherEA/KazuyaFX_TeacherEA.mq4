@@ -67,7 +67,7 @@ bool LoadStudents(string& names) {
         Students[n].LotMultiply = StringToDouble(values[1]);
         Students[n].MagicNumber = GetMagicNumber(values[0]);
         Students[n].FileName = values[0] + ".csv";
-        bool result = AppendLog(Students[n], title);
+        bool result = AppendLog(Students[n], "");
         if (!result) {
             FileClose(file);
             return false;
@@ -376,22 +376,23 @@ bool Settlement(const STUDENT& Student, int order_type, int ticket, double order
 }
 
 bool AppendLog(const STUDENT& Student, string message) {
-    bool created = false;
     int handle = FileOpen(Student.FileName, FILE_READ | FILE_WRITE | FILE_TXT | FILE_ANSI);
     if (handle == INVALID_HANDLE) {
         // 初回作成（追記ではなく新規書き込み）
         handle = FileOpen(Student.FileName, FILE_WRITE | FILE_TXT | FILE_ANSI);
-        created = true;
+    }
+
+    if (FileSize(handle) == 0) {
+        FileWriteString(handle, title);
+        if (message == "") {
+            FileClose(handle);
+            return true;
+        }
     }
 
     if (handle != INVALID_HANDLE) {
         FileSeek(handle, 0, SEEK_END);
-        if (created) {
-            FileWriteString(handle, title);
-        }
-        else {
-            FileWriteString(handle, message);
-        }
+        FileWriteString(handle, message);
         FileClose(handle);
         return true;
     } else {

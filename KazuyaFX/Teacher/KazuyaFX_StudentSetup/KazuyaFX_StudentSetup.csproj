@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>KazuyaFX_StudentSetup</RootNamespace>
+    <AssemblyName>KazuyaFX_StudentSetup</AssemblyName>
+    <ApplicationIcon>Resources\KazuyaFX_StudentSetup.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WindowsShortcutFactory" Version="1.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\KazuyaFX_StudentSetup.ico" />
+  </ItemGroup>
+
+</Project>
