@@ -91,7 +91,7 @@ void ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
     string response = Get(uri, res, 4, 1000);
 
     if (STOPPED_BY_HTTP_ERROR || response == HTTP_ERROR) {
-        ExitEA(ENDPOINT, res);
+        ExitEA(ENDPOINT, ERROR_SERVER_CONNECTION_LOST, res);
         return;
     }
 
