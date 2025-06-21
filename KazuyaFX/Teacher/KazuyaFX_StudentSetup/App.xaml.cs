@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace KazuyaFX_StudentSetup
 {
@@ -12,22 +13,27 @@ namespace KazuyaFX_StudentSetup
             base.OnStartup(e);
             var terminalDirectories = EnumerateTerminalDirectories();
             var links = EnumerateMT4(terminalDirectories);
-            
-            // MainWindowを開く
+
             var mainWindow = new MainWindow();
+            mainWindow.Loaded += (s, ev) =>
+            {
+                foreach (var key in links.Keys)
+                {
+                    mainWindow.AddTab(key);
+                }
+            };
             mainWindow.Show();
         }
 
         private Dictionary<string, string> EnumerateMT4(Dictionary<string, string> terminalDirectories)
         {
             var links = new Dictionary<string, string>();
-            const string desktopPath = @"C:\Users\Public\Desktop";
+            const string desktopPath = @"C:\\Users\\Public\\Desktop";
             var shortcutFiles = Directory.GetFiles(desktopPath, "*.lnk", SearchOption.TopDirectoryOnly);
             foreach (var shortcutFile in shortcutFiles)
             {
                 var link = WindowsShortcutFactory.WindowsShortcut.Load(shortcutFile);
                 if (string.IsNullOrEmpty(link.Path)) continue;
-                if (!link.Path.StartsWith(@"C:\Program Files (x86)\")) continue;
                 if (!link.Path.EndsWith(@"terminal.exe")) continue;
                 var appName = Path.GetFileNameWithoutExtension(shortcutFile);
                 var appPath = Path.GetDirectoryName(link.Path);
@@ -53,6 +59,7 @@ namespace KazuyaFX_StudentSetup
 
                 var line = File.ReadAllText(originText).Trim();
                 if (string.IsNullOrEmpty(line)) continue;
+                if (!line.StartsWith(@"C:\Program Files (x86)\")) continue;
                 terminalDirectories.Add(line, terminalPath);
             }
             return terminalDirectories;

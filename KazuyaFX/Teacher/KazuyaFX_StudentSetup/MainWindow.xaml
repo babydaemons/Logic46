@@ -5,13 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:KazuyaFX_StudentSetup"
         mc:Ignorable="d"
-        Title="KazuyaFX Student Setup" Height="300" Width="480">
+        Title="KazuyaFX Student Setup" Height="300" Width="720">
 
     <Grid>
-        <TabControl x:Name="tabControl" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <TabItem Header="Student Settings">
-                <local:StudentSettingsControl />
-            </TabItem>
-        </TabControl>
+        <TabControl x:Name="tabControl" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
     </Grid>
 </Window>
