@@ -26,6 +26,6 @@
 
         <CheckBox x:Name="checkBoxWebAPI" Grid.Row="1" Margin="5" Content="Web APIのURLを設定【MT4ログイン情報は初期化されます】" />
 
-        <Button x:Name="btnSave" Grid.Row="2" Margin="5" Width="75" Content="保存" HorizontalAlignment="Right" />
+        <Button x:Name="btnSave" Grid.Row="2" Margin="5" Width="75" Content="保存" HorizontalAlignment="Right" Click="btnSave_Click" />
     </Grid>
 </UserControl>

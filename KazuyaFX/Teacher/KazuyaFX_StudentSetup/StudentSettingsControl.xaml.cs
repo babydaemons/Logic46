@@ -10,20 +10,25 @@ namespace KazuyaFX_StudentSetup
     public partial class StudentSettingsControl : UserControl
     {
         public ObservableCollection<StudentData> Students { get; set; } = new ObservableCollection<StudentData>();
+        private string _terminalDir;
+        private string _configDir;
+        private string _configPath;
 
-        public StudentSettingsControl()
+        public StudentSettingsControl(string terminalDir)
         {
             InitializeComponent();
+            _terminalDir = terminalDir ?? throw new ArgumentNullException(nameof(terminalDir));
+            _configDir = CreateCongigDirectory(_terminalDir);
             dataGrid.ItemsSource = Students;
-            LoadCsvData();
+            LoadCsvData(_configDir);
         }
 
-        private void LoadCsvData()
+        private void LoadCsvData(string configDir)
         {
-            var filePath = "students.csv";
-            if (!File.Exists(filePath)) return;
+            _configPath = Path.Combine(configDir, "Students.csv");
+            if (!File.Exists(_configPath)) return;
 
-            using (var reader = new StreamReader(filePath, new UTF8Encoding(false)))
+            using (var reader = new StreamReader(_configPath, new UTF8Encoding(false)))
             {
                 Students.Clear();
                 string line;
@@ -44,8 +49,7 @@ namespace KazuyaFX_StudentSetup
 
         private void btnSave_Click(object sender, RoutedEventArgs e)
         {
-            var filePath = "students.csv";
-            using (var writer = new StreamWriter(filePath, false, new UTF8Encoding(false)))
+            using (var writer = new StreamWriter(_configPath, false, new UTF8Encoding(false)))
             {
                 foreach (var student in Students)
                 {
@@ -54,6 +58,23 @@ namespace KazuyaFX_StudentSetup
             }
 
             MessageBox.Show("Data saved successfully.");
+        }
+
+        private string CreateCongigDirectory(string terminalDir)
+        {
+            var configDir = Path.Combine(terminalDir, "Files", "Config");
+            if (!Directory.Exists(configDir))
+            {
+                try
+                {
+                    Directory.CreateDirectory(configDir);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error creating directory: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            return configDir;
         }
     }
 

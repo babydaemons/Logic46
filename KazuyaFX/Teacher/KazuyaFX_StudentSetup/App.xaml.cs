@@ -19,7 +19,7 @@ namespace KazuyaFX_StudentSetup
             {
                 foreach (var key in links.Keys)
                 {
-                    mainWindow.AddTab(key);
+                    mainWindow.AddTab(key, links[key]);
                 }
             };
             mainWindow.Show();

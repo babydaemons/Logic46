@@ -10,12 +10,12 @@ namespace KazuyaFX_StudentSetup
             InitializeComponent();
         }
 
-        public void AddTab(string title)
+        public void AddTab(string title, string terminalDir)
         {
             var tabItem = new TabItem
             {
                 Header = title,
-                Content = new StudentSettingsControl()
+                Content = new StudentSettingsControl(terminalDir)
             };
             tabControl.Items.Add(tabItem);
         }
