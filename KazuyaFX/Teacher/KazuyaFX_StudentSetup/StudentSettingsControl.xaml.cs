@@ -10,13 +10,15 @@ namespace KazuyaFX_StudentSetup
     public partial class StudentSettingsControl : UserControl
     {
         public ObservableCollection<StudentData> Students { get; set; } = new ObservableCollection<StudentData>();
-        private string _terminalDir;
-        private string _configDir;
+        private readonly string _title;
+        private readonly string _terminalDir;
+        private readonly string _configDir;
         private string _configPath;
 
-        public StudentSettingsControl(string terminalDir)
+        public StudentSettingsControl(string title, string terminalDir)
         {
             InitializeComponent();
+            _title = title ?? throw new ArgumentNullException(nameof(title));
             _terminalDir = terminalDir ?? throw new ArgumentNullException(nameof(terminalDir));
             _configDir = CreateCongigDirectory(_terminalDir);
             dataGrid.ItemsSource = Students;
@@ -57,7 +59,7 @@ namespace KazuyaFX_StudentSetup
                 }
             }
 
-            MessageBox.Show("Data saved successfully.");
+            MessageBox.Show("生徒さん毎のロット倍率を保存しました。", _title);
         }
 
         private string CreateCongigDirectory(string terminalDir)
@@ -71,7 +73,7 @@ namespace KazuyaFX_StudentSetup
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error creating directory: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"フォルダの作成に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             return configDir;
