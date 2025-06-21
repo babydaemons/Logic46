@@ -64,7 +64,7 @@ namespace KazuyaFX_StudentSetup
 
         private string CreateCongigDirectory(string terminalDir)
         {
-            var configDir = Path.Combine(terminalDir, "Files", "Config");
+            var configDir = Path.Combine(terminalDir, "MQL4", "Files", "Config");
             if (!Directory.Exists(configDir))
             {
                 try
