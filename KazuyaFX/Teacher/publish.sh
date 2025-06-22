@@ -7,6 +7,7 @@ taskkill.exe -im EXPLZH.EXE -f 1>/dev/null 2>&1
 rm -rf ${ROOT_DIR}/Users/Administrator/AppData/Roaming/MetaQuotes/Terminal/F1DD1D6E7C4A311D1B1CA0D34E33291D/MQL4/Experts
 mkdir -p ${ROOT_DIR}/Users/Administrator/AppData/Roaming/MetaQuotes/Terminal/F1DD1D6E7C4A311D1B1CA0D34E33291D/MQL4/Experts
 cp -pr ../Experts/KazuyaFX_*フォルダ ${ROOT_DIR}/Users/Administrator/AppData/Roaming/MetaQuotes/Terminal/F1DD1D6E7C4A311D1B1CA0D34E33291D/MQL4/Experts
+git add ${ROOT_DIR}/KazuyaFX
 git add ${ROOT_DIR}/Users/Administrator/AppData/Roaming/MetaQuotes/Terminal/F1DD1D6E7C4A311D1B1CA0D34E33291D/MQL4/Experts/*/*
 git add ${ROOT_DIR}/Users/Administrator/AppData/Roaming/MetaQuotes/Terminal/F1DD1D6E7C4A311D1B1CA0D34E33291D/MQL4/Experts/*/*/*
 
