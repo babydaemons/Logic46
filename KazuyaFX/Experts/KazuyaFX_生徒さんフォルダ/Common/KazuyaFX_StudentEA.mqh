@@ -249,7 +249,7 @@ int ScanCurrentPositions(POSITION_LIST& Current) {
 }
 
 //+------------------------------------------------------------------+
-//| 追加されたポジション全体の状態を走査します                       |
+//| 追加されたポジション全体の状態を走査します                          |
 //+------------------------------------------------------------------+
 int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int added_count) {
     // 外側のカウンタ current のループで現在のポジション全体をスキャンします
@@ -276,7 +276,7 @@ int ScanAddedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int posi
 }
 
 //+------------------------------------------------------------------+
-//| 削除されたポジション全体の状態を走査します                       |
+//| 削除されたポジション全体の状態を走査します                          |
 //+------------------------------------------------------------------+
 int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int position_count, int change_count) {
     // 外側のカウンタ previous のループで前回のポジション全体をスキャンします
@@ -303,7 +303,7 @@ int ScanRemovedPositions(POSITION_LIST& Current, POSITION_LIST& Previous, int po
 }
 
 //+------------------------------------------------------------------+
-//| 出力する差分情報構造体にポジションの要素を追記します             |
+//| 出力する差分情報構造体にポジションの要素を追記します                 |
 //+------------------------------------------------------------------+
 int AppendChangedPosition(POSITION_LIST& Current, int entry, int dst, int src) {
     Output.Change[dst] = entry;
@@ -320,7 +320,7 @@ int AppendChangedPosition(POSITION_LIST& Current, int entry, int dst, int src) {
 }
 
 //+------------------------------------------------------------------+
-//| コピーポジション連携用HTTPリクエストで送信します                 |
+//| コピーポジション連携用HTTPリクエストで送信します                    |
 //+------------------------------------------------------------------+
 bool SendPositionRequest(int change_count) {
     for (int i = 0; i < change_count; ++i) {
@@ -332,7 +332,7 @@ bool SendPositionRequest(int change_count) {
 }
 
 //+------------------------------------------------------------------+
-//| ポジションの差分をHTTPリクエストで送信します                     |
+//| ポジションの差分をHTTPリクエストで送信します                        |
 //+------------------------------------------------------------------+
 bool ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
 {
@@ -351,21 +351,22 @@ bool ExecuteRequest(int entry, int buy, string symbol, double lots, int ticket)
         }
         ExitProcessedPositionIdList += position_id + ",";
     }
-    string uri = URL;
-    uri += StringFormat("&entry=%d", entry);
-    uri += StringFormat("&buy=%d", buy);
-    uri += StringFormat("&symbol=%s", symbol);
-    uri += StringFormat("&lots=%.2f", lots);
-    uri += StringFormat("&ticket=%d", ticket);
+    string csvData = "";
+    csvData += StringFormat("%s,", Name);
+    csvData += StringFormat("%d,", entry);
+    csvData += StringFormat("%d,", buy);
+    csvData += StringFormat("%s,", symbol);
+    csvData += StringFormat("%.2f,", lots);
+    csvData += StringFormat("%d", ticket);
 
     int res = 0;
-    string response = Get(uri, res, 4, 1000);
+    string response = Post(ENDPOINT, csvData, res, 4, 1000);
 
     if (STOPPED_BY_HTTP_ERROR || response == HTTP_ERROR) {
         ExitEA(ENDPOINT, ERROR_SERVER_CONNECTION_LOST, res);
         return false;
     }
 
-    printf("Order Request Sended: %s", uri);
+    printf("Order Request Sended: %s", ENDPOINT);
     return true;
 }

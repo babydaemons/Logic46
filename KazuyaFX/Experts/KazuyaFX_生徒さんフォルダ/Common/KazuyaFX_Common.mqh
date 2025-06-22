@@ -36,6 +36,7 @@ const string ERROR_SERVER_CONNECTION_LOST =
         "              ⇒ WebRequestを許可するURLリスト\n" +
         "                 ⇒ 〈%s〉";
 
+const string AUTH_HEADER = "Authorization: Bearer 0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17\r\n";
 
 bool STOPPED_BY_HTTP_ERROR = false;
 
@@ -64,12 +65,10 @@ string GetWebApiUri(string resource) {
 string GetRequest(string uri, int& res, int retry_max, int retry_interval) {
     char data[];
     char result[];
-
-    string headers = "Authorization: Bearer 0163655e13d0e8f87d8c50140024bff3fa16510f1b0103aad40a7c7af2fc48934630a60beea6eddb453a903c106f7972e7fbaeb305adcc2b08e8ff4fb8ad8d17\r\n";
     string result_headers;
 
     for (int attempt = 0; attempt < retry_max; ++attempt) {
-        res = WebRequest("GET", uri, headers, 1000, data, result, result_headers);
+        res = WebRequest("GET", uri, AUTH_HEADER, 1000, data, result, result_headers);
         if (res != -1) break;
         printf("GetLastError(): %d", GetLastError());
         Sleep(retry_interval);
@@ -88,6 +87,62 @@ string Get(string uri, int& res, int retry_max, int retry_interval) {
 
     while (true) {
         text = GetRequest(uri, res, retry_max, retry_interval);
+        if (res == 200) {
+            break;
+        }
+        if (res == 404 || res == -1) {
+            STOPPED_BY_HTTP_ERROR = true;
+            return HTTP_ERROR;
+        }
+        else if (res >= 400) {
+            string error_message = StringFormat("HTTP ERROR! [%d] \"%s\" %s", res, Replace(uri, "%40", "@"), ErrorDescription());
+            printf(error_message);
+            if (retry_count < retry_max - 1) {
+                Sleep(retry_interval << retry_count);
+                ++retry_count;
+                continue;
+            }
+            return "";
+        }
+        else if (res > 200) {
+            return "";
+        }
+    }
+    return text;
+}
+
+//+------------------------------------------------------------------+
+//| HTTP POST function                                               |
+//+------------------------------------------------------------------+
+string PostRequest(string uri, string csvData, int& res, int retry_max, int retry_interval) {
+    uchar postData[];
+    StringToCharArray(csvData, postData);
+
+    // HTTPヘッダの設定
+    string headers = "Content-Type: text/csv\r\n";
+
+    char result[];
+    string result_headers;
+    for (int attempt = 0; attempt < retry_max; ++attempt) {
+        res = WebRequest("POST", uri, AUTH_HEADER + headers, 1000, postData, result, result_headers);
+        if (res != -1) break;
+        printf("GetLastError(): %d", GetLastError());
+        Sleep(retry_interval);
+    }
+
+    return CharArrayToString(result);
+}
+
+//+------------------------------------------------------------------+
+//| HTTP POST function                                               |
+//+------------------------------------------------------------------+
+string Post(string uri, string jsonData, int& res, int retry_max, int retry_interval) {
+
+    int retry_count = 0;
+    string text = "";
+
+    while (true) {
+        text = PostRequest(uri, jsonData, res, retry_max, retry_interval);
         if (res == 200) {
             break;
         }
