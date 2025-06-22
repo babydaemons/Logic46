@@ -1,9 +1,9 @@
-﻿internal struct Position
+﻿public class Position
 {
-    public string name;
-    public int entry;
-    public int buy;
-    public string symbol;
-    public double lots;
-    public int ticket;
+    public string name { get; set; } = string.Empty;
+    public int entry { get; set; }
+    public int buy { get; set; }
+    public string symbol { get; set; } = string.Empty;
+    public double lots { get; set; }
+    public int ticket { get; set; }
 }

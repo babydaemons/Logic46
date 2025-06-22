@@ -1,10 +1,15 @@
-﻿﻿using System.Collections.Concurrent;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text;
+
+// 追加：Shift_JISなどを使う準備
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+var SJIS = Encoding.GetEncoding("shift_jis");
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -57,56 +62,91 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
     {
         return Results.Text("ready");
     }
-
-    lock (positionDao)
+    else
     {
-        var name = context.Request.Query["name"];
+        return Results.Text("error");
+    }
+});
 
-        var position = new Position
-        {
-            name = name!,
-            entry = int.TryParse(context.Request.Query["entry"], out var e) ? e : 0,
-            buy = int.TryParse(context.Request.Query["buy"], out var b) ? b : 0,
-            symbol = context.Request.Query["symbol"]!,
-            lots = double.TryParse(context.Request.Query["lots"], out var l) ? l : 0,
-            ticket = int.TryParse(context.Request.Query["ticket"], out var t) ? t : 0,
-        };
+/// <summary>
+/// 生徒のトレード情報を受信し、データベースに記録する（POST）。
+/// </summary>
+/// <remarks>
+/// POST /api/student
+/// Body (application/json):
+/// {
+///   "name": "Taro",
+///   "entry": 1,
+///   "buy": 1,
+///   "symbol": "USDJPY",
+///   "lots": 0.1,
+///   "ticket": 123456
+/// }
+/// </remarks>
+app.MapPost("/api/student", async ([FromServices] PositionDao positionDao, HttpContext context) =>
+{
+    // StreamReader のエンコーディングを明示
+    var csvLine = string.Empty;
+    try
+    {
+        csvLine = await new StreamReader(context.Request.Body, SJIS).ReadToEndAsync();
+    }
+    catch (Exception ex)
+    {
+        // エンコーディングの問題で読み込みに失敗した場合
+        return Results.Text($"Invalid CSV format: {ex}");
+    }
 
-        string positionId = $"{name}-{position.ticket}";
-        if (position.entry == 1)
+    if (string.IsNullOrWhiteSpace(csvLine))
+        return Results.Text("Empty CSV");
+
+    string[] fields = csvLine.Replace("\0", "").Split(',');
+
+    if (fields.Length != 6)
+        return Results.Text("Invalid CSV format");
+
+    var position = new Position
+    {
+        name = fields[0],
+        entry = int.TryParse(fields[1], out var e) ? e : 0,
+        buy = int.TryParse(fields[2], out var b) ? b : 0,
+        symbol = fields[3],
+        lots = double.TryParse(fields[4], out var l) ? l : 0,
+        ticket = int.TryParse(fields[5], out var t) ? t : 0,
+    };
+
+    string positionId = $"{position.name}-{position.ticket}";
+    if (position.entry == 1)
+    {
+        if (entryPositionIdList.ContainsKey(positionId))
         {
-            if (entryPositionIdList.ContainsKey(positionId))
-            {
-                // すでに同じポジションIDが存在する場合は、何もしない。
-                return Results.Text("ok");
-            }
-            else
-            {
-                entryPositionIdList.TryAdd(positionId!, 1);
-            }
+            return Results.Text("ok");
         }
         else
         {
-            if (exitPositionIdList.ContainsKey(positionId))
-            {
-                // すでに同じポジションIDが存在する場合は、何もしない。
-                return Results.Text("ok");
-            }
-            else
-            {
-                exitPositionIdList.TryAdd(positionId!, 1);
-            }
+            entryPositionIdList.TryAdd(positionId, 1);
         }
-
-        positionDao.InsertPosition(position);
-
-        var Entry = position.entry == +1 ? "[Entry]," : "[Exit], ";
-        var Buy = position.buy == +1 ? "[Buy], " : "[Sell],";
-        var message = $"生徒さん[{name}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], 売買番号[{position.ticket}]";
-        Logger.Log(Color.YELLOW, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
-
-        return Results.Text("ok");
     }
+    else
+    {
+        if (exitPositionIdList.ContainsKey(positionId))
+        {
+            return Results.Text("ok");
+        }
+        else
+        {
+            exitPositionIdList.TryAdd(positionId, 1);
+        }
+    }
+
+    positionDao.InsertPosition(position);
+
+    var Entry = position.entry == +1 ? "[Entry]," : "[Exit], ";
+    var Buy = position.buy == +1 ? "[Buy], " : "[Sell],";
+    var message = $"生徒さん[{position.name}], 売買{Entry} ポジション{Buy} 通貨ペア[{position.symbol}], 売買ロット[{position.lots:F2}], 売買番号[{position.ticket}]";
+    Logger.Log(Color.YELLOW, position.entry == +1 ? $">>>>>>>>>> {message}" : $"<<<<<<<<<< {message}");
+
+    return Results.Text("ok");
 });
 
 /// <summary>
