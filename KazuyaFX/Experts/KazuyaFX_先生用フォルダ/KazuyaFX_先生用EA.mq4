@@ -10,6 +10,7 @@
 
 #include "Common/KazuyaFX_Common.mqh"
 
+input int     STOP_LOSS_POINT = 200;                            // ストップロスのポイント(0.1pips単位)
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
 input int     RETRY_INTERVAL = 250;                             // オーダー失敗時のリトライ時間インターバル
 input string  SYMBOL_APPEND_SUFFIX = "";                        // ポジションコピー時にシンボル名に追加するサフィックス
@@ -263,12 +264,15 @@ void Entry(const STUDENT& Student, string buy, string symbol, double lots, int m
     string error_message = "";
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
         double price = 0;
+        double sl = 0;
         if (buy == "1") {
             price = SymbolInfoDouble(symbol, SYMBOL_ASK);
+            sl = SymbolInfoDouble(symbol, SYMBOL_BID) - STOP_LOSS_POINT * SymbolInfoDouble(Symbol(), SYMBOL_POINT)
         } else {
             price = SymbolInfoDouble(symbol, SYMBOL_BID);
+            sl = SymbolInfoDouble(symbol, SYMBOL_ASK) + STOP_LOSS_POINT * SymbolInfoDouble(Symbol(), SYMBOL_POINT)
         }
-        int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, 0, 0, position_id, magic_number, 0, arrow);
+        int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, sl, 0, position_id, magic_number, 0, arrow);
         if (order_ticket == -1) {
             int error = GetLastError();
             if (error <= 1) {
