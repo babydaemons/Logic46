@@ -267,10 +267,10 @@ void Entry(const STUDENT& Student, string buy, string symbol, double lots, int m
         double sl = 0;
         if (buy == "1") {
             price = SymbolInfoDouble(symbol, SYMBOL_ASK);
-            sl = SymbolInfoDouble(symbol, SYMBOL_BID) - STOP_LOSS_POINT * SymbolInfoDouble(Symbol(), SYMBOL_POINT)
+            sl = SymbolInfoDouble(symbol, SYMBOL_BID) - STOP_LOSS_POINT * SymbolInfoDouble(Symbol(), SYMBOL_POINT);
         } else {
             price = SymbolInfoDouble(symbol, SYMBOL_BID);
-            sl = SymbolInfoDouble(symbol, SYMBOL_ASK) + STOP_LOSS_POINT * SymbolInfoDouble(Symbol(), SYMBOL_POINT)
+            sl = SymbolInfoDouble(symbol, SYMBOL_ASK) + STOP_LOSS_POINT * SymbolInfoDouble(Symbol(), SYMBOL_POINT);
         }
         int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, sl, 0, position_id, magic_number, 0, arrow);
         if (order_ticket == -1) {
