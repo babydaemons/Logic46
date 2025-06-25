@@ -22,30 +22,53 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 # 管理者権限で実行されている場合の処理
 Write-Host "管理者権限で実行中..." -ForegroundColor Green
 
-$AppDir = "C:\KazuyaFX"
-$MetaQuotes = "Users\Administrator\AppData\Roaming\MetaQuotes\Terminal\F1DD1D6E7C4A311D1B1CA0D34E33291D"
+function Create-Folder {
+    param (
+        [string]$FolderPath
+    )
 
+    if (Test-Path $FolderPath) {
+        Remove-Item $FolderPath -Force -Recurse | Out-Null
+    }
+
+    if (!(Test-Path $FolderPath)) {
+        New-Item -ItemType Directory -Path $FolderPath -Force | Out-Null
+        # Write-Host "#### フォルダを作成しました: $FolderPath" -ForegroundColor Cyan
+    } else {
+        # Write-Host "#### フォルダは既に存在します: $FolderPath" -ForegroundColor Blue
+    }
+}
+
+& taskkill.exe /IM "wacs.exe" /F 2>&1 | Out-Null
 & taskkill.exe /IM "nginx.exe" /F 2>&1 | Out-Null
 & taskkill.exe /IM "KazuyaFX.exe" /F 2>&1 | Out-Null
-if (Test-Path "C:\KazuyaFX") {
-    Remove-Item "C:\KazuyaFX" -Force -Recurse | Out-Null
-}
+
+$MetaQuotes = "Users\Administrator\AppData\Roaming\MetaQuotes\Terminal\F1DD1D6E7C4A311D1B1CA0D34E33291D"
+$TempRootDir = "C:\Windows\Temp\KazuyaFX_Setup.tmp"
+
+$AppDir = "C:\KazuyaFX"; Create-Folder -FolderPath $AppDir
+$logDir = "$AppDir\logs"; Create-Folder -FolderPath $logDir
+$WebRoot = "$AppDir\webroot"; Create-Folder -FolderPath $WebRoot
+$CertDir = "$AppDir\certificate"; Create-Folder -FolderPath $CertDir
+$NginxDir = "$AppDir\nginx"; Create-Folder -FolderPath $NginxDir
+$NginxLogDir = "$NginxDir\logs"; Create-Folder -FolderPath $NginxLogDir
+$WinAcmeDir = "$AppDir\win-acme"; Create-Folder -FolderPath $WinAcmeDir
+
 if (Test-Path "C:\$MetaQuotes\MQL4\Experts\KazuyaFX_StudentsEA") {
     Remove-Item "C:\$MetaQuotes\MQL4\Experts\KazuyaFX_StudentsEA" -Force -Recurse | Out-Null
 }
 if (Test-Path "C:\$MetaQuotes\MQL4\Experts\KazuyaFX_TeacherEA") {
     Remove-Item "C:\$MetaQuotes\MQL4\Experts\KazuyaFX_TeacherEA" -Force -Recurse | Out-Null
 }
+
 $DomainName = "qta-kazuyafx.com"
 $MailAddress = "qta.kazuyafx@gmail.com"
-
 if (Test-Path "$desktop\KazuyaFX_Setup.json") {
     # 読み込み
     $config = Get-Content "$desktop\KazuyaFX_Setup.json" | ConvertFrom-Json
     $DomainName = $config.Certification.DomainName # "qta-kazuyafx.com"
     $MailAddress = $config.Certification.MailAddress # "qta.kazuyafx@gmail.com"
 }
-
 Write-Host "#### ドメイン名:     $DomainName" -ForegroundColor Cyan
 Write-Host "#### メールアドレス: $MailAddress" -ForegroundColor Cyan
 
@@ -61,32 +84,12 @@ function Get-AvailablelogFile {
     return $logFile
 }
 
-function Create-Folder {
-    param (
-        [string]$FolderPath
-    )
-
-    if (!(Test-Path $FolderPath)) {
-        New-Item -ItemType Directory -Path $FolderPath -Force | Out-Null
-        # Write-Host "#### フォルダを作成しました: $FolderPath" -ForegroundColor Cyan
-    } else {
-        # Write-Host "#### フォルダは既に存在します: $FolderPath" -ForegroundColor Blue
-    }
-}
-
 $logFile = Get-AvailablelogFile -baseName $logFile
 Start-Transcript -Path $logFile -Append -Force | Out-Null
 
 # === コンソールのタイトルを変更 ===
 $host.UI.RawUI.WindowTitle = "KazuyaFX インストーラー"
 Write-Host "#### KazuyaFX のインストールを開始します..." -ForegroundColor Yellow
-$logDir = "C:\KazuyaFX\logs"; Create-Folder -FolderPath $logDir
-$WebRoot = "C:\KazuyaFX\webroot"; Create-Folder -FolderPath $WebRoot
-$CertDir = "C:\KazuyaFX\certificate"; Create-Folder -FolderPath $CertDir
-$NginxDir = "C:\KazuyaFX\nginx"; Create-Folder -FolderPath $NginxDir
-$NginxLogDir = "$NginxDir\logs"; Create-Folder -FolderPath $NginxLogDir
-$WinAcmeDir = "C:\KazuyaFX\win-acme"; Create-Folder -FolderPath $WinAcmeDir
-
 function Install-MT4 {
     $fxtfExePath = "C:\Program Files (x86)\FXTF MT4\terminal.exe"
     $fxtfInstallerUrl = "https://www.fxtrade.co.jp/system/download/fxtf4setup.exe"
@@ -272,9 +275,8 @@ http {
 }
     
 try {
-    Remove-Item "C:\KazuyaFX" -Force -Recurse | Out-Null
-    Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\KazuyaFX" -Destination "C:\" -Recurse -Force
-    Copy-Item -Path "C:\Windows\Temp\KazuyaFX_Setup.tmp\Users\Administrator" -Destination "C:\Users" -Recurse -Force
+    Copy-Item -Path "$TempRootDir\KazuyaFX" -Destination "C:\" -Recurse -Force
+    Copy-Item -Path "$TempRootDir\Users\Administrator" -Destination "C:\Users" -Recurse -Force
 
     # === MT4インストール ===
 	Install-MT4
