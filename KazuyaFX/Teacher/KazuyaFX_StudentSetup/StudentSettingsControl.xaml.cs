@@ -27,9 +27,6 @@ namespace KazuyaFX_StudentSetup
 
         private void LoadCsvData(string configDir)
         {
-            _configPath = Path.Combine(configDir, "Students.csv");
-            if (!File.Exists(_configPath)) return;
-
             using (var reader = new StreamReader(_configPath, new UTF8Encoding(false)))
             {
                 Students.Clear();
@@ -55,6 +52,10 @@ namespace KazuyaFX_StudentSetup
             {
                 foreach (var student in Students)
                 {
+                    if (string.IsNullOrWhiteSpace(student.StudentName) || string.IsNullOrWhiteSpace(student.LotMultiplier))
+                    {
+                        continue;
+                    }
                     writer.WriteLine($"{student.StudentName},{student.LotMultiplier}");
                 }
             }
@@ -74,6 +75,13 @@ namespace KazuyaFX_StudentSetup
                 catch (Exception ex)
                 {
                     MessageBox.Show($"フォルダの作成に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            _configPath = Path.Combine(configDir, "Students.csv");
+            if (!File.Exists(_configPath))
+            {
+                using (var writer = new FileStream(_configPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
                 }
             }
             return configDir;

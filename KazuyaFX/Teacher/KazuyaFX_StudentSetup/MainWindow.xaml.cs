@@ -18,6 +18,12 @@ namespace KazuyaFX_StudentSetup
                 Content = new StudentSettingsControl(title, terminalDir)
             };
             tabControl.Items.Add(tabItem);
+
+            // 最初のタブを選択する
+            if (tabControl.Items.Count == 1)
+            {
+                tabControl.SelectedIndex = 0; // 最初のタブを選択
+            }
         }
     }
 }
