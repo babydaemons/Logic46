@@ -11,6 +11,8 @@ using System.Text;
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 var SJIS = Encoding.GetEncoding("shift_jis");
 
+var positionDao = new PositionDao();
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
@@ -56,7 +58,7 @@ app.MapGet("/api/check", () => Results.Text("KazuyaFX_Server: OK"));
 /// <remarks>
 /// GET /api/student?name={name}&account={account}&entry={entry}&buy={buy}&symbol={symbol}&lots={lots}&command={command}&position_id={position_id}
 /// </remarks>
-app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext context) =>
+app.MapGet("/api/student", (HttpContext context) =>
 {
     if (context.Request.Query.ContainsKey("check"))
     {
@@ -83,13 +85,13 @@ app.MapGet("/api/student", ([FromServices] PositionDao positionDao, HttpContext 
 ///   "ticket": 123456
 /// }
 /// </remarks>
-app.MapPost("/api/student", async ([FromServices] PositionDao positionDao, HttpContext context) =>
+app.MapPost("/api/student", async (HttpContext context) =>
 {
     // StreamReader のエンコーディングを明示
     var csvLine = string.Empty;
     try
     {
-        csvLine = await new StreamReader(context.Request.Body, SJIS).ReadToEndAsync();
+        csvLine = await new StreamReader(context.Request.Body, Encoding.UTF8).ReadToEndAsync();
     }
     catch (Exception ex)
     {
@@ -153,16 +155,26 @@ app.MapPost("/api/student", async ([FromServices] PositionDao positionDao, HttpC
 /// 先生が生徒のトレード状況を取得する。
 /// </summary>
 /// <remarks>
-/// GET /api/teacher?name={name}
+/// POST /api/teacher
+/// Body (application/json):
+/// {
+///   "names": ["Taro", "Jiro"]
+/// }
 /// </remarks>
-app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
+app.MapPost("/api/teacher", async (HttpContext context) =>
 {
-    if (context.Request.Query.ContainsKey("check"))
+    // StreamReader のエンコーディングを明示
+    var names = string.Empty;
+    try
     {
-        return Results.Text("ready");
+        names = await new StreamReader(context.Request.Body, Encoding.UTF8).ReadToEndAsync();
+    }
+    catch (Exception ex)
+    {
+        // エンコーディングの問題で読み込みに失敗した場合
+        return Results.Text($"Invalid CSV format: {ex}");
     }
 
-    var names = context.Request.Query["names"];
     var name_list = names.ToString().Split(',');
     string lines = string.Empty;
 
@@ -204,6 +216,17 @@ app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
     }
 
     return Results.Text(lines, "text/csv; charset=utf-8");
+});
+
+/// <summary>
+/// 先生が死活監視する。
+/// </summary>
+/// <remarks>
+/// GET /api/teacher?chack=1
+/// </remarks>
+app.MapGet("/api/teacher", (HttpContext context, PositionDao positionDao) =>
+{
+    return Results.Text("ready");
 });
 
 app.Run();
