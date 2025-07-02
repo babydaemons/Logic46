@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property strict
 
-#include "Common/KazuyaFX_Common.mqh"
+#include "../KazuyaFX_生徒さん用フォルダ/Common/KazuyaFX_Common.mqh"
 
 input int     STOP_LOSS_POINT = 200;                            // ストップロスのポイント(0.1pips単位)
 input int     RETRY_COUNT_MAX = 4;                              // オーダー失敗時のリトライ回数
@@ -20,6 +20,7 @@ input int     SLIPPAGE = 30;                                    // スリッペ�
 
 string ENDPOINT;
 string URL;
+string Names;
 
 bool TimerEnabled = false;
 
@@ -100,18 +101,19 @@ int FindStudentIndex(string name) {
 int OnInit() {
     ENDPOINT = GetWebApiUri("/api/teacher");
 
-    string names = "";
-    bool result = LoadStudents(names);
-    if (!result) {
-        return INIT_FAILED;
-    }
-    URL = ENDPOINT + "?names=" + names;
-
     int res = 0;
     string status = Get(ENDPOINT + "?check=1", res, 2, 50);
     if (status != "ready") {
+        printf("ERROR: 死活チェック失敗しました: %s", ENDPOINT);
         ExitEA(ENDPOINT, ERROR_SERVER_NOT_READY, res);
     }
+
+    Names = "";
+    bool result = LoadStudents(Names);
+    if (!result) {
+        return INIT_FAILED;
+    }
+    URL = ENDPOINT;
 
     EventSetMillisecondTimer(FETCH_INTERVAL);
     TimerEnabled = true;
@@ -162,14 +164,13 @@ void OnTimer() {
 //+------------------------------------------------------------------+
 void ExecuteTimer() {
     int res = 0;
-    string csv_text = Get(URL, res, 1, 1000);
+    string csv_text = Post(URL, Names, res, 1, 1000);
     if (STOPPED_BY_HTTP_ERROR || csv_text == HTTP_ERROR) {
         if (TimerEnabled) {
             EventKillTimer();
             TimerEnabled = false;
             ExitEA(ENDPOINT, ERROR_SERVER_CONNECTION_LOST, res);
         }
-        ExpertRemove();
         return;
     }
     string lines[];
