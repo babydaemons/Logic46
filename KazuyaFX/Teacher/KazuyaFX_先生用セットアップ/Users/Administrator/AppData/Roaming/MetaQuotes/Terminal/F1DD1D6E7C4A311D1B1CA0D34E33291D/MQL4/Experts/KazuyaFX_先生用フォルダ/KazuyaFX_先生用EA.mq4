@@ -251,8 +251,8 @@ void Entry(const STUDENT& Student, string buy, string symbol, double lots, int m
 {
     lots = RoundLots(symbol, lots);
 
-    color arrow = clrNONE;
     int cmd = 0;
+    color arrow = clrNONE;
     if (buy == "1") {
         cmd = OP_BUY;
         arrow = clrBlue;
@@ -262,17 +262,29 @@ void Entry(const STUDENT& Student, string buy, string symbol, double lots, int m
         arrow = clrRed;
     }
 
+    double ask = MarketInfo(symbol, MODE_ASK);
+    double bid = MarketInfo(symbol, MODE_BID);
+    double point = MarketInfo(symbol, MODE_POINT);
+    double stopLevel = MarketInfo(symbol, MODE_STOPLEVEL) * point;
+    int digits = (int)MarketInfo(symbol, MODE_DIGITS);
+    double price = 0;
+    double sl = 0;
+    
+    if (cmd == OP_BUY) {
+        sl = ask - STOP_LOSS_POINT * point;
+        if ((ask - sl) < stopLevel) {
+            sl = ask - (stopLevel + point);
+        }
+    } else if (cmd == OP_SELL) {
+        sl = bid + STOP_LOSS_POINT * point;
+        if ((sl - bid) < stopLevel) {
+            sl = bid + (stopLevel + point);
+        }
+    }
+    sl = NormalizeDouble(sl, digits);
+
     string error_message = "";
     for (int times = 0; times < RETRY_COUNT_MAX; ++times) {
-        double price = 0;
-        double sl = 0;
-        if (buy == "1") {
-            price = SymbolInfoDouble(symbol, SYMBOL_ASK);
-            sl = SymbolInfoDouble(symbol, SYMBOL_BID) - STOP_LOSS_POINT * SymbolInfoDouble(Symbol(), SYMBOL_POINT);
-        } else {
-            price = SymbolInfoDouble(symbol, SYMBOL_BID);
-            sl = SymbolInfoDouble(symbol, SYMBOL_ASK) + STOP_LOSS_POINT * SymbolInfoDouble(Symbol(), SYMBOL_POINT);
-        }
         int order_ticket = OrderSend(symbol, cmd, lots, price, SLIPPAGE, sl, 0, position_id, magic_number, 0, arrow);
         if (order_ticket == -1) {
             int error = GetLastError();
