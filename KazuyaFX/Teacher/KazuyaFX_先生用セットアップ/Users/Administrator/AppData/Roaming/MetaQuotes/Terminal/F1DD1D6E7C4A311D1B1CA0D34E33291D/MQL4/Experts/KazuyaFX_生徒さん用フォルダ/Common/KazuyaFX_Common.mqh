@@ -114,23 +114,44 @@ string Get(string uri, int& res, int retry_max, int retry_interval) {
 //+------------------------------------------------------------------+
 //| HTTP POST function                                               |
 //+------------------------------------------------------------------+
-string PostRequest(string uri, string csvData, int& res, int retry_max, int retry_interval) {
-    uchar postData[];
-    StringToCharArray(csvData, postData);
+string PostRequest(string url, string csvLine, int& res, int retry_max, int retry_interval) {
+    // --- 送信データを UTF-8 バイト配列へ変換 --------------------------
+    uchar body[];
+    int len = StringToCharArray(csvLine, body, 0, WHOLE_ARRAY, CP_UTF8);
+    --len;
+    ArrayResize(body, len);     // NULL終端を除去
+
+    char data[];
+    ArrayResize(data, len);
+    for (int i = 0; i < len; ++i) {
+        data[i] = (char)body[i];
+    }
 
     // HTTPヘッダの設定
-    string headers = "Content-Type: text/csv\r\n";
+    string headers = AUTH_HEADER + "Content-Type: text/csv; charset=utf-8\r\n";
 
-    char result[];
-    string result_headers;
+    const int timeout = 1000;
+    char   result[];            // 応答ボディ
+    string result_headers;      // 応答ヘッダ
     for (int attempt = 0; attempt < retry_max; ++attempt) {
-        res = WebRequest("POST", uri, AUTH_HEADER + headers, 1000, postData, result, result_headers);
+        // --- 呼び出し ------------------------------------------------------
+        res = WebRequest("POST",
+                url,
+                headers,
+                timeout,
+                data,
+                result,
+                result_headers);
+
+        // --- 結果確認 ------------------------------------------------------
         if (res != -1) break;
-        printf("GetLastError(): %d", GetLastError());
+        printf("ERROR: %s", ErrorDescription());
         Sleep(retry_interval);
     }
 
-    return CharArrayToString(result);
+    // 応答本文を UTF-8 → 文字列へ変換して表示
+    string response = CharArrayToString(result, 0, WHOLE_ARRAY, CP_UTF8);
+    return response;
 }
 
 //+------------------------------------------------------------------+
@@ -244,9 +265,11 @@ string Base64Encode(const string data) {
 //+------------------------------------------------------------------+
 void ExitEA(string url, string message_format, int res)
 {
+/*
     string message = StringFormat(message_format, res, url);
     MessageBox(message, "エラー", MB_OK);
     ExpertRemove();
+*/
 }
 
 //+------------------------------------------------------------------+
